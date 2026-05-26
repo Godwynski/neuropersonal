@@ -24,8 +24,8 @@ export default function TweakDeck({
   return (
     <div className="space-y-6 outline-none animate-in fade-in duration-300">
       <header className="border-b border-blue-500/10 pb-4">
-        <h1 className="text-xl font-bold tracking-widest font-mono text-slate-200 font-bold">OS CONTROL & DEFRAG GRID</h1>
-        <p className="text-xs text-indigo-400 font-mono mt-0.5">Toggle registry settings, manage scroll scripts, and defragment sectors</p>
+        <h1 className="text-xl font-bold tracking-widest font-mono text-slate-200">OS CONTROL &amp; CACHE PURGER</h1>
+        <p className="text-xs text-indigo-400 font-mono mt-0.5">Toggle registry settings, manage scroll scripts, and purge temporary sectors</p>
       </header>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -36,9 +36,9 @@ export default function TweakDeck({
           <div className={`p-6 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} space-y-4`}>
             <div className="flex justify-between items-center border-b border-blue-500/5 pb-2">
               <h3 className="text-xs font-mono font-bold tracking-widest text-blue-400 uppercase">
-                Disk Defragmenter Drive Sector Map
+                Temp Cache Sector Analysis (Purge deletes temporary system files)
               </h3>
-              <span className="text-xs font-mono text-slate-400">Sector Size: {tempFolderSize}</span>
+              <span className="text-xs font-mono text-slate-400">Cache Size: {tempFolderSize}</span>
             </div>
 
             {/* 120-block grid */}
@@ -61,14 +61,14 @@ export default function TweakDeck({
 
             <div className="flex justify-between items-center font-mono text-xs">
               <div className="flex gap-4 text-slate-500">
-                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-blue-600 rounded-sm" /> System</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-cyan-600 rounded-sm" /> Files</span>
-                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-amber-500 rounded-sm" /> Junk Temp</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-blue-600 rounded-sm" /> System Caches</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-cyan-600 rounded-sm" /> Active Files</span>
+                <span className="flex items-center gap-1"><span className="w-2 h-2 bg-amber-500 rounded-sm" /> Junk Cache</span>
               </div>
 
               <div className="flex gap-2">
                 <button onClick={scanTempFolder} disabled={scanningTemp || purgingTemp} className={`px-3 py-1.5 rounded text-xs font-bold ${activeStyle.btnGhost} cursor-pointer disabled:opacity-50`}>SCAN</button>
-                <button onClick={purgeTempFolder} disabled={purgingTemp || scanningTemp} className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-xs font-bold transition cursor-pointer disabled:opacity-50">DEFRAG PURGE</button>
+                <button onClick={purgeTempFolder} disabled={purgingTemp || scanningTemp} className="bg-blue-600 hover:bg-blue-500 text-white px-3 py-1.5 rounded text-xs font-bold transition cursor-pointer disabled:opacity-50">PURGE TEMP CACHE</button>
               </div>
             </div>
           </div>

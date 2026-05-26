@@ -3,6 +3,9 @@ import { Cpu, Settings, Zap, Trash2, Monitor } from 'lucide-react';
 
 export default function ValorantOptimizer({
   isElectron,
+  valorantPath,
+  valorantPathDetected,
+  browseValorantPath,
   valorantRunning,
   setValorantRunning,
   autoBoostActive,
@@ -315,6 +318,33 @@ export default function ValorantOptimizer({
             <span className={`text-slate-400 font-bold block border-b ${sectionLabelBorder} pb-1 uppercase tracking-wider`}>
               1. VALORANT Graphic Settings Tuner
             </span>
+
+            {/* VALORANT Executable Path Configuration */}
+            <div className={`p-3 rounded-lg border ${cardInner} flex flex-col gap-2 font-mono text-[11px]`}>
+              <div className="flex justify-between items-center">
+                <span className="text-slate-300 font-sans font-bold">VALORANT Executable Path</span>
+                <span className={`px-2 py-0.5 rounded text-[9px] font-black tracking-wider border ${
+                  valorantPathDetected 
+                    ? 'bg-emerald-100/10 text-emerald-400 border-emerald-500/20' 
+                    : 'bg-rose-100/10 text-rose-400 border-rose-500/20'
+                }`}>
+                  {valorantPathDetected ? 'DETECTED' : 'NOT FOUND'}
+                </span>
+              </div>
+              <div className="flex gap-2 items-center">
+                <code className="flex-1 bg-slate-950/80 border border-white/5 p-1.5 rounded truncate select-all text-slate-400" title={valorantPath}>
+                  {valorantPath}
+                </code>
+                {isElectron && (
+                  <button 
+                    onClick={browseValorantPath}
+                    className="bg-blue-600 hover:bg-blue-500 text-white font-sans text-xs px-2.5 py-1.5 rounded transition cursor-pointer shrink-0 font-bold"
+                  >
+                    BROWSE
+                  </button>
+                )}
+              </div>
+            </div>
             
             {valorantConfigs.length === 0 ? (
               <div className="text-slate-500 italic font-sans py-4">
@@ -567,12 +597,12 @@ export default function ValorantOptimizer({
                   </button>
                 </div>
 
-                {/* FreeSync Enable Toggle */}
+                {/* AMD FRTC Enable Toggle */}
                 <div className={`flex justify-between items-start gap-4 ${cardInner} p-3 rounded-lg border`}>
                   <div className="space-y-0.5">
-                    <span className="text-slate-200 font-bold block text-[11px]">Enable FreeSync / Adaptive Sync</span>
+                    <span className="text-slate-200 font-bold block text-[11px]">Adaptive Sync / FRTC Support</span>
                     <p className={`text-[10px] ${textS} font-sans leading-relaxed`}>
-                      Activates AMD FreeSync or NVIDIA Adaptive Sync for tear-free frames without VSync latency.
+                      Enables AMD Frame Rate Target Control &amp; Large Page Memory, or NVIDIA Driver Adaptive Sync support to optimize frame delivery.
                     </p>
                   </div>
                   <button
@@ -583,7 +613,7 @@ export default function ValorantOptimizer({
                         : pillInactive
                     }`}
                   >
-                    {freesyncEnabled ? 'FREESYNC ACTIVE ✓' : 'FREESYNC OFF'}
+                    {freesyncEnabled ? 'TWEAK ACTIVE ✓' : 'TWEAK OFF'}
                   </button>
                 </div>
               </div>
@@ -640,7 +670,7 @@ export default function ValorantOptimizer({
               </div>
 
               <div className="text-[10px] text-slate-500 font-sans leading-relaxed pt-2 border-t border-white/5">
-                💡 <strong>Recommended:</strong> Disable G-Sync + Enable FreeSync + <span className="text-amber-400">Uncapped FPS</span>. FreeSync handles tear prevention while uncapped FPS minimizes latency and prevents stutters from adaptive sync range limits.
+                💡 <strong>Recommended:</strong> Disable G-Sync + Enable Adaptive Sync/FRTC + <span className="text-amber-400">Uncapped FPS</span>. Adaptive Sync handles tear prevention while uncapped FPS minimizes latency and prevents stutters from sync range limits.
               </div>
             </div>
           </div>

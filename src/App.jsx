@@ -356,6 +356,8 @@ export default function App() {
   const [timerResActive, setTimerResActive] = useState(false);
   const [hyperthreadingDisabled, setHyperthreadingDisabled] = useState(false);
   const [backgroundAppsToEcores, setBackgroundAppsToEcores] = useState(false);
+  const [valorantPath, setValorantPath] = useState('C:\\Riot Games\\VALORANT\\live\\ShooterGame\\Binaries\\Win64\\VALORANT-Win64-Shipping.exe');
+  const [valorantPathDetected, setValorantPathDetected] = useState(false);
 
   // GPU Info State
   const [gpuInfo, setGpuInfo] = useState({ vendor: 'unknown', name: 'Detecting...', driverVersion: '', vramMB: 0, temperature: 0, utilization: 0, refreshRate: 0 });
@@ -403,7 +405,7 @@ export default function App() {
       setRegistryStates(prev => ({ ...prev, hagsEnabled: hagsRes.output.trim() === '2' }));
 
       // MSI
-      const msiRes = await window.api.runSystemCommand("powershell -Command \"(Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\*\\*\\Device Parameters\\Interrupt Management\\MessageSignaledInterruptProperties' -Name 'MSISupported' -ErrorAction SilentlyContinue).MSISupported -contains 1\"");
+      const msiRes = await window.api.runSystemCommand("powershell -Command \"$gpu = Get-CimInstance Win32_VideoController | Select-Object -First 1; if ($gpu -and $gpu.PNPDeviceID -match 'PCI\\\\(?<device>.+)') { $p = 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\' + $Matches['device'] + '\\Device Parameters\\Interrupt Management\\MessageSignaledInterruptProperties'; if (Test-Path $p) { (Get-ItemProperty -Path $p -Name 'MSISupported' -ErrorAction SilentlyContinue).MSISupported -eq 1 } else { $false } } else { $false }\"");
       setMsiEnabled(msiRes.output.trim().toLowerCase() === 'true');
 
       // HPET
@@ -656,7 +658,7 @@ export default function App() {
         success = res.success;
       }
       else if (tweakName === 'disableFullscreenOpt') {
-        const exePath = 'C:\\Riot Games\\VALORANT\\live\\ShooterGame\\Binaries\\Win64\\VALORANT-Win64-Shipping.exe';
+        const exePath = valorantPath;
         if (active) {
           cmd = `powershell -Command "New-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers' -Name '${exePath}' -Value '~ DISABLEDXMAXIMIZEDWINDOWEDMODE' -PropertyType String -Force -ErrorAction SilentlyContinue"`;
         } else {
@@ -867,6 +869,43 @@ export default function App() {
     } catch (e) { console.error('GPU detection failed:', e); }
   };
 
+  const detectValorantPath = async () => {
+    if (!window.api || !window.api.detectValorantPath) {
+      setValorantPathDetected(false);
+      return;
+    }
+    try {
+      const res = await window.api.detectValorantPath();
+      if (res.success) {
+        setValorantPath(res.path);
+        setValorantPathDetected(res.exists);
+      }
+    } catch (e) {
+      console.error('Valorant path detection failed:', e);
+    }
+  };
+
+  const browseValorantPath = async () => {
+    if (!window.api || !window.api.selectValorantPath) return;
+    try {
+      const res = await window.api.selectValorantPath();
+      if (res.success && res.path) {
+        setValorantPath(res.path);
+        setValorantPathDetected(true);
+        addToast('VALORANT path configured successfully!', 'success');
+        try {
+          const saved = localStorage.getItem('neuroptimize-settings');
+          const currentSettings = saved ? JSON.parse(saved) : {};
+          currentSettings.valorantPath = res.path;
+          currentSettings.valorantPathDetected = true;
+          localStorage.setItem('neuroptimize-settings', JSON.stringify(currentSettings));
+        } catch (err) {}
+      }
+    } catch (e) {
+      console.error('Valorant folder browse failed:', e);
+    }
+  };
+
   const checkVbsStatus = async () => {
     if (!window.api) { setVbsEnabled(false); return; }
     try {
@@ -973,6 +1012,14 @@ export default function App() {
     }
   };
 
+  const checkPowerThrottling = async () => {
+    if (!window.api) { setPowerThrottlingDisabled(false); return; }
+    try {
+      const res = await window.api.runSystemCommand("powershell -Command \"(Get-ItemProperty -Path 'HKLM:\\SYSTEM\\Control\\Power\\PowerThrottling' -Name 'PowerThrottlingOff' -ErrorAction SilentlyContinue).PowerThrottlingOff\"");
+      setPowerThrottlingDisabled(res.success && parseInt(res.output.trim(), 10) === 1);
+    } catch (e) { setPowerThrottlingDisabled(false); }
+  };
+
   const checkGlobalFso = async () => {
     if (!window.api) { setGlobalFsoDisabled(true); return; }
     try {
@@ -1004,7 +1051,8 @@ export default function App() {
   const togglePowerThrottling = async (disable) => {
     if (isElectron) {
       const val = disable ? 1 : 0;
-      await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling' -Name 'PowerThrottlingOff' -Value ${val} -Type DWord -ErrorAction SilentlyContinue"`);
+      const cmd = `powershell -Command "if (-not (Test-Path 'HKLM:\\SYSTEM\\Control\\Power\\PowerThrottling')) { New-Item -Path 'HKLM:\\SYSTEM\\Control\\Power\\PowerThrottling' -Force | Out-Null }; Set-ItemProperty -Path 'HKLM:\\SYSTEM\\Control\\Power\\PowerThrottling' -Name 'PowerThrottlingOff' -Value ${val} -Type DWord -Force"`;
+      await window.api.runSystemCommand(cmd);
       setPowerThrottlingDisabled(disable);
       addLog(`Power Throttling ${disable ? 'disabled' : 'enabled'}.`);
     } else {
@@ -1016,10 +1064,10 @@ export default function App() {
   const toggleMsiMode = async (enable) => {
     if (isElectron) {
       const val = enable ? 1 : 0;
-      const cmd = `powershell -Command "$paths = Get-ChildItem -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI' -Recurse | Where-Object { $_.PSChildName -eq 'MessageSignaledInterruptProperties' }; foreach ($p in $paths) { Set-ItemProperty -Path $p.PSPath -Name 'MSISupported' -Value ${val} -Type DWord -ErrorAction SilentlyContinue }"`;
+      const cmd = `powershell -Command "$gpu = Get-CimInstance Win32_VideoController | Select-Object -First 1; if ($gpu -and $gpu.PNPDeviceID -match 'PCI\\\\(?<device>.+)') { $p = 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\' + $Matches['device'] + '\\Device Parameters'; $intMgmt = Join-Path $p 'Interrupt Management'; if (-not (Test-Path $intMgmt)) { New-Item -Path $intMgmt -Force | Out-Null }; $msi = Join-Path $intMgmt 'MessageSignaledInterruptProperties'; if (-not (Test-Path $msi)) { New-Item -Path $msi -Force | Out-Null }; Set-ItemProperty -Path $msi -Name 'MSISupported' -Value ${val} -Type DWord -Force | Out-Null }; $net = Get-CimInstance Win32_NetworkAdapter | Where-Object { $_.NetConnectionStatus -eq 2 } | Select-Object -First 1; if ($net -and $net.PNPDeviceID -match 'PCI\\\\(?<device>.+)') { $p = 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\' + $Matches['device'] + '\\Device Parameters'; $intMgmt = Join-Path $p 'Interrupt Management'; if (-not (Test-Path $intMgmt)) { New-Item -Path $intMgmt -Force | Out-Null }; $msi = Join-Path $intMgmt 'MessageSignaledInterruptProperties'; if (-not (Test-Path $msi)) { New-Item -Path $msi -Force | Out-Null }; Set-ItemProperty -Path $msi -Name 'MSISupported' -Value ${val} -Type DWord -Force | Out-Null }"`;
       await window.api.runSystemCommand(cmd);
       setMsiEnabled(enable);
-      addLog(`MSI Mode ${enable ? 'forced ON' : 'reverted to default'}. Requires restart.`);
+      addLog(`MSI Mode ${enable ? 'forced ON (GPU + Network)' : 'reverted to default'}. Requires restart.`);
     } else {
       setMsiEnabled(enable);
       addLog(`[SIMULATION] MSI Mode ${enable ? 'forced ON' : 'reverted'}.`);
@@ -1043,8 +1091,8 @@ export default function App() {
   const toggleHpet = async (disable) => {
     if (isElectron) {
       const cmd = disable
-        ? `powershell -Command "bcdedit /deletevalue useplatformclock; bcdedit /set tscsyncpolicy Enhanced"`
-        : `powershell -Command "bcdedit /set useplatformclock true; bcdedit /deletevalue tscsyncpolicy"`;
+        ? `powershell -Command "bcdedit /set useplatformclock false -ErrorAction SilentlyContinue; bcdedit /deletevalue useplatformclock -ErrorAction SilentlyContinue; bcdedit /set tscsyncpolicy Enhanced -ErrorAction SilentlyContinue"`
+        : `powershell -Command "bcdedit /set useplatformclock true -ErrorAction SilentlyContinue; bcdedit /deletevalue tscsyncpolicy -ErrorAction SilentlyContinue"`;
       await window.api.runSystemCommand(cmd);
       setHpetDisabled(disable);
       addLog(`HPET ${disable ? 'disabled (TSC enabled)' : 'enabled'}. Requires restart.`);
@@ -1234,7 +1282,7 @@ export default function App() {
         theme, autoBoostActive, deepOptimizeActive, optimizationOptions,
         purgeAppsChecklist, hyperthreadingDisabled, backgroundAppsToEcores,
         scrolls, monitorRefreshRate, frameLimitMode, maxBoostActive,
-        gsyncDisabled, freesyncEnabled, advancedMode
+        gsyncDisabled, freesyncEnabled, advancedMode, valorantPath, valorantPathDetected
       };
       localStorage.setItem('neuroptimize-settings', JSON.stringify(settings));
     } catch (e) { console.error('Settings save failed:', e); }
@@ -1258,6 +1306,8 @@ export default function App() {
       if (s.gsyncDisabled !== undefined) setGsyncDisabled(s.gsyncDisabled);
       if (s.freesyncEnabled !== undefined) setFreesyncEnabled(s.freesyncEnabled);
       if (s.advancedMode !== undefined) setAdvancedMode(s.advancedMode);
+      if (s.valorantPath) setValorantPath(s.valorantPath);
+      if (s.valorantPathDetected !== undefined) setValorantPathDetected(s.valorantPathDetected);
       if (s.maxBoostActive !== undefined) {
         setMaxBoostActive(s.maxBoostActive);
         if (s.maxBoostActive) {
@@ -1334,15 +1384,25 @@ export default function App() {
       setValorantLogs(prev => [...prev, `[Mock Timer] Timer resolution set to ${active ? '0.5ms' : 'Default'}`]);
       return;
     }
-    if (active) {
-      const startCmd = "powershell -Command \"Start-Process powershell -WindowStyle Hidden -ArgumentList '-Command', '`\"$code = \\'\\'\\`[DllImport(\\\\\\\"ntdll.dll\\\\\\\")] public static extern int NtSetTimerResolution(uint DesiredResolution, bool SetResolution, out uint CurrentResolution);\\'\\'; Add-Type -MemberDefinition $code -Name \\'\\'Timer\\'\\' -Namespace \\'\\'Win32\\'\\' -PassThru; [uint]$current = 0; while ($true) { \\`[Win32.Timer\\`]::NtSetTimerResolution(5000, $true, [ref]$current); Start-Sleep -Seconds 2 }`\"'\"";
-      await window.api.runSystemCommand(startCmd);
-      setValorantLogs(prev => [...prev, `[Timer Resolution] Locked to 0.5 ms. Sub-millisecond latency active.`]);
-      playPresetSound('success');
+    if (window.api.setTimerResolution) {
+      const res = await window.api.setTimerResolution(active);
+      if (res.success) {
+        setValorantLogs(prev => [...prev, active ? `[Timer Resolution] Locked to 0.5 ms. Sub-millisecond latency active.` : `[Timer Resolution] Released lock. Reverted to default.`]);
+        if (active) playPresetSound('success');
+      } else {
+        setValorantLogs(prev => [...prev, `[Timer Resolution Error] Failed: ${res.error}`]);
+      }
     } else {
-      const stopCmd = "powershell -Command \"Get-CimInstance Win32_Process -Filter \\\"Name = 'powershell.exe'\\\" | Where-Object { $_.CommandLine -like '*NtSetTimerResolution*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }\"";
-      await window.api.runSystemCommand(stopCmd);
-      setValorantLogs(prev => [...prev, `[Timer Resolution] Released lock. Reverted to default.`]);
+      if (active) {
+        const startCmd = "powershell -Command \"Start-Process powershell -WindowStyle Hidden -ArgumentList '-Command', '`\"$code = \\'\\'\\`[DllImport(\\\\\\\"ntdll.dll\\\\\")] public static extern int NtSetTimerResolution(uint DesiredResolution, bool SetResolution, out uint CurrentResolution);\\'\\'; Add-Type -MemberDefinition $code -Name \\'\\'Timer\\'\\' -Namespace \\'\\'Win32\\'\\' -PassThru; [uint]$current = 0; while ($true) { \\`[Win32.Timer\\`]::NtSetTimerResolution(5000, $true, [ref]$current); Start-Sleep -Seconds 2 }`\"'\"";
+        await window.api.runSystemCommand(startCmd);
+        setValorantLogs(prev => [...prev, `[Timer Resolution] Locked to 0.5 ms. Sub-millisecond latency active.`]);
+        playPresetSound('success');
+      } else {
+        const stopCmd = "powershell -Command \"Get-CimInstance Win32_Process -Filter \\\"Name = 'powershell.exe'\\\" | Where-Object { $_.CommandLine -like '*NtSetTimerResolution*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }\"";
+        await window.api.runSystemCommand(stopCmd);
+        setValorantLogs(prev => [...prev, `[Timer Resolution] Released lock. Reverted to default.`]);
+      }
     }
   };
 
@@ -1370,6 +1430,7 @@ export default function App() {
           setIsAdmin(false);
         }
       }
+      await detectValorantPath();
       await checkRegistryStates();
       await loadValorantConfigs();
       await checkLatencyRegistryStates();
@@ -1551,8 +1612,10 @@ export default function App() {
     // 4. Memory standby flush
     if (optimizationOptions.clearStandby) {
       setValorantLogs(prev => [...prev, '[Deep Optimizer] Flushing RAM page standby list caches...']);
-      if (isElectron) {
-        await window.api.runSystemCommand("powershell -Command \"[System.GC]::Collect(); [System.GC]::WaitForPendingFinalizers()\"");
+      if (isElectron && window.api && window.api.purgeStandbyMemory) {
+        await window.api.purgeStandbyMemory();
+      } else if (isElectron) {
+        await window.api.runSystemCommand("powershell -Command \"[System.GC]::Collect()\"");
       }
       setValorantLogs(prev => [...prev, '[Deep Optimizer] RAM standby cache flushed.']);
     }
@@ -1844,6 +1907,14 @@ export default function App() {
     setTimeout(() => setShakeScreen(false), 500);
 
     setTimeout(async () => {
+      if (spellName === 'ramRejuvenation' && isElectron && window.api && window.api.purgeStandbyMemory) {
+        const res = await window.api.purgeStandbyMemory();
+        setSpellStatusText(res.success ? `SUCCESS: RAM CACHE CLEANSED.` : `FAILED: \${res.error}`);
+        playPresetSound('success');
+        setTimeout(() => setCastingSpell(null), 1500);
+        return;
+      }
+
       let cmd = '';
       if (spellName === 'dnsCleanse') cmd = 'ipconfig /flushdns';
       else if (spellName === 'ramRejuvenation') cmd = 'powershell -Command "[System.GC]::Collect()"';
@@ -2317,6 +2388,9 @@ export default function App() {
           <Tabs.Content value="valorant" className="outline-none">
             <ValorantOptimizer 
               isElectron={isElectron}
+              valorantPath={valorantPath}
+              valorantPathDetected={valorantPathDetected}
+              browseValorantPath={browseValorantPath}
               valorantRunning={valorantRunning}
               setValorantRunning={setValorantRunning}
               autoBoostActive={autoBoostActive}

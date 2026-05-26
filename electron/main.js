@@ -6,6 +6,104 @@ const fs = require('fs');
 
 let mainWindow;
 const isDev = !app.isPackaged;
+let timerResolutionProcess = null;
+
+function writePowerShellHelpers() {
+  try {
+    const userDataPath = app.getPath('userData');
+    if (!fs.existsSync(userDataPath)) {
+      fs.mkdirSync(userDataPath, { recursive: true });
+    }
+    
+    // Write memory cleaner script
+    const memoryCleanerContent = `$code = @"
+using System;
+using System.Runtime.InteropServices;
+public class MemoryCleaner {
+    [DllImport("ntdll.dll")]
+    public static extern int NtSetSystemInformation(int classId, IntPtr info, int length);
+    [DllImport("psapi.dll")]
+    public static extern bool EmptyWorkingSet(IntPtr hProcess);
+    [DllImport("kernel32.dll", SetLastError = true)]
+    public static extern bool OpenProcessToken(IntPtr ProcessHandle, uint DesiredAccess, out IntPtr TokenHandle);
+    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+    public static extern bool LookupPrivilegeValue(string lpSystemName, string lpName, out long lpLuid);
+    [DllImport("advapi32.dll", SetLastError = true)]
+    public static extern bool AdjustTokenPrivileges(IntPtr TokenHandle, bool DisableAll, ref TOKEN_PRIVILEGES NewState, int BufferLength, IntPtr PrevState, IntPtr ReturnLength);
+    [StructLayout(LayoutKind.Sequential, Pack = 1)]
+    public struct TOKEN_PRIVILEGES {
+        public int PrivilegeCount;
+        public long Luid;
+        public int Attributes;
+    }
+    private static bool EnablePrivilege(string privilege) {
+        IntPtr hToken;
+        long luid;
+        if (!OpenProcessToken(System.Diagnostics.Process.GetCurrentProcess().Handle, 0x0020 | 0x0008, out hToken)) return false;
+        if (!LookupPrivilegeValue(null, privilege, out luid)) return false;
+        TOKEN_PRIVILEGES tp = new TOKEN_PRIVILEGES();
+        tp.PrivilegeCount = 1;
+        tp.Luid = luid;
+        tp.Attributes = 0x00000002;
+        return AdjustTokenPrivileges(hToken, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero);
+    }
+    public static bool FlushStandby() {
+        EnablePrivilege("SeProfileSingleProcessPrivilege");
+        IntPtr pCmd = Marshal.AllocHGlobal(sizeof(int));
+        Marshal.WriteInt32(pCmd, 4); // Command 4 = Purge standby list
+        int res = NtSetSystemInformation(80, pCmd, sizeof(int));
+        Marshal.FreeHGlobal(pCmd);
+        return res == 0;
+    }
+}
+"@
+try {
+    Add-Type -TypeDefinition $code -ErrorAction SilentlyContinue
+} catch {}
+
+Get-Process | Where-Object { $_.Id -gt 4 -and $_.ProcessName -notlike "System" -and $_.ProcessName -notlike "Idle" } | ForEach-Object {
+    try {
+        $handle = $_.Handle
+        if ($handle -ne 0) {
+            [MemoryCleaner]::EmptyWorkingSet($handle) | Out-Null
+        }
+    } catch {}
+}
+
+$res = [MemoryCleaner]::FlushStandby()
+echo "Standby Flush Success: $res"
+`;
+    fs.writeFileSync(path.join(userDataPath, 'purge_standby.ps1'), memoryCleanerContent, 'utf8');
+
+    // Write timer resolution script
+    const timerResContent = `param (
+    [int]$ParentPid
+)
+$code = @"
+using System;
+using System.Runtime.InteropServices;
+public class Timer {
+    [DllImport("ntdll.dll")]
+    public static extern int NtSetTimerResolution(uint DesiredResolution, bool SetResolution, out uint CurrentResolution);
+}
+"@
+try {
+    Add-Type -TypeDefinition $code -ErrorAction SilentlyContinue
+} catch {}
+
+[uint]$current = 0;
+$parentProcess = Get-Process -Id $ParentPid -ErrorAction SilentlyContinue;
+while ($parentProcess) {
+    [Timer]::NtSetTimerResolution(5000, $true, [ref]$current) | Out-Null
+    Start-Sleep -Seconds 2
+    $parentProcess = Get-Process -Id $ParentPid -ErrorAction SilentlyContinue
+}
+`;
+    fs.writeFileSync(path.join(userDataPath, 'timer_resolution.ps1'), timerResContent, 'utf8');
+  } catch (err) {
+    console.error('Failed to write PowerShell helpers:', err);
+  }
+}
 
 function createWindow() {
   mainWindow = new BrowserWindow({
@@ -54,6 +152,7 @@ ipcMain.handle('set-titlebar-overlay', async (event, { color, symbolColor }) => 
 });
 
 app.whenReady().then(() => {
+  writePowerShellHelpers();
   createWindow();
 
   app.on('activate', function () {
@@ -67,8 +166,12 @@ app.on('window-all-closed', function () {
 
 app.on('before-quit', () => {
   try {
+    if (timerResolutionProcess) {
+      timerResolutionProcess.kill('SIGTERM');
+      timerResolutionProcess = null;
+    }
     console.log('Cleaning up orphaned powershell timer resolution processes...');
-    execSync('powershell -Command "Get-CimInstance Win32_Process -Filter \\"Name = \'powershell.exe\'\\" | Where-Object { $_.CommandLine -like \'*NtSetTimerResolution*\' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"');
+    execSync('powershell -Command "Get-CimInstance Win32_Process -Filter \\"Name = \'powershell.exe\'\\" | Where-Object { $_.CommandLine -like \'*NtSetTimerResolution*\' -or $_.CommandLine -like \'*timer_resolution.ps1*\' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"');
   } catch (err) {
     console.error('Cleanup error:', err.message);
   }
@@ -237,6 +340,11 @@ function saveGameUserSettings(filePath, newSettings) {
   if (!fs.existsSync(filePath)) {
     throw new Error('Config file does not exist: ' + filePath);
   }
+  const stats = fs.statSync(filePath);
+  const isReadOnly = (stats.mode & 0o222) === 0;
+  if (isReadOnly) {
+    fs.chmodSync(filePath, 0o666); // make writeable
+  }
   const content = fs.readFileSync(filePath, 'utf8');
   const lines = content.split(/\r?\n/);
   const updatedLines = [];
@@ -390,6 +498,9 @@ function saveGameUserSettings(filePath, newSettings) {
   }
 
   fs.writeFileSync(filePath, updatedLines.join('\r\n'), 'utf8');
+  if (isReadOnly) {
+    fs.chmodSync(filePath, 0o444); // restore read-only attribute
+  }
 }
 
 // IPC Handler: Fetch all VALORANT account graphics configs on the system
@@ -424,15 +535,98 @@ ipcMain.handle('save-valorant-config', async (event, { filePath, settings }) => 
   }
 });
 
-// IPC Handler: Check if VALORANT executable exists at default paths
+// IPC Handler: Check if VALORANT executable exists at detected or default paths
 ipcMain.handle('detect-valorant-path', async () => {
   const defaultPath = 'C:\\Riot Games\\VALORANT\\live\\ShooterGame\\Binaries\\Win64\\VALORANT-Win64-Shipping.exe';
   try {
-    const exists = fs.existsSync(defaultPath);
-    return { success: true, exists, path: defaultPath };
+    const programData = process.env.ProgramData || 'C:\\ProgramData';
+    const metadataPath = path.join(programData, 'Riot Games', 'Metadata', 'valorant.live', 'valorant.live.installs.json');
+    
+    let detectedPath = defaultPath;
+    let exists = false;
+    
+    if (fs.existsSync(metadataPath)) {
+      try {
+        const content = fs.readFileSync(metadataPath, 'utf8');
+        const data = JSON.parse(content);
+        if (data && data.product_install_full_path) {
+          const gameDir = data.product_install_full_path.replace(/\//g, '\\');
+          const exePath = path.join(gameDir, 'ShooterGame', 'Binaries', 'Win64', 'VALORANT-Win64-Shipping.exe');
+          if (fs.existsSync(exePath)) {
+            detectedPath = exePath;
+            exists = true;
+          }
+        }
+      } catch (err) {
+        console.error('Error parsing Valorant installs metadata:', err);
+      }
+    }
+    
+    if (!exists && fs.existsSync(defaultPath)) {
+      exists = true;
+    }
+    
+    return { success: true, exists, path: detectedPath };
   } catch (err) {
     return { success: false, exists: false, error: err.message };
   }
+});
+
+// IPC Handler: Set Sub-millisecond Timer Resolution
+ipcMain.handle('set-timer-resolution', async (event, active) => {
+  if (active) {
+    if (timerResolutionProcess) return { success: true };
+    try {
+      const userDataPath = app.getPath('userData');
+      const scriptPath = path.join(userDataPath, 'timer_resolution.ps1');
+      const { spawn } = require('child_process');
+      timerResolutionProcess = spawn('powershell', [
+        '-NoProfile',
+        '-NonInteractive',
+        '-ExecutionPolicy', 'Bypass',
+        '-File', scriptPath,
+        '-ParentPid', process.pid
+      ], {
+        detached: true,
+        stdio: 'ignore',
+        windowsHide: true
+      });
+      timerResolutionProcess.unref();
+      return { success: true };
+    } catch (err) {
+      return { success: false, error: err.message };
+    }
+  } else {
+    if (timerResolutionProcess) {
+      try {
+        timerResolutionProcess.kill('SIGTERM');
+      } catch (e) {}
+      timerResolutionProcess = null;
+    }
+    try {
+      execSync('powershell -Command "Get-CimInstance Win32_Process -Filter \\"Name = \'powershell.exe\'\\" | Where-Object { $_.CommandLine -like \'*timer_resolution.ps1*\' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue }"');
+    } catch (err) {}
+    return { success: true };
+  }
+});
+
+// IPC Handler: Standby memory and working set purge
+ipcMain.handle('purge-standby-memory', async () => {
+  return new Promise((resolve) => {
+    try {
+      const userDataPath = app.getPath('userData');
+      const scriptPath = path.join(userDataPath, 'purge_standby.ps1');
+      exec(`powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${scriptPath}"`, (error, stdout, stderr) => {
+        if (error) {
+          resolve({ success: false, error: error.message, output: stderr });
+        } else {
+          resolve({ success: true, output: stdout.trim() });
+        }
+      });
+    } catch (err) {
+      resolve({ success: false, error: err.message });
+    }
+  });
 });
 
 // IPC Handler: GPU Detection
@@ -538,4 +732,24 @@ function backupRegistryValue(keyPath, valueName) {
 
 ipcMain.handle('backup-registry', async (event, { keyPath, valueName }) => {
   return backupRegistryValue(keyPath, valueName);
+});
+
+// IPC Handler: Show file open dialog for VALORANT.exe
+ipcMain.handle('select-valorant-path', async () => {
+  try {
+    const { dialog } = require('electron');
+    const res = await dialog.showOpenDialog(mainWindow, {
+      title: 'Select VALORANT Executable',
+      properties: ['openFile'],
+      filters: [
+        { name: 'Executables', extensions: ['exe'] }
+      ]
+    });
+    if (!res.canceled && res.filePaths.length > 0) {
+      return { success: true, path: res.filePaths[0] };
+    }
+    return { success: false };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 });
