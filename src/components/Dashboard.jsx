@@ -201,13 +201,13 @@ export default function Dashboard({
               </div>
 
               {/* Console log */}
-              <div className={`border rounded-lg p-3 font-mono text-[10px] h-[108px] flex flex-col justify-between overflow-hidden relative ${
+              <div className={`border rounded-lg p-3 font-mono text-[10px] h-[108px] flex flex-col justify-between overflow-hidden relative select-text ${
                 isLight ? 'bg-slate-50 border-slate-200 text-slate-800' : 'bg-slate-950/80 border-blue-500/10 text-slate-200'
               }`}>
                 <span className={`absolute top-1 right-2 text-[9px] uppercase font-bold tracking-wider select-none ${activeStyle.textSub}`}>
                   Core Daemon
                 </span>
-                <div className="overflow-y-auto space-y-1 flex-1 pr-1 leading-tight max-h-[84px]" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>
+                <div className="overflow-y-auto space-y-1 flex-1 pr-1 leading-tight max-h-[84px] select-text" ref={(el) => { if (el) el.scrollTop = el.scrollHeight; }}>
                   {maxBoostLogs.length === 0 ? (
                     <span className={`block ${isLight ? 'text-slate-400' : 'text-slate-500'}`}>Console idle. Overdrive on standby.</span>
                   ) : (

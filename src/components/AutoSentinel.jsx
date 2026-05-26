@@ -362,9 +362,9 @@ export default function AutoSentinel({
 
       {/* Automation Trigger Logs */}
       <div className={`p-4 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} font-mono text-xs shrink-0 flex flex-col md:flex-row gap-4 h-[120px]`}>
-        <div className="flex-1 flex flex-col">
+        <div className="flex-1 flex flex-col select-text">
           <span className="text-xs text-slate-500 font-bold tracking-widest block mb-2 uppercase">AUTOMATION SYSTEM LOGS</span>
-          <div className="overflow-y-auto flex-1 text-slate-400 space-y-1 max-h-[60px] pr-2">
+          <div className="overflow-y-auto flex-1 text-slate-400 space-y-1 max-h-[60px] pr-2 select-text">
             {automationLogs.length === 0 ? (
               <span className="italic text-slate-600 text-xs">Waiting for sentinel trigger events...</span>
             ) : (

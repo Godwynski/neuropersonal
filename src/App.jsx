@@ -15,7 +15,6 @@ import Toast from './components/Toast';
 import Explorer from './components/Explorer';
 import TweakDeck from './components/TweakDeck';
 import OneClickOptimize from './components/OneClickOptimize';
-import BottomConsole from './components/BottomConsole';
 
 // Dynamic Cyberpunk Theme Style Schemas
 const themeStyles = {
@@ -2541,13 +2540,6 @@ export default function App() {
           </Tabs.Content>
 
         </main>
-        
-        {/* Bottom Console Panel */}
-        <BottomConsole 
-          logs={systemLogs} 
-          onClear={() => setSystemLogs([])} 
-          theme={activeStyle} 
-        />
       </div>
     </Tabs.Root>
     </div>
