@@ -32,3 +32,17 @@
 .titlebar-no-drag {
   -webkit-app-region: no-drag;
 }
+
+/* Cybernetic SVG and scanner animations */
+@keyframes dash {
+  to {
+    stroke-dashoffset: -40;
+  }
+}
+
+@keyframes shimmer {
+  to {
+    transform: translateX(350px);
+  }
+}
+
