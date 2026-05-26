@@ -1,11 +1,11 @@
 {
-  "name": "nexus-os-commander",
+  "name": "neuroptimize",
   "version": "1.0.0",
   "description": "System command and utility dashboard for Windows",
   "main": "electron/main.js",
   "scripts": {
     "start": "electron .",
-    "dev": "concurrently \"vite\" \"wait-on http://127.0.0.1:5173 && electron .\"",
+    "dev": "concurrently -k \"vite\" \"wait-on http://127.0.0.1:5173 && electron .\"",
     "build": "vite build",
     "preview": "vite preview"
   },

@@ -9,10 +9,11 @@ import Sidebar from './components/Sidebar';
 import Dashboard from './components/Dashboard';
 import SynthDrawer from './components/SynthDrawer';
 import ValorantOptimizer from './components/ValorantOptimizer';
-import TweakDeck from './components/TweakDeck';
-import CommandPanel from './components/CommandPanel';
-import Explorer from './components/Explorer';
 import AutoSentinel from './components/AutoSentinel';
+import CommandPanel from './components/CommandPanel';
+import Toast from './components/Toast';
+import Explorer from './components/Explorer';
+import TweakDeck from './components/TweakDeck';
 
 // Dynamic Cyberpunk Theme Style Schemas
 const themeStyles = {
@@ -190,7 +191,7 @@ export default function App() {
   // Command Console & Netrunner Radar Map
   const [cmdInput, setCmdInput] = useState('');
   const [terminalLogs, setTerminalLogs] = useState([
-    'Nexus Sentinel Cyber Deck Active...',
+    'NeurOptimize Cyber Deck Active...',
     'Real-time network security scanning modules enabled.'
   ]);
   const [executing, setExecuting] = useState(false);
@@ -241,15 +242,801 @@ export default function App() {
     onedrive: true
   });
   const [isAdmin, setIsAdmin] = useState(false);
+  const [valorantConfigs, setValorantConfigs] = useState([]);
+  const [selectedConfig, setSelectedConfig] = useState(null);
+  const [registryStates, setRegistryStates] = useState({
+    hagsEnabled: false,
+    gameDvrDisabled: false,
+    priorityOptimized: false
+  });
+  const [latencyTweaks, setLatencyTweaks] = useState({
+    disableMouseAccel: false,
+    disableUsbSuspend: false,
+    disableCoreParking: false,
+    disableDynamicTick: false,
+    disableFullscreenOpt: false
+  });
+  const [monitorRefreshRate, setMonitorRefreshRate] = useState(240);
+  const [frameLimitMode, setFrameLimitMode] = useState('uncapped');
+  const [vanguardHealth, setVanguardHealth] = useState({
+    secureBoot: 'unknown',
+    tpm2: 'unknown',
+    vpnActive: false,
+    gpuDriverWarning: false,
+    csmDisabled: 'unknown',
+    flaggedDrivers: []
+  });
+  const [bgServices, setBgServices] = useState({
+    SysMain: true,
+    Spooler: true,
+    DiagTrack: true,
+    XblAuthManager: true,
+    WSearch: true
+  });
+  const [activeDns, setActiveDns] = useState('default');
+  const [timerResActive, setTimerResActive] = useState(false);
+  const [hyperthreadingDisabled, setHyperthreadingDisabled] = useState(false);
+  const [backgroundAppsToEcores, setBackgroundAppsToEcores] = useState(false);
+
+  // GPU Info State
+  const [gpuInfo, setGpuInfo] = useState({ vendor: 'unknown', name: 'Detecting...', driverVersion: '', vramMB: 0, temperature: 0, utilization: 0, refreshRate: 0 });
+
+  // New FPS Optimization States
+  const [vbsEnabled, setVbsEnabled] = useState(false);
+  const [nagleDisabled, setNagleDisabled] = useState(false);
+  const [memCompressionEnabled, setMemCompressionEnabled] = useState(true);
+  const [nicPowerSavingDisabled, setNicPowerSavingDisabled] = useState(false);
+  const [globalFsoDisabled, setGlobalFsoDisabled] = useState(false);
+  const [powerThrottlingDisabled, setPowerThrottlingDisabled] = useState(false);
+
+  // Toast Notifications
+  const [toasts, setToasts] = useState([]);
+
+
+
+  const checkRegistryStates = async () => {
+    if (!window.api) {
+      setRegistryStates({
+        hagsEnabled: true,
+        gameDvrDisabled: true,
+        priorityOptimized: true
+      });
+      return;
+    }
+    try {
+      const hagsRes = await window.api.runSystemCommand("powershell -Command \"(Get-ItemProperty -Path 'HKLM:\\System\\CurrentControlSet\\Control\\GraphicsDrivers' -Name 'HwSchMode' -ErrorAction SilentlyContinue).HwSchMode\"");
+      const hagsVal = hagsRes.success ? parseInt(hagsRes.output.trim(), 10) : 1;
+
+      const dvrRes = await window.api.runSystemCommand("powershell -Command \"(Get-ItemProperty -Path 'HKCU:\\System\\GameConfigStore' -Name 'GameDVR_Enabled' -ErrorAction SilentlyContinue).GameDVR_Enabled\"");
+      const dvrVal = dvrRes.success ? parseInt(dvrRes.output.trim(), 10) : 1;
+
+      const respRes = await window.api.runSystemCommand("powershell -Command \"(Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile' -Name 'SystemResponsiveness' -ErrorAction SilentlyContinue).SystemResponsiveness\"");
+      const respVal = respRes.success ? parseInt(respRes.output.trim(), 10) : 14;
+
+      setRegistryStates({
+        hagsEnabled: hagsVal === 2,
+        gameDvrDisabled: dvrVal === 0,
+        priorityOptimized: respVal === 0
+      });
+    } catch (e) {
+      console.error('Error checking registry states:', e);
+    }
+  };
+
+  const toggleHags = async (enable) => {
+    const val = enable ? 2 : 1;
+    setValorantLogs(prev => [...prev, `[Registry Tweak] ${enable ? 'Enabling' : 'Disabling'} HAGS...`]);
+    if (window.api) {
+      const res = await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKLM:\\System\\CurrentControlSet\\Control\\GraphicsDrivers' -Name 'HwSchMode' -Value ${val} -ErrorAction Stop"`);
+      if (res.success) {
+        setValorantLogs(prev => [...prev, `[Registry Tweak] HAGS ${enable ? 'Enabled' : 'Disabled'}. Reboot required.`]);
+        setRegistryStates(prev => ({ ...prev, hagsEnabled: enable }));
+      } else {
+        setValorantLogs(prev => [...prev, `[Registry Tweak Error] HAGS failed: ${res.error || 'Access Denied (Admin Required)'}`]);
+      }
+    } else {
+      setValorantLogs(prev => [...prev, `[Mock Registry] HAGS set to ${val}.`]);
+      setRegistryStates(prev => ({ ...prev, hagsEnabled: enable }));
+    }
+  };
+
+  const toggleGameDvr = async (disable) => {
+    const val = disable ? 0 : 1;
+    setValorantLogs(prev => [...prev, `[Registry Tweak] ${disable ? 'Disabling' : 'Enabling'} Game DVR / App Capture...`]);
+    if (window.api) {
+      const res1 = await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKCU:\\System\\GameConfigStore' -Name 'GameDVR_Enabled' -Value ${val} -ErrorAction SilentlyContinue"`);
+      const res2 = await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKCU:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\GameDVR' -Name 'AppCaptureEnabled' -Value ${val} -ErrorAction SilentlyContinue"`);
+      if (res1.success || res2.success) {
+        setValorantLogs(prev => [...prev, `[Registry Tweak] Game DVR ${disable ? 'Disabled' : 'Enabled'}.`]);
+        setRegistryStates(prev => ({ ...prev, gameDvrDisabled: disable }));
+      } else {
+        setValorantLogs(prev => [...prev, `[Registry Tweak Error] Game DVR modification failed.`]);
+      }
+    } else {
+      setValorantLogs(prev => [...prev, `[Mock Registry] Game DVR set to ${val}.`]);
+      setRegistryStates(prev => ({ ...prev, gameDvrDisabled: disable }));
+    }
+  };
+
+  const togglePriorityOptimized = async (enable) => {
+    setValorantLogs(prev => [...prev, `[Registry Tweak] ${enable ? 'Optimizing' : 'Reverting'} Multimedia & GPU Priority...`]);
+    if (window.api) {
+      if (enable) {
+        const r1 = await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile' -Name 'SystemResponsiveness' -Value 0 -ErrorAction Stop"`);
+        const r2 = await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile' -Name 'NetworkThrottlingIndex' -Value 4294967295 -ErrorAction Stop"`);
+        const r3 = await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games' -Name 'GPU Priority' -Value 8 -ErrorAction Stop"`);
+        const r4 = await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games' -Name 'Priority' -Value 6 -ErrorAction Stop"`);
+        const r5 = await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games' -Name 'Scheduling Category' -Value 'High' -ErrorAction Stop"`);
+        if (r1.success && r2.success) {
+          setValorantLogs(prev => [...prev, `[Registry Tweak] Multimedia scheduling & GPU Priority optimized.`]);
+          setRegistryStates(prev => ({ ...prev, priorityOptimized: true }));
+        } else {
+          setValorantLogs(prev => [...prev, `[Registry Tweak Error] Priority tweaks failed: ${r1.error || 'Access Denied (Admin Required)'}`]);
+        }
+      } else {
+        const r1 = await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile' -Name 'SystemResponsiveness' -Value 20 -ErrorAction SilentlyContinue"`);
+        const r2 = await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile' -Name 'NetworkThrottlingIndex' -Value 10 -ErrorAction SilentlyContinue"`);
+        const r3 = await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games' -Name 'GPU Priority' -Value 8 -ErrorAction SilentlyContinue"`);
+        const r4 = await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games' -Name 'Priority' -Value 2 -ErrorAction SilentlyContinue"`);
+        const r5 = await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile\\Tasks\\Games' -Name 'Scheduling Category' -Value 'Medium' -ErrorAction SilentlyContinue"`);
+        setValorantLogs(prev => [...prev, `[Registry Tweak] Multimedia scheduling priority reverted to default.`]);
+        setRegistryStates(prev => ({ ...prev, priorityOptimized: false }));
+      }
+    } else {
+      setValorantLogs(prev => [...prev, `[Mock Registry] Priority optimization set to ${enable}.`]);
+      setRegistryStates(prev => ({ ...prev, priorityOptimized: enable }));
+    }
+  };
+
+  const loadValorantConfigs = async () => {
+    if (window.api) {
+      try {
+        const res = await window.api.getValorantConfigs();
+        if (res.success && res.configs.length > 0) {
+          setValorantConfigs(res.configs);
+          setSelectedConfig(res.configs[0]);
+        }
+      } catch (e) {
+        console.error('Error loading Valorant configs:', e);
+      }
+    } else {
+      const mockConfigs = [
+        {
+          filePath: 'C:\\Users\\kuyag\\AppData\\Local\\VALORANT\\Saved\\Config\\8cfcfa2c-5678-5e83-9b2f-7c15ba829281-ap\\Windows\\GameUserSettings.ini',
+          accountId: '8cfcfa2c-5678-5e83-9b2f-7c15ba829281-ap',
+          resolutionQuality: 100,
+          textureQuality: 3,
+          shadowQuality: 3,
+          effectsQuality: 3,
+          antiAliasingQuality: 3,
+          postProcessQuality: 3,
+          viewDistanceQuality: 3,
+          shadingQuality: 3,
+          vsync: true
+        },
+        {
+          filePath: 'C:\\Users\\kuyag\\AppData\\Local\\VALORANT\\Saved\\Config\\DefaultUser\\Windows\\GameUserSettings.ini',
+          accountId: 'DefaultUser',
+          resolutionQuality: 85,
+          textureQuality: 1,
+          shadowQuality: 0,
+          effectsQuality: 0,
+          antiAliasingQuality: 0,
+          postProcessQuality: 1,
+          viewDistanceQuality: 2,
+          shadingQuality: 1,
+          vsync: false
+        }
+      ];
+      setValorantConfigs(mockConfigs);
+      setSelectedConfig(mockConfigs[0]);
+    }
+  };
+
+  const saveValorantConfig = async (updatedSettings) => {
+    if (!selectedConfig) return;
+    const newConfig = { ...selectedConfig, ...updatedSettings };
+    
+    setValorantConfigs(prev => prev.map(c => c.filePath === selectedConfig.filePath ? newConfig : c));
+    setSelectedConfig(newConfig);
+
+    if (window.api) {
+      try {
+        const res = await window.api.saveValorantConfig(selectedConfig.filePath, updatedSettings);
+        if (res.success) {
+          setValorantLogs(prev => [...prev, `[Config Tuner] Graphics settings successfully updated for account ${selectedConfig.accountId}`]);
+          playPresetSound('success');
+        } else {
+          setValorantLogs(prev => [...prev, `[Config Tuner Error] Failed to save config: ${res.error}`]);
+        }
+      } catch (e) {
+        setValorantLogs(prev => [...prev, `[Config Tuner Error] Failed to write config: ${e.message}`]);
+      }
+    } else {
+      setValorantLogs(prev => [...prev, `[Mock Config Tuner] Updated mock settings for ${selectedConfig.accountId}`]);
+      playPresetSound('success');
+    }
+  };
+
+  const applyTournamentPreset = async () => {
+    if (!selectedConfig) return;
+    const preset = {
+      resolutionQuality: 100,
+      textureQuality: 0,
+      shadowQuality: 0,
+      effectsQuality: 0,
+      antiAliasingQuality: 0,
+      postProcessQuality: 0,
+      viewDistanceQuality: 0,
+      shadingQuality: 0,
+      vsync: false
+    };
+    await saveValorantConfig(preset);
+    setValorantLogs(prev => [...prev, `[Config Tuner] Applied 'Tournament Preset' (ultra-low latency graphics settings)`]);
+  };
+
+  const checkLatencyRegistryStates = async () => {
+    if (!window.api) {
+      setLatencyTweaks({
+        disableMouseAccel: true,
+        disableUsbSuspend: true,
+        disableCoreParking: true,
+        disableDynamicTick: true,
+        disableFullscreenOpt: true
+      });
+      return;
+    }
+    try {
+      const mouseRes = await window.api.runSystemCommand("powershell -Command \"(Get-ItemProperty -Path 'HKCU:\\Control Panel\\Mouse' -Name 'MouseSpeed' -ErrorAction SilentlyContinue).MouseSpeed\"");
+      const mouseVal = mouseRes.success ? mouseRes.output.trim() : '1';
+
+      const usbRes = await window.api.runSystemCommand("powershell -Command \"powercfg /q SCHEME_CURRENT SUB_NONE 48e7d7a8-f3f5-4c07-b395-e7401140034a | Select-String -Pattern 'Current AC Power Setting Index'\"");
+      const usbVal = usbRes.success && usbRes.output.includes('0x00000000');
+
+      const parkingRes = await window.api.runSystemCommand("powershell -Command \"powercfg /q SCHEME_CURRENT sub_processor CPMinCores | Select-String -Pattern 'Current AC Power Setting Index'\"");
+      const parkingVal = parkingRes.success && parkingRes.output.includes('0x00000064');
+
+      const tickRes = await window.api.runSystemCommand("powershell -Command \"bcdedit /enum {current} | Select-String -Pattern 'disabledynamictick'\"");
+      const tickVal = tickRes.success && tickRes.output.toLowerCase().includes('yes');
+
+      const layersRes = await window.api.runSystemCommand("powershell -Command \"(Get-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers' -ErrorAction SilentlyContinue).GetEnumerator() | Where-Object { $_.Name -like '*VALORANT-Win64-Shipping.exe' } | Select-Object -ExpandProperty Value\"");
+      const layersVal = layersRes.success && layersRes.output.toLowerCase().includes('disabledxmaximizedwindowedmode');
+
+      setLatencyTweaks({
+        disableMouseAccel: mouseVal === '0',
+        disableUsbSuspend: usbVal,
+        disableCoreParking: parkingVal,
+        disableDynamicTick: tickVal,
+        disableFullscreenOpt: layersVal
+      });
+    } catch (e) {
+      console.error('Error checking latency registry states:', e);
+    }
+  };
+
+  const toggleLatencyTweak = async (tweakName, active) => {
+    setValorantLogs(prev => [...prev, `[Latency Deck] Toggling ${tweakName} to ${active ? 'Enabled' : 'Disabled'}...`]);
+    if (!window.api) {
+      setLatencyTweaks(prev => ({ ...prev, [tweakName]: active }));
+      setValorantLogs(prev => [...prev, `[Mock Latency Deck] ${tweakName} set to ${active}.`]);
+      return;
+    }
+    let success = false;
+    let cmd = '';
+    try {
+      if (tweakName === 'disableMouseAccel') {
+        const speed = active ? '0' : '1';
+        const t1 = active ? '0' : '6';
+        const t2 = active ? '0' : '10';
+        cmd = `powershell -Command "Set-ItemProperty -Path 'HKCU:\\Control Panel\\Mouse' -Name 'MouseSpeed' -Value '${speed}'; Set-ItemProperty -Path 'HKCU:\\Control Panel\\Mouse' -Name 'MouseThreshold1' -Value '${t1}'; Set-ItemProperty -Path 'HKCU:\\Control Panel\\Mouse' -Name 'MouseThreshold2' -Value '${t2}'"`;
+        const res = await window.api.runSystemCommand(cmd);
+        success = res.success;
+      } 
+      else if (tweakName === 'disableUsbSuspend') {
+        const val = active ? '0' : '1';
+        cmd = `powershell -Command "powercfg /SETACVALUEINDEX SCHEME_CURRENT SUB_NONE 48e7d7a8-f3f5-4c07-b395-e7401140034a ${val}; powercfg /reassociate"`;
+        const res = await window.api.runSystemCommand(cmd);
+        success = res.success;
+      }
+      else if (tweakName === 'disableCoreParking') {
+        const val = active ? '100' : '5';
+        cmd = `powershell -Command "powercfg -setacvalueindex scheme_current sub_processor CPMinCores ${val}; powercfg /reassociate"`;
+        const res = await window.api.runSystemCommand(cmd);
+        success = res.success;
+      }
+      else if (tweakName === 'disableDynamicTick') {
+        cmd = active 
+          ? 'powershell -Command "bcdedit /set disabledynamictick yes"' 
+          : 'powershell -Command "bcdedit /deletevalue disabledynamictick"';
+        const res = await window.api.runSystemCommand(cmd);
+        success = res.success;
+      }
+      else if (tweakName === 'disableFullscreenOpt') {
+        const exePath = 'C:\\Riot Games\\VALORANT\\live\\ShooterGame\\Binaries\\Win64\\VALORANT-Win64-Shipping.exe';
+        if (active) {
+          cmd = `powershell -Command "New-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers' -Name '${exePath}' -Value '~ DISABLEDXMAXIMIZEDWINDOWEDMODE' -PropertyType String -Force -ErrorAction SilentlyContinue"`;
+        } else {
+          cmd = `powershell -Command "Remove-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers' -Name '${exePath}' -ErrorAction SilentlyContinue"`;
+        }
+        const res = await window.api.runSystemCommand(cmd);
+        success = res.success;
+      }
+
+      if (success) {
+        setLatencyTweaks(prev => ({ ...prev, [tweakName]: active }));
+        setValorantLogs(prev => [...prev, `[Latency Deck] Success: ${tweakName} configured successfully.`]);
+        playPresetSound('success');
+      } else {
+        setValorantLogs(prev => [...prev, `[Latency Deck Error] Failed to update ${tweakName}. Admin permissions likely required.`]);
+      }
+    } catch (e) {
+      setValorantLogs(prev => [...prev, `[Latency Deck Error] Exception during ${tweakName}: ${e.message}`]);
+    }
+  };
+
+  const applyFrameLimitSettings = async (mode, hz) => {
+    setFrameLimitMode(mode);
+    setMonitorRefreshRate(hz);
+    if (!selectedConfig) return;
+
+    let limit = 0;
+    if (mode === 'vrr') {
+      limit = Math.max(30, hz - 3);
+    } else if (mode === 'uncapped') {
+      limit = 0;
+    } else {
+      return;
+    }
+
+    const updatedSettings = {
+      resolutionQuality: selectedConfig.resolutionQuality,
+      textureQuality: selectedConfig.textureQuality,
+      shadowQuality: selectedConfig.shadowQuality,
+      effectsQuality: selectedConfig.effectsQuality,
+      antiAliasingQuality: selectedConfig.antiAliasingQuality,
+      postProcessQuality: selectedConfig.postProcessQuality,
+      viewDistanceQuality: selectedConfig.viewDistanceQuality,
+      shadingQuality: selectedConfig.shadingQuality,
+      vsync: selectedConfig.vsync,
+      frameRateLimit: limit
+    };
+
+    await saveValorantConfig(updatedSettings);
+  };
+
+  const checkVanguardHealth = async () => {
+    if (!window.api) {
+      setVanguardHealth({
+        secureBoot: 'enabled',
+        tpm2: 'active',
+        vpnActive: false,
+        gpuDriverWarning: false,
+        csmDisabled: 'disabled',
+        flaggedDrivers: []
+      });
+      return;
+    }
+    try {
+      const sbRes = await window.api.runSystemCommand("powershell -Command \"Confirm-SecureBootUEFI\"");
+      const sbVal = sbRes.success && sbRes.output.trim().toLowerCase() === 'true' ? 'enabled' : 'disabled';
+
+      const tpmRes = await window.api.runSystemCommand("powershell -Command \"(Get-Tpm).TpmPresent\"");
+      const tpmVal = tpmRes.success && tpmRes.output.trim().toLowerCase() === 'true' ? 'active' : 'inactive';
+
+      const vpnRes = await window.api.runSystemCommand("powershell -Command \"Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Select-Object -ExpandProperty InterfaceDescription\"");
+      let vpnActive = false;
+      if (vpnRes.success) {
+        const desc = vpnRes.output.toLowerCase();
+        if (desc.includes('tap') || desc.includes('tun') || desc.includes('vpn') || desc.includes('wireguard') || desc.includes('openvpn')) {
+          vpnActive = true;
+        }
+      }
+
+      const gpuRes = await window.api.runSystemCommand("powershell -Command \"Get-WmiObject Win32_VideoController | Select-Object -ExpandProperty DriverVersion\"");
+      const gpuWarning = gpuRes.success && gpuRes.output.trim() === '32.0.31007.1017';
+
+      // Scan for Vanguard-incompatible/blocked drivers
+      const drvFilesRes = await window.api.runSystemCommand("powershell -Command \"(Get-Item -Path C:\\Windows\\System32\\drivers\\inpoutx64.sys,C:\\Windows\\System32\\drivers\\gdrv.sys,C:\\Windows\\System32\\drivers\\RTCore64.sys,C:\\Windows\\System32\\drivers\\alsysio64.sys,C:\\Windows\\System32\\drivers\\cpuz154_x64.sys,C:\\Windows\\System32\\drivers\\dbk64.sys -ErrorAction SilentlyContinue).Name\"");
+      const drvServRes = await window.api.runSystemCommand("powershell -Command \"(Get-Service -Name inpoutx64,gdrv,RTCore64,dbk64,alsysio64,cpuz154 -ErrorAction SilentlyContinue).Name\"");
+
+      const flagged = [];
+      if (drvFilesRes.success && drvFilesRes.output.trim()) {
+        drvFilesRes.output.split(/\r?\n/).forEach(line => {
+          const l = line.trim();
+          if (l) flagged.push(l);
+        });
+      }
+      if (drvServRes.success && drvServRes.output.trim()) {
+        drvServRes.output.split(/\r?\n/).forEach(line => {
+          const l = line.trim();
+          if (l && !flagged.includes(l)) flagged.push(l);
+        });
+      }
+
+      setVanguardHealth({
+        secureBoot: sbVal,
+        tpm2: tpmVal,
+        vpnActive,
+        gpuDriverWarning: gpuWarning,
+        csmDisabled: sbVal === 'enabled' ? 'disabled' : 'unknown',
+        flaggedDrivers: flagged
+      });
+    } catch (e) {
+      console.error('Error checking Vanguard health:', e);
+    }
+  };
+
+  const checkBgServices = async () => {
+    if (!window.api) {
+      setBgServices({
+        SysMain: true,
+        Spooler: true,
+        DiagTrack: true,
+        XblAuthManager: true,
+        WSearch: true
+      });
+      return;
+    }
+    try {
+      const services = ['SysMain', 'Spooler', 'DiagTrack', 'XblAuthManager', 'WSearch'];
+      const states = {};
+      for (const s of services) {
+        const res = await window.api.runSystemCommand(`powershell -Command "(Get-Service -Name '${s}' -ErrorAction SilentlyContinue).Status"`);
+        states[s] = res.success && res.output.trim().toLowerCase() === 'running';
+      }
+      setBgServices(states);
+    } catch (e) {
+      console.error('Error checking background services:', e);
+    }
+  };
+
+  const addToast = (message, type = 'info') => {
+    const id = Date.now() + Math.random();
+    setToasts(prev => [...prev, { id, message, type }]);
+  };
+  const removeToast = (id) => {
+    setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
+  const detectGpu = async () => {
+    if (!window.api || !window.api.detectGpu) {
+      setGpuInfo({ vendor: 'nvidia', name: 'NVIDIA GeForce RTX 4070 (Mock)', driverVersion: '560.94', vramMB: 12288, temperature: 52, utilization: 15, refreshRate: 165 });
+      return;
+    }
+    try {
+      const res = await window.api.detectGpu();
+      if (res.success) setGpuInfo(res.gpu);
+    } catch (e) { console.error('GPU detection failed:', e); }
+  };
+
+  const checkVbsStatus = async () => {
+    if (!window.api) { setVbsEnabled(false); return; }
+    try {
+      const res = await window.api.runSystemCommand("powershell -Command \"(Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard' -Name 'EnableVirtualizationBasedSecurity' -ErrorAction SilentlyContinue).EnableVirtualizationBasedSecurity\"");
+      setVbsEnabled(res.success && parseInt(res.output.trim(), 10) === 1);
+    } catch (e) { console.error('VBS check failed:', e); }
+  };
+
+  const toggleVbs = async (enable) => {
+    const val = enable ? 1 : 0;
+    setValorantLogs(prev => [...prev, `[Registry Tweak] ${enable ? 'Enabling' : 'Disabling'} VBS/HVCI (Memory Integrity)...`]);
+    if (window.api) {
+      if (window.api.backupRegistry) await window.api.backupRegistry('HKLM:\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard', 'EnableVirtualizationBasedSecurity');
+      const res = await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard' -Name 'EnableVirtualizationBasedSecurity' -Value ${val} -Type DWord -ErrorAction Stop"`);
+      if (res.success) {
+        setValorantLogs(prev => [...prev, `[Registry Tweak] VBS ${enable ? 'Enabled' : 'Disabled'}. Reboot required for changes to take effect.`]);
+        setVbsEnabled(enable);
+        addToast(`VBS/HVCI ${enable ? 'enabled' : 'disabled'}. Reboot required.`, 'success');
+      } else {
+        setValorantLogs(prev => [...prev, `[Registry Tweak Error] VBS failed: ${res.error || 'Access Denied (Admin Required)'}`]);
+        addToast('VBS toggle failed - Admin required', 'error');
+      }
+    } else {
+      setVbsEnabled(enable);
+      addToast(`[Mock] VBS ${enable ? 'enabled' : 'disabled'}`, 'info');
+    }
+  };
+
+  const checkNagleStatus = async () => {
+    if (!window.api) { setNagleDisabled(true); return; }
+    try {
+      const res = await window.api.runSystemCommand("powershell -Command \"$path = 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces'; $interfaces = Get-ChildItem $path; $disabled = $false; foreach ($i in $interfaces) { $val = (Get-ItemProperty -Path $i.PSPath -Name 'TcpNoDelay' -ErrorAction SilentlyContinue).TcpNoDelay; if ($val -eq 1) { $disabled = $true; break } }; $disabled\"");
+      setNagleDisabled(res.success && res.output.trim().toLowerCase() === 'true');
+    } catch (e) { console.error('Nagle check failed:', e); }
+  };
+
+  const toggleNagle = async (disable) => {
+    setValorantLogs(prev => [...prev, `[Network Tweak] ${disable ? 'Disabling' : 'Re-enabling'} Nagle\\'s Algorithm (TCP buffering)...`]);
+    if (window.api) {
+      const val = disable ? 1 : 0;
+      const cmd = `powershell -Command "$path = 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces'; Get-ChildItem $path | ForEach-Object { Set-ItemProperty -Path $_.PSPath -Name 'TcpNoDelay' -Value ${val} -Type DWord -ErrorAction SilentlyContinue; Set-ItemProperty -Path $_.PSPath -Name 'TcpAckFrequency' -Value ${val} -Type DWord -ErrorAction SilentlyContinue }"`;
+      const res = await window.api.runSystemCommand(cmd);
+      if (res.success) {
+        setNagleDisabled(disable);
+        setValorantLogs(prev => [...prev, `[Network Tweak] Nagle\\'s Algorithm ${disable ? 'disabled' : 'enabled'} on all interfaces.`]);
+        addToast(`Nagle's Algorithm ${disable ? 'disabled' : 'enabled'}`, 'success');
+      } else {
+        setValorantLogs(prev => [...prev, `[Network Error] Nagle toggle failed: ${res.error || 'Admin Required'}`]);
+        addToast('Nagle toggle failed - Admin required', 'error');
+      }
+    } else {
+      setNagleDisabled(disable);
+      addToast(`[Mock] Nagle ${disable ? 'disabled' : 'enabled'}`, 'info');
+    }
+  };
+
+  const checkMemCompression = async () => {
+    if (!window.api) { setMemCompressionEnabled(true); return; }
+    try {
+      const res = await window.api.runSystemCommand("powershell -Command \"(Get-MMAgent).MemoryCompression\"");
+      setMemCompressionEnabled(res.success && res.output.trim().toLowerCase() === 'true');
+    } catch (e) { console.error('Memory compression check failed:', e); }
+  };
+
+  const toggleMemCompression = async (enable) => {
+    setValorantLogs(prev => [...prev, `[Memory Tweak] ${enable ? 'Enabling' : 'Disabling'} Windows Memory Compression...`]);
+    if (window.api) {
+      const cmd = enable ? 'powershell -Command "Enable-MMAgent -MemoryCompression"' : 'powershell -Command "Disable-MMAgent -MemoryCompression"';
+      const res = await window.api.runSystemCommand(cmd);
+      if (res.success) {
+        setMemCompressionEnabled(enable);
+        setValorantLogs(prev => [...prev, `[Memory Tweak] Memory Compression ${enable ? 'enabled' : 'disabled'}.`]);
+        addToast(`Memory Compression ${enable ? 'enabled' : 'disabled'}`, 'success');
+      } else {
+        setValorantLogs(prev => [...prev, `[Memory Error] ${res.error || 'Admin Required'}`]);
+        addToast('Memory compression toggle failed', 'error');
+      }
+    } else {
+      setMemCompressionEnabled(enable);
+      addToast(`[Mock] Memory Compression ${enable ? 'enabled' : 'disabled'}`, 'info');
+    }
+  };
+
+  const checkNicPower = async () => {
+    if (!window.api) { setNicPowerSavingDisabled(true); return; }
+    try {
+      const res = await window.api.runSystemCommand("powershell -Command \"Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Get-NetAdapterAdvancedProperty -DisplayName 'Energy Efficient Ethernet' -ErrorAction SilentlyContinue | Select-Object -ExpandProperty DisplayValue\"");
+      setNicPowerSavingDisabled(res.success && res.output.trim().toLowerCase() === 'disabled');
+    } catch (e) { setNicPowerSavingDisabled(false); }
+  };
+
+  const toggleNicPower = async (disablePowerSaving) => {
+    setValorantLogs(prev => [...prev, `[Network Tweak] ${disablePowerSaving ? 'Disabling' : 'Enabling'} NIC power saving...`]);
+    if (window.api) {
+      const val = disablePowerSaving ? 'Disabled' : 'Enabled';
+      const cmd = `powershell -Command "Get-NetAdapter | Where-Object {$_.Status -eq 'Up'} | Set-NetAdapterAdvancedProperty -DisplayName 'Energy Efficient Ethernet' -DisplayValue '${val}' -ErrorAction SilentlyContinue"`;
+      const res = await window.api.runSystemCommand(cmd);
+      setNicPowerSavingDisabled(disablePowerSaving);
+      setValorantLogs(prev => [...prev, `[Network Tweak] NIC Energy Efficient Ethernet ${val}.`]);
+      addToast(`NIC power saving ${val.toLowerCase()}`, 'success');
+    } else {
+      setNicPowerSavingDisabled(disablePowerSaving);
+      addToast(`[Mock] NIC power saving ${disablePowerSaving ? 'disabled' : 'enabled'}`, 'info');
+    }
+  };
+
+  const checkGlobalFso = async () => {
+    if (!window.api) { setGlobalFsoDisabled(true); return; }
+    try {
+      const res = await window.api.runSystemCommand("powershell -Command \"(Get-ItemProperty -Path 'HKCU:\\System\\GameConfigStore' -Name 'GameDVR_FSEBehaviorMode' -ErrorAction SilentlyContinue).GameDVR_FSEBehaviorMode\"");
+      setGlobalFsoDisabled(res.success && parseInt(res.output.trim(), 10) === 2);
+    } catch (e) { setGlobalFsoDisabled(false); }
+  };
+
+  const toggleGlobalFso = async (disable) => {
+    setValorantLogs(prev => [...prev, `[Registry Tweak] ${disable ? 'Disabling' : 'Enabling'} Global Fullscreen Optimizations...`]);
+    if (window.api) {
+      if (disable) {
+        await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKCU:\\System\\GameConfigStore' -Name 'GameDVR_FSEBehaviorMode' -Value 2 -Type DWord"`);
+        await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKCU:\\System\\GameConfigStore' -Name 'GameDVR_HonorUserFSEBehaviorMode' -Value 1 -Type DWord"`);
+        await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKCU:\\System\\GameConfigStore' -Name 'GameDVR_FSEBehavior' -Value 2 -Type DWord"`);
+      } else {
+        await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKCU:\\System\\GameConfigStore' -Name 'GameDVR_FSEBehaviorMode' -Value 0 -Type DWord"`);
+        await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKCU:\\System\\GameConfigStore' -Name 'GameDVR_HonorUserFSEBehaviorMode' -Value 0 -Type DWord"`);
+      }
+      setGlobalFsoDisabled(disable);
+      setValorantLogs(prev => [...prev, `[Registry Tweak] Global FSO ${disable ? 'disabled' : 'enabled'}.`]);
+      addToast(`Global Fullscreen Optimizations ${disable ? 'disabled' : 'enabled'}`, 'success');
+    } else {
+      setGlobalFsoDisabled(disable);
+      addToast(`[Mock] Global FSO ${disable ? 'disabled' : 'enabled'}`, 'info');
+    }
+  };
+
+  const checkPowerThrottling = async () => {
+    if (!window.api) { setPowerThrottlingDisabled(true); return; }
+    try {
+      const res = await window.api.runSystemCommand("powershell -Command \"(Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power' -Name 'PowerThrottlingOff' -ErrorAction SilentlyContinue).PowerThrottlingOff\"");
+      setPowerThrottlingDisabled(res.success && parseInt(res.output.trim(), 10) === 1);
+    } catch (e) { setPowerThrottlingDisabled(false); }
+  };
+
+  const togglePowerThrottling = async (disable) => {
+    setValorantLogs(prev => [...prev, `[Registry Tweak] ${disable ? 'Disabling' : 'Enabling'} Power Throttling...`]);
+    if (window.api) {
+      const val = disable ? 1 : 0;
+      const res = await window.api.runSystemCommand(`powershell -Command "New-Item -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power' -Force -ErrorAction SilentlyContinue | Out-Null; Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power' -Name 'PowerThrottlingOff' -Value ${val} -Type DWord -ErrorAction Stop"`);
+      if (res.success) {
+        setPowerThrottlingDisabled(disable);
+        addToast(`Power Throttling ${disable ? 'disabled' : 'enabled'}`, 'success');
+      } else {
+        addToast('Power Throttling toggle failed - Admin required', 'error');
+      }
+    } else {
+      setPowerThrottlingDisabled(disable);
+    }
+  };
+
+  const cleanAllShaderCaches = async () => {
+    setValorantLogs(prev => [...prev, '[Cache Scrubber] Cleaning ALL shader caches (NVIDIA + AMD + DirectX)...']);
+    if (window.api) {
+      await window.api.runSystemCommand("powershell -Command \"Remove-Item -Path '$env:LOCALAPPDATA\\NVIDIA\\DXCache\\*' -Recurse -Force -ErrorAction SilentlyContinue\"");
+      await window.api.runSystemCommand("powershell -Command \"Remove-Item -Path '$env:LOCALAPPDATA\\NVIDIA\\GLCache\\*' -Recurse -Force -ErrorAction SilentlyContinue\"");
+      await window.api.runSystemCommand("powershell -Command \"Remove-Item -Path '$env:LOCALAPPDATA\\AMD\\DxCache\\*' -Recurse -Force -ErrorAction SilentlyContinue\"");
+      await window.api.runSystemCommand("powershell -Command \"Remove-Item -Path '$env:LOCALAPPDATA\\D3DSCache\\*' -Recurse -Force -ErrorAction SilentlyContinue\"");
+    }
+    setValorantLogs(prev => [...prev, '[Cache Scrubber] All shader caches purged (NVIDIA DX/GL, AMD Dx, DirectX D3DS).']);
+    setShaderCacheSize('0.00 Bytes');
+    addToast('All shader caches purged', 'success');
+    playPresetSound('success');
+  };
+
+  const applyOptimizationProfile = async (profileName) => {
+    setValorantLogs(prev => [...prev, `[Profile Engine] Applying '${profileName}' optimization profile...`]);
+    addToast(`Applying ${profileName} profile...`, 'info');
+    
+    if (profileName === 'tournament') {
+      if (selectedConfig) await applyTournamentPreset();
+      if (!registryStates.gameDvrDisabled) await toggleGameDvr(true);
+      if (!registryStates.priorityOptimized) await togglePriorityOptimized(true);
+      if (!globalFsoDisabled) await toggleGlobalFso(true);
+      if (!nagleDisabled) await toggleNagle(true);
+      if (!latencyTweaks.disableMouseAccel) await toggleLatencyTweak('disableMouseAccel', true);
+      if (!timerResActive) await toggleTimerResolution(true);
+      if (activeDns !== 'cloudflare') await changeDns('cloudflare');
+      setValorantLogs(prev => [...prev, '[Profile Engine] Tournament profile applied. Maximum competitive advantage.']);
+      addToast('Tournament profile applied!', 'success');
+    } else if (profileName === 'balanced') {
+      if (!registryStates.gameDvrDisabled) await toggleGameDvr(true);
+      if (activeDns !== 'cloudflare') await changeDns('cloudflare');
+      setValorantLogs(prev => [...prev, '[Profile Engine] Balanced Gaming profile applied.']);
+      addToast('Balanced Gaming profile applied!', 'success');
+    } else if (profileName === 'streaming') {
+      if (!registryStates.gameDvrDisabled) await toggleGameDvr(true);
+      if (!registryStates.priorityOptimized) await togglePriorityOptimized(true);
+      setValorantLogs(prev => [...prev, '[Profile Engine] Streaming profile applied. Visual quality preserved for viewers.']);
+      addToast('Streaming profile applied!', 'success');
+    } else if (profileName === 'revert') {
+      if (registryStates.gameDvrDisabled) await toggleGameDvr(false);
+      if (registryStates.priorityOptimized) await togglePriorityOptimized(false);
+      if (globalFsoDisabled) await toggleGlobalFso(false);
+      if (nagleDisabled) await toggleNagle(false);
+      if (latencyTweaks.disableMouseAccel) await toggleLatencyTweak('disableMouseAccel', false);
+      if (timerResActive) await toggleTimerResolution(false);
+      if (activeDns !== 'default') await changeDns('default');
+      setValorantLogs(prev => [...prev, '[Profile Engine] All optimizations reverted to Windows defaults.']);
+      addToast('All settings reverted to defaults', 'success');
+    }
+    playPresetSound('success');
+  };
+
+  const saveSettingsToStorage = () => {
+    try {
+      const settings = {
+        theme, autoBoostActive, deepOptimizeActive, optimizationOptions,
+        purgeAppsChecklist, hyperthreadingDisabled, backgroundAppsToEcores,
+        scrolls, monitorRefreshRate, frameLimitMode
+      };
+      localStorage.setItem('neuroptimize-settings', JSON.stringify(settings));
+    } catch (e) { console.error('Settings save failed:', e); }
+  };
+
+  const loadSettingsFromStorage = () => {
+    try {
+      const saved = localStorage.getItem('neuroptimize-settings');
+      if (!saved) return;
+      const s = JSON.parse(saved);
+      if (s.theme) setTheme(s.theme);
+      if (s.autoBoostActive !== undefined) setAutoBoostActive(s.autoBoostActive);
+      if (s.deepOptimizeActive !== undefined) setDeepOptimizeActive(s.deepOptimizeActive);
+      if (s.optimizationOptions) setOptimizationOptions(s.optimizationOptions);
+      if (s.purgeAppsChecklist) setPurgeAppsChecklist(s.purgeAppsChecklist);
+      if (s.hyperthreadingDisabled !== undefined) setHyperthreadingDisabled(s.hyperthreadingDisabled);
+      if (s.backgroundAppsToEcores !== undefined) setBackgroundAppsToEcores(s.backgroundAppsToEcores);
+      if (s.scrolls) setScrolls(s.scrolls);
+      if (s.monitorRefreshRate) setMonitorRefreshRate(s.monitorRefreshRate);
+      if (s.frameLimitMode) setFrameLimitMode(s.frameLimitMode);
+    } catch (e) { console.error('Settings load failed:', e); }
+  };
+
+  const toggleBgService = async (serviceName, start) => {
+    setValorantLogs(prev => [...prev, `[Services] ${start ? 'Starting' : 'Stopping'} ${serviceName}...`]);
+    if (!window.api) {
+      setBgServices(prev => ({ ...prev, [serviceName]: start }));
+      return;
+    }
+    const action = start ? 'Start-Service' : 'Stop-Service';
+    const res = await window.api.runSystemCommand(`powershell -Command "${action} -Name '${serviceName}' -Force"`);
+    if (res.success) {
+      setValorantLogs(prev => [...prev, `[Services] Success: ${serviceName} ${start ? 'started' : 'stopped'}.`]);
+      setBgServices(prev => ({ ...prev, [serviceName]: start }));
+      playPresetSound('success');
+    } else {
+      setValorantLogs(prev => [...prev, `[Services Error] Failed to modify ${serviceName}: ${res.error || 'Admin required'}`]);
+    }
+  };
+
+  const changeDns = async (mode) => {
+    setValorantLogs(prev => [...prev, `[DNS Optimizer] Switching DNS to ${mode}...`]);
+    setActiveDns(mode);
+    if (!window.api) {
+      setValorantLogs(prev => [...prev, `[Mock DNS] DNS set to ${mode}`]);
+      return;
+    }
+    try {
+      const intRes = await window.api.runSystemCommand("powershell -Command \"(Get-NetAdapter | Where-Object { $_.Status -eq 'Up' } | Select-Object -First 1).InterfaceIndex\"");
+      const index = intRes.success ? parseInt(intRes.output.trim(), 10) : null;
+      if (!index) {
+        setValorantLogs(prev => [...prev, `[DNS Error] No active network adapter detected.`]);
+        return;
+      }
+      if (mode === 'default') {
+        const resetRes = await window.api.runSystemCommand(`powershell -Command "Set-DnsClientServerAddress -InterfaceIndex ${index} -ResetServerAddresses"`);
+        if (resetRes.success) {
+          setValorantLogs(prev => [...prev, `[DNS Optimizer] Success: DNS reset to ISP default (DHCP).`]);
+          playPresetSound('success');
+        } else {
+          setValorantLogs(prev => [...prev, `[DNS Error] Failed to reset DNS.`]);
+        }
+        return;
+      }
+      let dnsIps = [];
+      if (mode === 'cloudflare') {
+        dnsIps = ["'1.1.1.1'", "'1.0.0.1'"];
+      } else if (mode === 'google') {
+        dnsIps = ["'8.8.8.8'", "'8.8.4.4'"];
+      }
+      const cmd = `powershell -Command "Set-DnsClientServerAddress -InterfaceIndex ${index} -ServerAddresses (${dnsIps.join(',')})"`;
+      const res = await window.api.runSystemCommand(cmd);
+      if (res.success) {
+        setValorantLogs(prev => [...prev, `[DNS Optimizer] Success: DNS set to ${mode} (${dnsIps.join(', ')})`]);
+        playPresetSound('success');
+      } else {
+        setValorantLogs(prev => [...prev, `[DNS Error] Failed to set DNS: ${res.error || 'Admin required'}`]);
+      }
+    } catch (e) {
+      setValorantLogs(prev => [...prev, `[DNS Error] Exception: ${e.message}`]);
+    }
+  };
+
+  const toggleTimerResolution = async (active) => {
+    setValorantLogs(prev => [...prev, `[Timer resolution] Toggling timer resolution to ${active ? '0.5ms' : 'Windows Default'}...`]);
+    setTimerResActive(active);
+    if (!window.api) {
+      setValorantLogs(prev => [...prev, `[Mock Timer] Timer resolution set to ${active ? '0.5ms' : 'Default'}`]);
+      return;
+    }
+    if (active) {
+      const startCmd = "powershell -Command \"Start-Process powershell -WindowStyle Hidden -ArgumentList '-Command', '`\"$code = \\'\\'\\`[DllImport(\\\\\\\"ntdll.dll\\\\\\\")] public static extern int NtSetTimerResolution(uint DesiredResolution, bool SetResolution, out uint CurrentResolution);\\'\\'; Add-Type -MemberDefinition $code -Name \\'\\'Timer\\'\\' -Namespace \\'\\'Win32\\'\\' -PassThru; [uint]$current = 0; while ($true) { \\`[Win32.Timer\\`]::NtSetTimerResolution(5000, $true, [ref]$current); Start-Sleep -Seconds 2 }`\"'\"";
+      await window.api.runSystemCommand(startCmd);
+      setValorantLogs(prev => [...prev, `[Timer Resolution] Locked to 0.5 ms. Sub-millisecond latency active.`]);
+      playPresetSound('success');
+    } else {
+      const stopCmd = "powershell -Command \"Get-CimInstance Win32_Process -Filter \\\"Name = 'powershell.exe'\\\" | Where-Object { $_.CommandLine -like '*NtSetTimerResolution*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force }\"";
+      await window.api.runSystemCommand(stopCmd);
+      setValorantLogs(prev => [...prev, `[Timer Resolution] Released lock. Reverted to default.`]);
+    }
+  };
 
   const terminalEndRef = useRef(null);
   const canvasRef = useRef(null);
 
   const activeStyle = themeStyles[theme] || themeStyles.cobalt;
 
-  // Check Administrator role on load
+  // Check Administrator role, load registry and VALORANT configs on load
   useEffect(() => {
-    const checkAdmin = async () => {
+    loadSettingsFromStorage();
+    const initializeApp = async () => {
       if (window.api) {
         try {
           const res = await window.api.runSystemCommand('net session');
@@ -258,8 +1045,23 @@ export default function App() {
           setIsAdmin(false);
         }
       }
+      await checkRegistryStates();
+      await loadValorantConfigs();
+      await checkLatencyRegistryStates();
+      await checkVanguardHealth();
+      await checkBgServices();
+      await detectGpu();
+      await checkVbsStatus();
+      await checkNagleStatus();
+      await checkMemCompression();
+      await checkNicPower();
+      await checkGlobalFso();
+      await checkPowerThrottling();
     };
-    checkAdmin();
+    initializeApp();
+
+    window.addEventListener('beforeunload', saveSettingsToStorage);
+    return () => window.removeEventListener('beforeunload', saveSettingsToStorage);
   }, []);
 
   // Web Audio Synth Note Generator using ADSR parameters
@@ -429,6 +1231,12 @@ export default function App() {
     setValorantLogs(prev => [...prev, '[Auto-Revert] VALORANT process exited. Restoring system parameters...']);
     setTerminalLogs(prev => [...prev, '\n[Auto-Revert Daemon]: VALORANT exited. Reverting temporary changes.']);
 
+    // Revert Power Plan
+    if (isElectron) {
+      setValorantLogs(prev => [...prev, '[Auto-Revert] Restoring active power scheme to Balanced...']);
+      await window.api.runSystemCommand("powercfg /setactive 381b4222-f694-41f0-9685-ff5bb260df2e");
+    }
+
     // Revert Windows Update
     if (revertQueue.includes('wuauserv')) {
       setValorantLogs(prev => [...prev, '[Auto-Revert] Restoring Windows Update service...']);
@@ -453,7 +1261,7 @@ export default function App() {
     playPresetSound('success');
 
     if (Notification.permission === 'granted') {
-      new Notification("Nexus System Restored", {
+      new Notification("NeurOptimize System Restored", {
         body: "VALORANT closed. Suspending deep optimization, all systems reverted to normal."
       });
     }
@@ -466,21 +1274,42 @@ export default function App() {
     setTerminalLogs(prev => [...prev, '\n[Auto-Boost Daemon]: VALORANT detected active! Deploying gaming priority.']);
     
     if (isElectron) {
+      // Switch Power Plan to High Performance
+      setValorantLogs(prev => [...prev, '[Auto-Daemon] Switching active power scheme to High Performance...']);
+      await window.api.runSystemCommand("powercfg /setactive 8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c");
+
+      // Set Priority High
       await window.api.runSystemCommand(
-        `powershell -Command "Get-Process -Name 'VALORANT-Win64-Shipping' -ErrorAction SilentlyContinue | ForEach-Object { $_.PriorityClass = 'High' }"`
+        `powershell -Command "Get-Process -Name 'VALORANT', 'VALORANT-Win64-Shipping' -ErrorAction SilentlyContinue | ForEach-Object { $_.PriorityClass = 'High' }"`
       );
-    }
-    setValorantLogs(prev => [...prev, '[Auto-Daemon] Process Priority set to HIGH in memory.']);
+      setValorantLogs(prev => [...prev, '[Auto-Daemon] Process Priority set to HIGH in memory for game and launcher threads.']);
 
-    if (isElectron) {
+      // Disable hyperthreading core affinity
+      if (hyperthreadingDisabled) {
+        setValorantLogs(prev => [...prev, '[Auto-Daemon] Disabling hyperthreading affinity for game process...']);
+        await window.api.runSystemCommand(
+          `powershell -Command "$cores = (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors; $mask = 0; for ($i = 0; $i -lt $cores; $i += 2) { $mask = $mask -bor (1 -shl $i) }; Get-Process -Name 'VALORANT-Win64-Shipping' -ErrorAction SilentlyContinue | ForEach-Object { $_.ProcessorAffinity = $mask }"`
+        );
+      }
+
+      // E-cores affinity for background apps
+      if (backgroundAppsToEcores) {
+        setValorantLogs(prev => [...prev, '[Auto-Daemon] Restricting background browsers/launchers to Efficiency cores...']);
+        await window.api.runSystemCommand(
+          `powershell -Command "$cores = (Get-CimInstance Win32_ComputerSystem).NumberOfLogicalProcessors; $mask = 0; for ($i = [Math]::Max(0, $cores - 4); $i -lt $cores; $i++) { $mask = $mask -bor (1 -shl $i) }; Get-Process -Name 'chrome','msedge','discord','spotify' -ErrorAction SilentlyContinue | ForEach-Object { $_.ProcessorAffinity = $mask }"`
+        );
+      }
+
+      // Memory flush
       await window.api.runSystemCommand(`powershell -Command "[System.GC]::Collect()"`);
-    }
-    setValorantLogs(prev => [...prev, '[Auto-Daemon] Cleaned memory working sets.']);
+      setValorantLogs(prev => [...prev, '[Auto-Daemon] Cleaned memory working sets.']);
 
-    if (isElectron) {
+      // DNS flush
       await window.api.runSystemCommand('ipconfig /flushdns');
+      setValorantLogs(prev => [...prev, '[Auto-Daemon] Flushed DNS routing table for minimal ping.']);
+    } else {
+      setValorantLogs(prev => [...prev, '[Mock Auto-Daemon] Simulated priority, affinity and power configurations applied.']);
     }
-    setValorantLogs(prev => [...prev, '[Auto-Daemon] Flushed DNS routing table for minimal ping.']);
 
     // Deep Optimization Trigger
     if (deepOptimizeActive) {
@@ -490,7 +1319,7 @@ export default function App() {
     playPresetSound('success');
     
     if (Notification.permission === 'granted') {
-      new Notification("Nexus Auto-Boost Active", {
+      new Notification("NeurOptimize Auto-Boost Active", {
         body: "VALORANT launch detected! CPU Priority High, RAM & Network optimization completed."
       });
     }
@@ -503,7 +1332,7 @@ export default function App() {
       setStats({
         platform: 'win32',
         arch: 'x64',
-        hostname: 'NEXUS-SUMMONER',
+        hostname: 'NEUROPTIMIZE-SUMMONER',
         cpuModel: 'Intel Core i9-13900K @ 3.00GHz (Virtual Core)',
         cpuCores: 24,
         cpuLoad: 12,
@@ -1031,12 +1860,13 @@ export default function App() {
 
   return (
     <div className={`flex flex-col h-screen select-none ${activeStyle.bg} text-slate-100 font-sans transition-all duration-300 ${shakeScreen ? 'animate-bounce' : ''}`}>
+      <Toast toasts={toasts} removeToast={removeToast} activeStyle={activeStyle} />
       
       {/* Title Header */}
       <header className="titlebar-drag h-[38px] bg-[#05080f] border-b border-blue-500/10 flex items-center px-4 shrink-0 justify-between">
         <div className="flex items-center gap-2">
           <Activity className={`w-4 h-4 ${activeStyle.textAccent} animate-pulse`} />
-          <span className={`text-xs font-bold tracking-widest font-mono ${activeStyle.textPrimary}`}>NEXUS SENTINEL CYBERNETIC DECK</span>
+          <span className={`text-xs font-bold tracking-widest font-mono ${activeStyle.textPrimary}`}>NEUROPTIMIZE CYBERNETIC DECK</span>
         </div>
         
         {/* RPG Credits panel in header */}
@@ -1083,6 +1913,7 @@ export default function App() {
               runningMacro={runningMacro}
               runMacro={runMacro}
               spellStatusText={spellStatusText}
+              gpuInfo={gpuInfo}
             />
 
             <SynthDrawer 
@@ -1128,6 +1959,49 @@ export default function App() {
               triggerValorantAutoRevert={triggerValorantAutoRevert}
               revertQueue={revertQueue}
               isAdmin={isAdmin}
+              valorantConfigs={valorantConfigs}
+              selectedConfig={selectedConfig}
+              setSelectedConfig={setSelectedConfig}
+              saveValorantConfig={saveValorantConfig}
+              applyTournamentPreset={applyTournamentPreset}
+              registryStates={registryStates}
+              toggleHags={toggleHags}
+              toggleGameDvr={toggleGameDvr}
+              togglePriorityOptimized={togglePriorityOptimized}
+              checkRegistryStates={checkRegistryStates}
+              latencyTweaks={latencyTweaks}
+              toggleLatencyTweak={toggleLatencyTweak}
+              monitorRefreshRate={monitorRefreshRate}
+              frameLimitMode={frameLimitMode}
+              applyFrameLimitSettings={applyFrameLimitSettings}
+              vanguardHealth={vanguardHealth}
+              bgServices={bgServices}
+              activeDns={activeDns}
+              timerResActive={timerResActive}
+              hyperthreadingDisabled={hyperthreadingDisabled}
+              setHyperthreadingDisabled={setHyperthreadingDisabled}
+              backgroundAppsToEcores={backgroundAppsToEcores}
+              setBackgroundAppsToEcores={setBackgroundAppsToEcores}
+              checkVanguardHealth={checkVanguardHealth}
+              checkBgServices={checkBgServices}
+              toggleBgService={toggleBgService}
+              changeDns={changeDns}
+              toggleTimerResolution={toggleTimerResolution}
+              gpuInfo={gpuInfo}
+              vbsEnabled={vbsEnabled}
+              toggleVbs={toggleVbs}
+              nagleDisabled={nagleDisabled}
+              toggleNagle={toggleNagle}
+              memCompressionEnabled={memCompressionEnabled}
+              toggleMemCompression={toggleMemCompression}
+              nicPowerSavingDisabled={nicPowerSavingDisabled}
+              toggleNicPower={toggleNicPower}
+              globalFsoDisabled={globalFsoDisabled}
+              toggleGlobalFso={toggleGlobalFso}
+              powerThrottlingDisabled={powerThrottlingDisabled}
+              togglePowerThrottling={togglePowerThrottling}
+              cleanAllShaderCaches={cleanAllShaderCaches}
+              applyOptimizationProfile={applyOptimizationProfile}
             />
           </Tabs.Content>
 

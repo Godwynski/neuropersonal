@@ -30,7 +30,43 @@ export default function ValorantOptimizer({
   setPurgeAppsChecklist,
   triggerValorantAutoRevert,
   revertQueue,
-  isAdmin
+  isAdmin,
+  valorantConfigs,
+  selectedConfig,
+  setSelectedConfig,
+  saveValorantConfig,
+  applyTournamentPreset,
+  registryStates,
+  toggleHags,
+  toggleGameDvr,
+  togglePriorityOptimized,
+  checkRegistryStates,
+  latencyTweaks,
+  toggleLatencyTweak,
+  monitorRefreshRate,
+  frameLimitMode,
+  applyFrameLimitSettings,
+  vanguardHealth,
+  bgServices,
+  activeDns,
+  timerResActive,
+  hyperthreadingDisabled,
+  setHyperthreadingDisabled,
+  backgroundAppsToEcores,
+  setBackgroundAppsToEcores,
+  checkVanguardHealth,
+  checkBgServices,
+  toggleBgService,
+  changeDns,
+  toggleTimerResolution,
+  vbsEnabled, toggleVbs,
+  nagleDisabled, toggleNagle,
+  memCompressionEnabled, toggleMemCompression,
+  nicPowerSavingDisabled, toggleNicPower,
+  globalFsoDisabled, toggleGlobalFso,
+  powerThrottlingDisabled, togglePowerThrottling,
+  cleanAllShaderCaches,
+  applyOptimizationProfile
 }) {
   return (
     <div className="space-y-6 outline-none animate-in fade-in duration-300">
@@ -67,7 +103,7 @@ export default function ValorantOptimizer({
         <div className="space-y-1 max-w-xl">
           <span className="text-xs font-bold text-slate-200 block">⚡ Allow Background Auto-Boosting Daemon</span>
           <p className="text-xs text-slate-400 font-sans leading-relaxed">
-            When enabled, Nexus Sentinel polls background processes. The second Valorant launches, it automatically sets the game to HIGH scheduling priority, collects memory junk, and flushes network ports.
+            When enabled, NeurOptimize polls background processes. The second Valorant launches, it automatically sets the game to HIGH scheduling priority, collects memory junk, and flushes network ports.
           </p>
         </div>
         <button 
@@ -205,10 +241,866 @@ export default function ValorantOptimizer({
         )}
       </div>
 
+      {/* CLIENT & GPU OPTIMIZATION DECK */}
+      <div className={`p-6 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} space-y-6`}>
+        {!isAdmin && (
+          <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 p-3 rounded-lg flex items-start gap-2.5 font-sans text-xs">
+            <span className="text-sm">⚠️</span>
+            <div className="space-y-0.5 leading-relaxed">
+              <strong>Administrator Elevation Recommended:</strong> Modifying system registry entries (Hardware GPU Scheduling and CPU Priorities) requires NeurOptimize to be run with Administrator privileges. Otherwise, these toggles will fail to apply.
+            </div>
+          </div>
+        )}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-blue-500/10 pb-4">
+          <div className="space-y-1">
+            <h3 className="text-xs font-mono font-bold tracking-widest text-slate-200 uppercase flex items-center gap-2">
+              <Monitor className="w-4 h-4 text-cyan-400" /> CLIENT & GPU OPTIMIZATION DECK
+            </h3>
+            <p className="text-xs text-slate-400 font-sans">
+              Scan accounts, customize Unreal engine graphic parameters in config files, and toggle Windows registry boosts for GPU scheduling & game latency.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 font-mono text-xs">
+          
+          {/* Section 1: Graphics Settings Tuner */}
+          <div className="space-y-4">
+            <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">
+              1. VALORANT Graphic Settings Tuner
+            </span>
+            
+            {valorantConfigs.length === 0 ? (
+              <div className="text-slate-500 italic font-sans py-4">
+                No VALORANT configurations detected on disk. Play VALORANT once to generate settings files, or connect your account.
+              </div>
+            ) : (
+              <div className="space-y-4">
+                {/* Account selector */}
+                <div className="flex flex-col gap-1">
+                  <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Active Account Settings File</label>
+                  <select
+                    value={selectedConfig ? selectedConfig.filePath : ''}
+                    onChange={(e) => {
+                      const cfg = valorantConfigs.find(c => c.filePath === e.target.value);
+                      if (cfg) setSelectedConfig(cfg);
+                    }}
+                    className="bg-[#05080e] border border-white/10 rounded-lg p-2 text-slate-300 focus:outline-none focus:border-cyan-500 transition text-[11px] cursor-pointer"
+                  >
+                    {valorantConfigs.map((cfg) => (
+                      <option key={cfg.filePath} value={cfg.filePath}>
+                        {cfg.accountId.slice(0, 18)}... (Windows)
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                {selectedConfig && (
+                  <div className="space-y-3 bg-slate-950/60 p-4 rounded-lg border border-white/5 animate-in fade-in duration-300">
+                    
+                    {/* VSync toggle */}
+                    <div className="flex justify-between items-center">
+                      <span className="text-slate-300 font-sans font-bold">Enable VSync</span>
+                      <button
+                        onClick={() => saveValorantConfig({ vsync: !selectedConfig.vsync })}
+                        className={`px-3 py-1 rounded text-[11px] font-bold border transition ${
+                          selectedConfig.vsync ? 'bg-amber-500/10 border-amber-500/35 text-amber-400' : 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400'
+                        }`}
+                      >
+                        {selectedConfig.vsync ? 'ON (Adds Latency)' : 'OFF (Optimal)'}
+                      </button>
+                    </div>
+
+                    {/* Resolution Scale */}
+                    <div className="space-y-1.5 pt-1">
+                      <div className="flex justify-between text-[11px]">
+                        <span className="text-slate-300 font-sans font-bold">Resolution Scale</span>
+                        <span className="text-indigo-400 font-bold">{Math.round(selectedConfig.resolutionQuality)}%</span>
+                      </div>
+                      <input
+                        type="range"
+                        min="50"
+                        max="100"
+                        value={Math.round(selectedConfig.resolutionQuality)}
+                        onChange={(e) => saveValorantConfig({ resolutionQuality: parseFloat(e.target.value) })}
+                        className="w-full h-1 bg-slate-900 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                      />
+                    </div>
+
+                    {/* Quality toggles (Texture, Shadow, Effects, AA) */}
+                    <div className="grid grid-cols-2 gap-3 pt-2">
+                      {/* Texture Quality */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase">Texture Quality</span>
+                        <select
+                          value={selectedConfig.textureQuality}
+                          onChange={(e) => saveValorantConfig({ textureQuality: parseInt(e.target.value, 10) })}
+                          className="bg-[#05080e] border border-white/5 rounded p-1 text-[11px] text-slate-300 cursor-pointer"
+                        >
+                          <option value="0">Low</option>
+                          <option value="1">Medium</option>
+                          <option value="2">High</option>
+                          <option value="3">Ultra</option>
+                        </select>
+                      </div>
+
+                      {/* Shadow Quality */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase">Shadow Quality</span>
+                        <select
+                          value={selectedConfig.shadowQuality}
+                          onChange={(e) => saveValorantConfig({ shadowQuality: parseInt(e.target.value, 10) })}
+                          className="bg-[#05080e] border border-white/5 rounded p-1 text-[11px] text-slate-300 cursor-pointer"
+                        >
+                          <option value="0">Low (Off)</option>
+                          <option value="1">Medium</option>
+                          <option value="2">High</option>
+                          <option value="3">Ultra</option>
+                        </select>
+                      </div>
+
+                      {/* Effects Quality */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase">Effects Quality</span>
+                        <select
+                          value={selectedConfig.effectsQuality}
+                          onChange={(e) => saveValorantConfig({ effectsQuality: parseInt(e.target.value, 10) })}
+                          className="bg-[#05080e] border border-white/5 rounded p-1 text-[11px] text-slate-300 cursor-pointer"
+                        >
+                          <option value="0">Low</option>
+                          <option value="1">Medium</option>
+                          <option value="2">High</option>
+                          <option value="3">Ultra</option>
+                        </select>
+                      </div>
+
+                      {/* Anti-Aliasing */}
+                      <div className="flex flex-col gap-1">
+                        <span className="text-[10px] text-slate-500 font-bold uppercase">Anti-Aliasing</span>
+                        <select
+                          value={selectedConfig.antiAliasingQuality}
+                          onChange={(e) => saveValorantConfig({ antiAliasingQuality: parseInt(e.target.value, 10) })}
+                          className="bg-[#05080e] border border-white/5 rounded p-1 text-[11px] text-slate-300 cursor-pointer"
+                        >
+                          <option value="0">Off</option>
+                          <option value="1">MSAA 2x</option>
+                          <option value="2">MSAA 4x</option>
+                          <option value="3">MSAA 8x</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+
+          {/* Section 2: Windows registry GPU tweaks */}
+          <div className="space-y-4">
+            <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">
+              2. GPU & System Registry Latency Tweaks
+            </span>
+            
+            <div className="space-y-3 font-mono">
+              {/* Tweak 1: HAGS */}
+              <div className="flex justify-between items-start gap-4 bg-slate-950/60 p-3.5 rounded-lg border border-white/5">
+                <div className="space-y-1">
+                  <span className="text-slate-200 font-bold block">Hardware GPU Scheduling (HAGS)</span>
+                  <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                    Reduces input latency and overhead by allowing your GPU to manage its memory. Requires restart.
+                  </p>
+                </div>
+                <button
+                  onClick={() => toggleHags(!registryStates.hagsEnabled)}
+                  className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
+                    registryStates.hagsEnabled
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                      : 'bg-slate-900 border-white/5 text-slate-500'
+                  }`}
+                >
+                  {registryStates.hagsEnabled ? 'HAGS ENABLED' : 'HAGS DISABLED'}
+                </button>
+              </div>
+
+              {/* Tweak 2: Disable Game DVR */}
+              <div className="flex justify-between items-start gap-4 bg-slate-950/60 p-3.5 rounded-lg border border-white/5">
+                <div className="space-y-1">
+                  <span className="text-slate-200 font-bold block">Disable Windows Game Bar & DVR</span>
+                  <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                    Turns off the background gaming capture and telemetry overlays which cause sudden frame drops.
+                  </p>
+                </div>
+                <button
+                  onClick={() => toggleGameDvr(!registryStates.gameDvrDisabled)}
+                  className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
+                    registryStates.gameDvrDisabled
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                      : 'bg-slate-900 border-white/5 text-slate-500'
+                  }`}
+                >
+                  {registryStates.gameDvrDisabled ? 'DVR DISABLED' : 'DVR ENABLED'}
+                </button>
+              </div>
+
+              {/* Tweak 3: High Priority System Scheduler */}
+              <div className="flex justify-between items-start gap-4 bg-slate-950/60 p-3.5 rounded-lg border border-white/5">
+                <div className="space-y-1">
+                  <span className="text-slate-200 font-bold block">System Profile Task Scheduling</span>
+                  <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                    Optimizes the Windows Multimedia Scheduler priority values, assigning maximum CPU slices to gaming tasks.
+                  </p>
+                </div>
+                <button
+                  onClick={() => togglePriorityOptimized(!registryStates.priorityOptimized)}
+                  className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
+                    registryStates.priorityOptimized
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                      : 'bg-slate-900 border-white/5 text-slate-500'
+                  }`}
+                >
+                  {registryStates.priorityOptimized ? 'OPTIMIZED' : 'DEFAULT'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* ULTRA-LOW LATENCY & INPUT DECK */}
+      <div className={`p-6 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} space-y-6`}>
+        {!isAdmin && (
+          <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 p-3 rounded-lg flex items-start gap-2.5 font-sans text-xs">
+            <span className="text-sm">⚠️</span>
+            <div className="space-y-0.5 leading-relaxed">
+              <strong>Administrator Rights Required:</strong> Disabling USB Selective Suspend, unparking CPU cores, and disabling dynamic tick/platform clock require NeurOptimize to run as Administrator.
+            </div>
+          </div>
+        )}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-blue-500/10 pb-4">
+          <div className="space-y-1">
+            <h3 className="text-xs font-mono font-bold tracking-widest text-slate-200 uppercase flex items-center gap-2">
+              <Zap className="w-4 h-4 text-amber-400 animate-pulse" /> ULTRA-LOW LATENCY & INPUT DECK
+            </h3>
+            <p className="text-xs text-slate-400 font-sans">
+              Optimize display frame-rates for Variable Refresh Rate monitors, eliminate peripheral input lag, and stabilize CPU 1% frametime lows.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 font-mono text-xs">
+          
+          {/* Column 1: Display VRR Sync & Frame Limiter */}
+          <div className="space-y-4">
+            <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">
+              1. Monitor Synchronization (FreeSync / G-Sync)
+            </span>
+            
+            <div className="space-y-4 bg-slate-950/60 p-4 rounded-lg border border-white/5">
+              {/* Hz selector */}
+              <div className="flex flex-col gap-1">
+                <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Monitor Refresh Rate (Hz)</label>
+                <select
+                  value={monitorRefreshRate}
+                  onChange={(e) => {
+                    const hz = parseInt(e.target.value, 10);
+                    applyFrameLimitSettings(frameLimitMode, hz);
+                  }}
+                  className="bg-[#05080e] border border-white/10 rounded-lg p-2 text-slate-300 focus:outline-none focus:border-cyan-500 transition text-[11px] cursor-pointer"
+                >
+                  <option value="60">60 Hz</option>
+                  <option value="120">120 Hz</option>
+                  <option value="144">144 Hz</option>
+                  <option value="165">165 Hz</option>
+                  <option value="240">240 Hz</option>
+                  <option value="280">280 Hz</option>
+                  <option value="360">360 Hz</option>
+                  <option value="540">540 Hz</option>
+                </select>
+              </div>
+
+              {/* VRR Preset buttons */}
+              <div className="flex flex-col gap-2 pt-1">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Synchronization Preset</span>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => applyFrameLimitSettings('vrr', monitorRefreshRate)}
+                    className={`p-2.5 rounded-lg border font-bold text-center transition cursor-pointer text-[11px] flex flex-col justify-center items-center gap-1 ${
+                      frameLimitMode === 'vrr'
+                        ? 'bg-cyan-500/10 border-cyan-500/35 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.15)]'
+                        : 'bg-slate-900 border-white/5 text-slate-400 hover:text-slate-300'
+                    }`}
+                  >
+                    <span className="block font-bold">VRR SYNC (G-Sync/FreeSync)</span>
+                    <span className="text-[9px] font-sans font-normal opacity-85 block">Caps FPS to {monitorRefreshRate - 3} FPS (VSync Off)</span>
+                  </button>
+                  <button
+                    onClick={() => applyFrameLimitSettings('uncapped', monitorRefreshRate)}
+                    className={`p-2.5 rounded-lg border font-bold text-center transition cursor-pointer text-[11px] flex flex-col justify-center items-center gap-1 ${
+                      frameLimitMode === 'uncapped'
+                        ? 'bg-amber-500/10 border-amber-500/35 text-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.15)]'
+                        : 'bg-slate-900 border-white/5 text-slate-400 hover:text-slate-300'
+                    }`}
+                  >
+                    <span className="block font-bold">RAW UNCAPPED</span>
+                    <span className="text-[9px] font-sans font-normal opacity-85 block">Sets FPS limit to Unlimited (0)</span>
+                  </button>
+                </div>
+              </div>
+
+              <div className="text-[10px] text-slate-500 font-sans leading-relaxed pt-2 border-t border-white/5">
+                💡 <strong>Why caps matter:</strong> To make VRR (G-Sync/FreeSync) work without latency spikes, FPS must be restricted just below your monitor's maximum range to prevent standard VSync from taking over. Raw Uncapped yields the maximum possible FPS but can introduce frame tearing.
+              </div>
+            </div>
+          </div>
+
+          {/* Column 2: Inputs & Hardware Tweaks */}
+          <div className="space-y-4">
+            <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">
+              2. Inputs & Core Latency Tweaks
+            </span>
+            
+            <div className="space-y-3 font-mono">
+              {/* Mouse acceleration */}
+              <div className="flex justify-between items-start gap-4 bg-slate-950/60 p-3 rounded-lg border border-white/5">
+                <div className="space-y-1">
+                  <span className="text-slate-200 font-bold block">Disable Mouse Acceleration</span>
+                  <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                    Forces Windows pointer speed curves to absolute 1-to-1 raw input ratios.
+                  </p>
+                </div>
+                <button
+                  onClick={() => toggleLatencyTweak('disableMouseAccel', !latencyTweaks.disableMouseAccel)}
+                  className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
+                    latencyTweaks.disableMouseAccel
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                      : 'bg-slate-900 border-white/5 text-slate-500'
+                  }`}
+                >
+                  {latencyTweaks.disableMouseAccel ? 'ACCEL DISABLED' : 'DEFAULT'}
+                </button>
+              </div>
+
+              {/* USB Selective suspend */}
+              <div className="flex justify-between items-start gap-4 bg-slate-950/60 p-3 rounded-lg border border-white/5">
+                <div className="space-y-1">
+                  <span className="text-slate-200 font-bold block">Disable USB selective suspend</span>
+                  <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                    Prevents USB root ports from powering down, reducing mouse/keyboard wake latency.
+                  </p>
+                </div>
+                <button
+                  onClick={() => toggleLatencyTweak('disableUsbSuspend', !latencyTweaks.disableUsbSuspend)}
+                  className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
+                    latencyTweaks.disableUsbSuspend
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                      : 'bg-slate-900 border-white/5 text-slate-500'
+                  }`}
+                >
+                  {latencyTweaks.disableUsbSuspend ? 'POWER SLEEP OFF' : 'DEFAULT'}
+                </button>
+              </div>
+
+              {/* Core Parking */}
+              <div className="flex justify-between items-start gap-4 bg-slate-950/60 p-3 rounded-lg border border-white/5">
+                <div className="space-y-1">
+                  <span className="text-slate-200 font-bold block">Disable CPU Core Parking (1% Lows)</span>
+                  <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                    Stops physical cores from entering deep sleep states, eliminating CPU power-state frame spikes.
+                  </p>
+                </div>
+                <button
+                  onClick={() => toggleLatencyTweak('disableCoreParking', !latencyTweaks.disableCoreParking)}
+                  className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
+                    latencyTweaks.disableCoreParking
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                      : 'bg-slate-900 border-white/5 text-slate-500'
+                  }`}
+                >
+                  {latencyTweaks.disableCoreParking ? 'PARKING DISABLED' : 'DEFAULT'}
+                </button>
+              </div>
+
+              {/* Dynamic tick */}
+              <div className="flex justify-between items-start gap-4 bg-slate-950/60 p-3 rounded-lg border border-white/5">
+                <div className="space-y-1">
+                  <span className="text-slate-200 font-bold block">Disable Windows Dynamic Tick</span>
+                  <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                    Forces Windows to maintain uniform scheduler clock periods for frame smoothness.
+                  </p>
+                </div>
+                <button
+                  onClick={() => toggleLatencyTweak('disableDynamicTick', !latencyTweaks.disableDynamicTick)}
+                  className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
+                    latencyTweaks.disableDynamicTick
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                      : 'bg-slate-900 border-white/5 text-slate-500'
+                  }`}
+                >
+                  {latencyTweaks.disableDynamicTick ? 'TICK CONSTANT' : 'DEFAULT'}
+                </button>
+              </div>
+
+              {/* Fullscreen Optimizations */}
+              <div className="flex justify-between items-start gap-4 bg-slate-950/60 p-3 rounded-lg border border-white/5">
+                <div className="space-y-1">
+                  <span className="text-slate-200 font-bold block">Force Exclusive Fullscreen (VALORANT)</span>
+                  <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                    Bypasses the DWM overlay pipeline completely, trimming display render queue latency.
+                  </p>
+                </div>
+                <button
+                  onClick={() => toggleLatencyTweak('disableFullscreenOpt', !latencyTweaks.disableFullscreenOpt)}
+                  className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
+                    latencyTweaks.disableFullscreenOpt
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                      : 'bg-slate-900 border-white/5 text-slate-500'
+                  }`}
+                >
+                  {latencyTweaks.disableFullscreenOpt ? 'EXCLUSIVE FORCE' : 'DEFAULT'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      {/* VANGUARD HEALTH & COMPLIANCE BOARD */}
+      <div className={`p-6 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} space-y-6 animate-in fade-in duration-300`}>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-blue-500/10 pb-4">
+          <div className="space-y-1">
+            <h3 className="text-xs font-mono font-bold tracking-widest text-slate-200 uppercase flex items-center gap-2">
+              <span className="text-[#ff4655] animate-pulse">🛡️</span> VANGUARD HEALTH & COMPLIANCE BOARD
+            </h3>
+            <p className="text-xs text-slate-400 font-sans">
+              Diagnose system parameters to ensure full Vanguard compatibility and prevent game client connection drops or freezes.
+            </p>
+          </div>
+          <button
+            onClick={checkVanguardHealth}
+            className="bg-blue-500/10 hover:bg-blue-500/25 border border-blue-500/35 text-blue-400 px-4 py-2 rounded-lg text-xs font-mono font-bold cursor-pointer transition shrink-0 uppercase"
+          >
+            Re-Scan Compliance
+          </button>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 font-mono text-xs">
+          {/* Secure Boot Check */}
+          <div className="bg-slate-950/60 p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Secure Boot Status</span>
+            <div className="my-3 flex items-center gap-2">
+              <div className={`w-2.5 h-2.5 rounded-full ${vanguardHealth.secureBoot === 'enabled' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`} />
+              <span className={`font-bold capitalize ${vanguardHealth.secureBoot === 'enabled' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {vanguardHealth.secureBoot}
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-500 font-sans leading-relaxed">Required by Vanguard on Windows 11 systems.</p>
+          </div>
+
+          {/* TPM 2.0 Check */}
+          <div className="bg-slate-950/60 p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">TPM 2.0 Verification</span>
+            <div className="my-3 flex items-center gap-2">
+              <div className={`w-2.5 h-2.5 rounded-full ${vanguardHealth.tpm2 === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`} />
+              <span className={`font-bold capitalize ${vanguardHealth.tpm2 === 'active' ? 'text-emerald-400' : 'text-rose-400'}`}>
+                {vanguardHealth.tpm2}
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-500 font-sans leading-relaxed">Trusted Platform Module 2.0 encryption check.</p>
+          </div>
+
+          {/* CSM Check */}
+          <div className="bg-slate-950/60 p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">CSM Compatibility</span>
+            <div className="my-3 flex items-center gap-2">
+              <div className={`w-2.5 h-2.5 rounded-full ${vanguardHealth.csmDisabled === 'disabled' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'}`} />
+              <span className={`font-bold uppercase ${vanguardHealth.csmDisabled === 'disabled' ? 'text-emerald-400' : 'text-amber-400'}`}>
+                {vanguardHealth.csmDisabled === 'disabled' ? 'INACTIVE (UEFI)' : 'ACTIVE / UNKNOWN'}
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-500 font-sans leading-relaxed">CSM must be turned OFF in BIOS for Secure Boot compatibility.</p>
+          </div>
+
+          {/* VPN/Proxy Active */}
+          <div className="bg-slate-950/60 p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">VPN Interface Status</span>
+            <div className="my-3 flex items-center gap-2">
+              <div className={`w-2.5 h-2.5 rounded-full ${!vanguardHealth.vpnActive ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'}`} />
+              <span className={`font-bold uppercase ${!vanguardHealth.vpnActive ? 'text-emerald-400' : 'text-amber-400 animate-pulse'}`}>
+                {vanguardHealth.vpnActive ? 'VPN DETECTED' : 'CLEAR'}
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-500 font-sans leading-relaxed">Active VPN tunnels can disrupt matchmaking protocols.</p>
+          </div>
+
+          {/* AMD Driver Warning */}
+          <div className="bg-slate-950/60 p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">AMD RX Driver Check</span>
+            <div className="my-3 flex items-center gap-2">
+              <div className={`w-2.5 h-2.5 rounded-full ${!vanguardHealth.gpuDriverWarning ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`} />
+              <span className={`font-bold uppercase ${!vanguardHealth.gpuDriverWarning ? 'text-emerald-400' : 'text-rose-400 animate-pulse'}`}>
+                {vanguardHealth.gpuDriverWarning ? 'WARNING' : 'CLEAR'}
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-500 font-sans leading-relaxed">AMD RX Driver v32.0.31007.1017 causes game client crashes.</p>
+          </div>
+
+          {/* Incompatible Driver Scanner */}
+          <div className="bg-slate-950/60 p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+            <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Vulnerable Drivers</span>
+            <div className="my-3 flex items-center gap-2">
+              <div className={`w-2.5 h-2.5 rounded-full ${(!vanguardHealth.flaggedDrivers || vanguardHealth.flaggedDrivers.length === 0) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`} />
+              <span className={`font-bold uppercase ${(!vanguardHealth.flaggedDrivers || vanguardHealth.flaggedDrivers.length === 0) ? 'text-emerald-400' : 'text-rose-400 animate-pulse'}`}>
+                {(!vanguardHealth.flaggedDrivers || vanguardHealth.flaggedDrivers.length === 0) ? 'CLEAR' : 'FLAGGED'}
+              </span>
+            </div>
+            <p className="text-[10px] text-slate-500 font-sans leading-relaxed">
+              {(!vanguardHealth.flaggedDrivers || vanguardHealth.flaggedDrivers.length === 0)
+                ? 'No vulnerable or incompatible drivers (inpoutx64, gdrv) found.'
+                : `Found: ${vanguardHealth.flaggedDrivers.join(', ')}. Uninstall associated app.`}
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* ADVANCED CPU SCHEDULER & WINDOWS SERVICES DECK */}
+      <div className={`p-6 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} space-y-6 animate-in fade-in duration-300`}>
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-blue-500/10 pb-4">
+          <div className="space-y-1">
+            <h3 className="text-xs font-mono font-bold tracking-widest text-slate-200 uppercase flex items-center gap-2">
+              <Cpu className="w-4 h-4 text-indigo-400" /> ADVANCED CPU SCHEDULER & ENVIRONMENT DECK
+            </h3>
+            <p className="text-xs text-slate-400 font-sans">
+              Optimize thread scheduler affinities for physical and efficiency processor cores, lock system clock speed periods, and configure local DNS.
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-mono text-xs">
+          {/* Section 1: Process Affinity & Priority Controls */}
+          <div className="space-y-4">
+            <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">
+              1. CPU Thread Affinity & Priority
+            </span>
+            <div className="space-y-3 bg-slate-950/60 p-4 rounded-lg border border-white/5">
+              <div className="flex justify-between items-center border-b border-white/5 pb-2">
+                <span className="text-slate-300 font-bold font-sans">Auto-High Priority</span>
+                <span className="text-emerald-400 font-bold text-[10px] bg-emerald-500/10 px-2 py-0.5 rounded">STANDBY</span>
+              </div>
+              <p className="text-[10px] text-slate-500 font-sans leading-relaxed mb-3">
+                Sets high process execution priority classes for both launcher and shipping binaries on detection.
+              </p>
+
+              <label className="flex items-start gap-3 cursor-pointer group pt-1">
+                <input
+                  type="checkbox"
+                  checked={hyperthreadingDisabled}
+                  onChange={(e) => setHyperthreadingDisabled(e.target.checked)}
+                  className="mt-0.5 accent-cyan-500 cursor-pointer"
+                />
+                <div className="space-y-0.5">
+                  <span className="text-slate-200 group-hover:text-cyan-400 transition font-bold block">Disable Hyperthreading (SMT)</span>
+                  <span className="text-slate-500 font-sans block leading-normal text-[10px]">
+                    Affinitizes VALORANT only to physical cores, stabilizing frame delivery and 1% lows.
+                  </span>
+                </div>
+              </label>
+
+              <label className="flex items-start gap-3 cursor-pointer group pt-2">
+                <input
+                  type="checkbox"
+                  checked={backgroundAppsToEcores}
+                  onChange={(e) => setBackgroundAppsToEcores(e.target.checked)}
+                  className="mt-0.5 accent-cyan-500 cursor-pointer"
+                />
+                <div className="space-y-0.5">
+                  <span className="text-slate-200 group-hover:text-cyan-400 transition font-bold block">Restrain Background Apps</span>
+                  <span className="text-slate-500 font-sans block leading-normal text-[10px]">
+                    Binds browsers, launchers, and Discord to Efficiency (E) cores so performance cores focus solely on the game.
+                  </span>
+                </div>
+              </label>
+
+              <div className="flex justify-between items-center border-t border-white/5 pt-3 mt-1">
+                <span className="text-slate-300 font-bold font-sans">Auto Power Plan</span>
+                <span className="text-cyan-400 font-bold text-[10px] bg-cyan-500/10 px-2 py-0.5 rounded">ACTIVE</span>
+              </div>
+              <p className="text-[10px] text-slate-500 font-sans leading-relaxed">
+                Switches the system scheme to High Performance on launch and reverts it to Balanced on exit.
+              </p>
+            </div>
+          </div>
+
+          {/* Section 2: Timer Resolution & Network DNS */}
+          <div className="space-y-4">
+            <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">
+              2. Latency Timers & Connection
+            </span>
+            <div className="space-y-3 bg-slate-950/60 p-4 rounded-lg border border-white/5">
+              {/* Timer resolution override */}
+              <div className="flex justify-between items-center pb-2 border-b border-white/5">
+                <div className="space-y-0.5">
+                  <span className="text-slate-300 font-bold font-sans block">Wanted Timer Resolution</span>
+                  <span className="text-[10px] text-slate-500 font-sans block">Force system tick rate to 0.50 ms.</span>
+                </div>
+                <button
+                  onClick={() => toggleTimerResolution(!timerResActive)}
+                  className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
+                    timerResActive
+                      ? 'bg-cyan-500/10 border-cyan-500/35 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.15)]'
+                      : 'bg-slate-900 border-white/5 text-slate-500'
+                  }`}
+                >
+                  {timerResActive ? '0.50 ms LOCKED' : 'WINDOWS DEFAULT'}
+                </button>
+              </div>
+
+              {/* DNS Changer */}
+              <div className="space-y-2 pt-1">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">One-Click DNS Optimizer</span>
+                <div className="grid grid-cols-3 gap-2">
+                  <button
+                    onClick={() => changeDns('cloudflare')}
+                    className={`py-1.5 rounded border font-bold text-center transition cursor-pointer text-[10px] ${
+                      activeDns === 'cloudflare'
+                        ? 'bg-cyan-500/10 border-cyan-500/35 text-cyan-400'
+                        : 'bg-slate-900 border-white/5 text-slate-400'
+                    }`}
+                  >
+                    Cloudflare (1.1.1.1)
+                  </button>
+                  <button
+                    onClick={() => changeDns('google')}
+                    className={`py-1.5 rounded border font-bold text-center transition cursor-pointer text-[10px] ${
+                      activeDns === 'google'
+                        ? 'bg-cyan-500/10 border-cyan-500/35 text-cyan-400'
+                        : 'bg-slate-900 border-white/5 text-slate-400'
+                    }`}
+                  >
+                    Google (8.8.8.8)
+                  </button>
+                  <button
+                    onClick={() => changeDns('default')}
+                    className={`py-1.5 rounded border font-bold text-center transition cursor-pointer text-[10px] ${
+                      activeDns === 'default'
+                        ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400'
+                        : 'bg-slate-900 border-white/5 text-slate-400'
+                    }`}
+                  >
+                    Reset (DHCP)
+                  </button>
+                </div>
+                <p className="text-[10px] text-slate-500 font-sans leading-normal">
+                  Reduces lookup desyncs and deserialization latency on initial matchmaking queues.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 3: Safe Background Windows Services */}
+          <div className="space-y-4">
+            <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">
+              3. Safely Disable Windows Services
+            </span>
+            <div className="space-y-3 bg-slate-950/60 p-4 rounded-lg border border-white/5">
+              <p className="text-[10px] text-slate-500 font-sans leading-relaxed mb-1">
+                Turn off non-essential telemetry and background schedulers to reclaim CPU cycles.
+              </p>
+
+              {/* SysMain toggle */}
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] text-slate-300 font-sans font-bold">SysMain (SuperFetch)</span>
+                <button
+                  onClick={() => toggleBgService('SysMain', !bgServices.SysMain)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
+                    bgServices.SysMain
+                      ? 'bg-slate-900 border-white/5 text-slate-400'
+                      : 'bg-rose-500/10 border-rose-500/35 text-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.1)]'
+                  }`}
+                >
+                  {bgServices.SysMain ? 'RUNNING (Disable)' : 'DISABLED (Optimized)'}
+                </button>
+              </div>
+
+              {/* Spooler toggle */}
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-[11px] text-slate-300 font-sans font-bold">Print Spooler</span>
+                <button
+                  onClick={() => toggleBgService('Spooler', !bgServices.Spooler)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
+                    bgServices.Spooler
+                      ? 'bg-slate-900 border-white/5 text-slate-400'
+                      : 'bg-rose-500/10 border-rose-500/35 text-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.1)]'
+                  }`}
+                >
+                  {bgServices.Spooler ? 'RUNNING (Disable)' : 'DISABLED (Optimized)'}
+                </button>
+              </div>
+
+              {/* Telemetry toggle */}
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-[11px] text-slate-300 font-sans font-bold">Connected Telemetry (DiagTrack)</span>
+                <button
+                  onClick={() => toggleBgService('DiagTrack', !bgServices.DiagTrack)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
+                    bgServices.DiagTrack
+                      ? 'bg-slate-900 border-white/5 text-slate-400'
+                      : 'bg-rose-500/10 border-rose-500/35 text-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.1)]'
+                  }`}
+                >
+                  {bgServices.DiagTrack ? 'RUNNING (Disable)' : 'DISABLED (Optimized)'}
+                </button>
+              </div>
+
+              {/* Xbox Live toggle */}
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-[11px] text-slate-300 font-sans font-bold">Xbox Live Auth Manager</span>
+                <button
+                  onClick={() => toggleBgService('XblAuthManager', !bgServices.XblAuthManager)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
+                    bgServices.XblAuthManager
+                      ? 'bg-slate-900 border-white/5 text-slate-400'
+                      : 'bg-rose-500/10 border-rose-500/35 text-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.1)]'
+                  }`}
+                >
+                  {bgServices.XblAuthManager ? 'RUNNING (Disable)' : 'DISABLED (Optimized)'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Section 4: Deep System & Network Tuning */}
+          <div className="space-y-4">
+            <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">
+              4. Deep System & Network Tuning
+            </span>
+            <div className="space-y-3 bg-slate-950/60 p-4 rounded-lg border border-white/5">
+              
+              <div className="flex justify-between items-center">
+                <span className="text-[11px] text-slate-300 font-sans font-bold">VBS / Memory Integrity</span>
+                <button
+                  onClick={() => toggleVbs(!vbsEnabled)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
+                    !vbsEnabled
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]'
+                      : 'bg-rose-500/10 border-rose-500/35 text-rose-400'
+                  }`}
+                >
+                  {!vbsEnabled ? 'DISABLED (Fast)' : 'ENABLED (Slow)'}
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-[11px] text-slate-300 font-sans font-bold">Nagle's Algorithm (TCP)</span>
+                <button
+                  onClick={() => toggleNagle(!nagleDisabled)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
+                    nagleDisabled
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]'
+                      : 'bg-slate-900 border-white/5 text-slate-400'
+                  }`}
+                >
+                  {nagleDisabled ? 'DISABLED (Low Ping)' : 'ENABLED (Default)'}
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-[11px] text-slate-300 font-sans font-bold">Windows Memory Compression</span>
+                <button
+                  onClick={() => toggleMemCompression(!memCompressionEnabled)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
+                    !memCompressionEnabled
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]'
+                      : 'bg-slate-900 border-white/5 text-slate-400'
+                  }`}
+                >
+                  {!memCompressionEnabled ? 'DISABLED (No Stutter)' : 'ENABLED (Default)'}
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-[11px] text-slate-300 font-sans font-bold">NIC Power Saving</span>
+                <button
+                  onClick={() => toggleNicPower(!nicPowerSavingDisabled)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
+                    nicPowerSavingDisabled
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]'
+                      : 'bg-slate-900 border-white/5 text-slate-400'
+                  }`}
+                >
+                  {nicPowerSavingDisabled ? 'DISABLED (Stable)' : 'ENABLED (Default)'}
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-[11px] text-slate-300 font-sans font-bold">Global Fullscreen Optimizations</span>
+                <button
+                  onClick={() => toggleGlobalFso(!globalFsoDisabled)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
+                    globalFsoDisabled
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]'
+                      : 'bg-slate-900 border-white/5 text-slate-400'
+                  }`}
+                >
+                  {globalFsoDisabled ? 'DISABLED (Exclusive)' : 'ENABLED (Borderless)'}
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center mt-2">
+                <span className="text-[11px] text-slate-300 font-sans font-bold">Power Throttling</span>
+                <button
+                  onClick={() => togglePowerThrottling(!powerThrottlingDisabled)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
+                    powerThrottlingDisabled
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]'
+                      : 'bg-slate-900 border-white/5 text-slate-400'
+                  }`}
+                >
+                  {powerThrottlingDisabled ? 'DISABLED (Max Perf)' : 'ENABLED (Throttled)'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        
         <div className="lg:col-span-2 space-y-6">
           
+          {/* Optimization Profile Engine */}
+          <div className={`p-6 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} space-y-4`}>
+            <h3 className="text-xs font-mono font-bold tracking-widest text-cyan-400 uppercase border-b border-cyan-500/10 pb-2">
+              Optimization Profile Engine
+            </h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 font-mono text-xs">
+              <button 
+                onClick={() => applyOptimizationProfile('tournament')}
+                className="bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 p-3 rounded text-purple-400 text-center font-bold transition shadow-[0_0_8px_rgba(168,85,247,0.15)] cursor-pointer"
+              >
+                TOURNAMENT
+              </button>
+              <button 
+                onClick={() => applyOptimizationProfile('balanced')}
+                className="bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 p-3 rounded text-emerald-400 text-center font-bold transition cursor-pointer"
+              >
+                BALANCED
+              </button>
+              <button 
+                onClick={() => applyOptimizationProfile('streaming')}
+                className="bg-blue-500/10 hover:bg-blue-500/20 border border-blue-500/30 p-3 rounded text-blue-400 text-center font-bold transition cursor-pointer"
+              >
+                STREAMING
+              </button>
+              <button 
+                onClick={() => applyOptimizationProfile('revert')}
+                className="bg-slate-800 hover:bg-slate-700 border border-slate-600 p-3 rounded text-slate-300 text-center font-bold transition cursor-pointer"
+              >
+                DEFAULT
+              </button>
+            </div>
+          </div>
+
           {/* One Click FPS Boosters */}
           <div className={`p-6 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} space-y-4`}>
             <h3 className="text-xs font-mono font-bold tracking-widest text-blue-400 uppercase border-b border-blue-500/5 pb-2">
@@ -283,7 +1175,7 @@ export default function ValorantOptimizer({
                   <p className="text-xs text-slate-400 font-sans">Empties shader database tables. Resolves sudden game stutter issues.</p>
                   <span className="text-indigo-400 block text-[10px] font-bold">Cache Size: {shaderCacheSize}</span>
                 </div>
-                <button onClick={clearShaderCache} disabled={cleaningVal || shaderCacheSize === 'Click Scan' || shaderCacheSize === '0.00 Bytes'} className="bg-blue-600 hover:bg-blue-500 text-white w-full py-1.5 rounded mt-4 transition font-bold cursor-pointer disabled:opacity-50">Purge Shader Cache</button>
+                <button onClick={cleanAllShaderCaches} disabled={cleaningVal || shaderCacheSize === 'Click Scan' || shaderCacheSize === '0.00 Bytes'} className="bg-blue-600 hover:bg-blue-500 text-white w-full py-1.5 rounded mt-4 transition font-bold cursor-pointer disabled:opacity-50">Purge Shader Caches</button>
               </div>
 
             </div>

@@ -16,7 +16,8 @@ export default function Dashboard({
   premadeMacros,
   runningMacro,
   runMacro,
-  spellStatusText
+  spellStatusText,
+  gpuInfo
 }) {
   return (
     <div className="space-y-6 outline-none">
@@ -66,6 +67,22 @@ export default function Dashboard({
                 <div className="bg-gradient-to-r from-purple-600 to-fuchsia-500 h-full rounded transition-all" style={{ width: `${100 - stats.cpuLoad}%` }} />
               </div>
             </div>
+
+            {/* GPU Info */}
+            {gpuInfo && (
+              <div className="space-y-1 text-sm pt-2">
+                <div className="flex justify-between font-bold">
+                  <span className={gpuInfo.vendor === 'nvidia' ? 'text-green-400' : gpuInfo.vendor === 'amd' ? 'text-red-400' : 'text-blue-400'}>
+                    {gpuInfo.vendor === 'nvidia' ? '🟩' : gpuInfo.vendor === 'amd' ? '🟥' : '🟦'} GPU [{gpuInfo.name.toUpperCase()}]
+                  </span>
+                  <span>{gpuInfo.temperature ? `${gpuInfo.temperature}°C | ` : ''}{gpuInfo.vramMB ? `${Math.round(gpuInfo.vramMB/1024)}GB VRAM` : ''}</span>
+                </div>
+                <div className="text-xs text-slate-500 font-sans flex justify-between">
+                  <span>Driver: {gpuInfo.driverVersion || 'N/A'}</span>
+                  <span>{gpuInfo.refreshRate ? `${gpuInfo.refreshRate}Hz Refresh Rate` : ''}</span>
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-6 pt-4 border-t border-blue-500/5 text-center font-mono text-xs">
