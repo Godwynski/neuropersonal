@@ -10,5 +10,6 @@ contextBridge.exposeInMainWorld('api', {
   detectGpu: () => ipcRenderer.invoke('detect-gpu'),
   saveAppSettings: (settings) => ipcRenderer.invoke('save-app-settings', settings),
   loadAppSettings: () => ipcRenderer.invoke('load-app-settings'),
-  backupRegistry: (keyPath, valueName) => ipcRenderer.invoke('backup-registry', { keyPath, valueName })
+  backupRegistry: (keyPath, valueName) => ipcRenderer.invoke('backup-registry', { keyPath, valueName }),
+  setTitleBarOverlay: (color, symbolColor) => ipcRenderer.invoke('set-titlebar-overlay', { color, symbolColor })
 });

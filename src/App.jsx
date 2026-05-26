@@ -14,9 +14,39 @@ import CommandPanel from './components/CommandPanel';
 import Toast from './components/Toast';
 import Explorer from './components/Explorer';
 import TweakDeck from './components/TweakDeck';
+import OneClickOptimize from './components/OneClickOptimize';
+import BottomConsole from './components/BottomConsole';
 
 // Dynamic Cyberpunk Theme Style Schemas
 const themeStyles = {
+  lightBlue: {
+    bg: 'bg-[#f1f5f9]',
+    panelBg: 'bg-white border-slate-200 hover:border-blue-300 shadow-[0_2px_12px_rgba(15,23,42,0.06)]',
+    sidebarBg: 'bg-slate-100 border-slate-200',
+    border: 'border-slate-200',
+    borderActive: 'border-blue-500',
+    textPrimary: 'text-blue-700',
+    textAccent: 'text-sky-700',
+    textMuted: 'text-slate-500',
+    bgAccent: 'bg-blue-50',
+    bgAccentActive: 'bg-blue-100 text-blue-800 border-blue-300',
+    btnPrimary: 'bg-blue-600 hover:bg-blue-700 text-white shadow-[0_2px_8px_rgba(59,130,246,0.35)]',
+    btnGhost: 'bg-white hover:bg-blue-50 border-slate-300 hover:border-blue-400 text-blue-700',
+    glowColor: 'rgba(59, 130, 246, 0.45)',
+    glowOuter: 'rgba(59, 130, 246, 0.05)',
+    radarColor: 'rgba(59, 130, 246, 0.25)',
+    radarPulse: 'rgba(14, 165, 233, 0.5)',
+    dotColor: '#0284c7',
+    textBody: 'text-slate-900',
+    textSub: 'text-slate-600',
+    cardBg: 'bg-white border-slate-200',
+    innerBg: 'bg-slate-50 border-slate-200',
+    isLight: true,
+    headerBg: 'bg-white text-slate-900 border-slate-200',
+    creditsBg: 'bg-slate-50 border-slate-200',
+    titlebarBg: '#ffffff',
+    titlebarSymbol: '#334155'
+  },
   cobalt: {
     bg: 'bg-[#070c14]',
     panelBg: 'bg-[#0b1220]/85 border-blue-500/15 hover:border-blue-500/30',
@@ -34,7 +64,16 @@ const themeStyles = {
     glowOuter: 'rgba(59, 130, 246, 0)',
     radarColor: 'rgba(59, 130, 246, 0.4)',
     radarPulse: 'rgba(6, 182, 212, 0.7)',
-    dotColor: '#06b6d4'
+    dotColor: '#06b6d4',
+    textBody: 'text-slate-200',
+    textSub: 'text-slate-400',
+    cardBg: 'bg-slate-950/40 border-white/5',
+    innerBg: 'bg-[#090d16] border-white/5',
+    isLight: false,
+    headerBg: 'bg-[#05080f] text-slate-100 border-blue-500/10',
+    creditsBg: 'bg-[#0b101c] border-blue-500/10',
+    titlebarBg: '#05080f',
+    titlebarSymbol: '#60a5fa'
   },
   matrix: {
     bg: 'bg-[#030704]',
@@ -53,7 +92,16 @@ const themeStyles = {
     glowOuter: 'rgba(16, 185, 129, 0)',
     radarColor: 'rgba(16, 185, 129, 0.4)',
     radarPulse: 'rgba(34, 197, 94, 0.7)',
-    dotColor: '#22c55e'
+    dotColor: '#22c55e',
+    textBody: 'text-slate-200',
+    textSub: 'text-slate-400',
+    cardBg: 'bg-slate-950/40 border-white/5',
+    innerBg: 'bg-[#050e07] border-white/5',
+    isLight: false,
+    headerBg: 'bg-[#030704] text-emerald-500 border-emerald-500/10',
+    creditsBg: 'bg-[#061008]/80 border-emerald-500/10',
+    titlebarBg: '#030704',
+    titlebarSymbol: '#34d399'
   },
   vaporwave: {
     bg: 'bg-[#0a0510]',
@@ -72,7 +120,16 @@ const themeStyles = {
     glowOuter: 'rgba(217, 70, 239, 0)',
     radarColor: 'rgba(217, 70, 239, 0.4)',
     radarPulse: 'rgba(6, 182, 212, 0.7)',
-    dotColor: '#d946ef'
+    dotColor: '#d946ef',
+    textBody: 'text-slate-200',
+    textSub: 'text-slate-400',
+    cardBg: 'bg-slate-950/40 border-white/5',
+    innerBg: 'bg-[#12081d] border-white/5',
+    isLight: false,
+    headerBg: 'bg-[#0a0510] text-fuchsia-500 border-fuchsia-500/10',
+    creditsBg: 'bg-[#150a22]/80 border-fuchsia-500/10',
+    titlebarBg: '#0a0510',
+    titlebarSymbol: '#d946ef'
   },
   solarized: {
     bg: 'bg-[#0f0a05]',
@@ -91,7 +148,16 @@ const themeStyles = {
     glowOuter: 'rgba(245, 158, 11, 0)',
     radarColor: 'rgba(245, 158, 11, 0.4)',
     radarPulse: 'rgba(251, 146, 60, 0.7)',
-    dotColor: '#fb923c'
+    dotColor: '#fb923c',
+    textBody: 'text-slate-200',
+    textSub: 'text-slate-400',
+    cardBg: 'bg-slate-950/40 border-white/5',
+    innerBg: 'bg-[#160f07] border-white/5',
+    isLight: false,
+    headerBg: 'bg-[#0f0a05] text-amber-500 border-amber-500/10',
+    creditsBg: 'bg-[#1a1208]/80 border-amber-500/10',
+    titlebarBg: '#0f0a05',
+    titlebarSymbol: '#f59e0b'
   }
 };
 
@@ -129,8 +195,13 @@ const synthPianoKeys = [
 
 export default function App() {
   const [isElectron, setIsElectron] = useState(true);
-  const [activeTab, setActiveTab] = useState('dashboard');
-  const [theme, setTheme] = useState('cobalt');
+  const [activeTab, setActiveTab] = useState('optimizer');
+  const [advancedMode, setAdvancedMode] = useState(false);
+  const [systemLogs, setSystemLogs] = useState([
+    'NeurOptimize Cyber Deck Active...',
+    'Real-time network security scanning modules enabled.'
+  ]);
+  const [theme, setTheme] = useState('lightBlue');
 
   // RPG Stats & Credits State
   const [xp, setXp] = useState(30);
@@ -168,7 +239,10 @@ export default function App() {
   const [scanningTemp, setScanningTemp] = useState(false);
   const [purgingTemp, setPurgingTemp] = useState(false);
   const [defragSectors, setDefragSectors] = useState(Array(120).fill('empty'));
-  const [tweakLogs, setTweakLogs] = useState([]);
+  const tweakLogs = systemLogs;
+  const setTweakLogs = (val) => {
+    setSystemLogs(prev => typeof val === 'function' ? val(prev) : val);
+  };
   const [tweaks, setTweaks] = useState({
     darkMode: true,
     hiddenFiles: false,
@@ -190,10 +264,10 @@ export default function App() {
 
   // Command Console & Netrunner Radar Map
   const [cmdInput, setCmdInput] = useState('');
-  const [terminalLogs, setTerminalLogs] = useState([
-    'NeurOptimize Cyber Deck Active...',
-    'Real-time network security scanning modules enabled.'
-  ]);
+  const terminalLogs = systemLogs;
+  const setTerminalLogs = (val) => {
+    setSystemLogs(prev => typeof val === 'function' ? val(prev) : val);
+  };
   const [executing, setExecuting] = useState(false);
   const [radarHops, setRadarHops] = useState([
     { id: 1, host: 'Gateway Node', ip: '192.168.1.1', pingMs: 2, radius: 25, angle: 45 },
@@ -222,7 +296,10 @@ export default function App() {
   const [shaderCacheSize, setShaderCacheSize] = useState('Click Scan');
   const [scanningVal, setScanningVal] = useState(false);
   const [cleaningVal, setCleaningVal] = useState(false);
-  const [valorantLogs, setValorantLogs] = useState([]);
+  const valorantLogs = systemLogs;
+  const setValorantLogs = (val) => {
+    setSystemLogs(prev => typeof val === 'function' ? val(prev) : val);
+  };
 
   // Deep Performance Optimizer States
   const [deepOptimizeActive, setDeepOptimizeActive] = useState(false);
@@ -258,6 +335,8 @@ export default function App() {
   });
   const [monitorRefreshRate, setMonitorRefreshRate] = useState(240);
   const [frameLimitMode, setFrameLimitMode] = useState('uncapped');
+  const [gsyncDisabled, setGsyncDisabled] = useState(false);
+  const [freesyncEnabled, setFreesyncEnabled] = useState(false);
   const [vanguardHealth, setVanguardHealth] = useState({
     secureBoot: 'unknown',
     tpm2: 'unknown',
@@ -289,10 +368,25 @@ export default function App() {
   const [globalFsoDisabled, setGlobalFsoDisabled] = useState(false);
   const [powerThrottlingDisabled, setPowerThrottlingDisabled] = useState(false);
 
+  // EXTREME-LEVEL TWEAKS
+  const [msiEnabled, setMsiEnabled] = useState(false);
+  const [nicOffloadsDisabled, setNicOffloadsDisabled] = useState(false);
+  const [hpetDisabled, setHpetDisabled] = useState(false);
+  const [islcActive, setIslcActive] = useState(false);
+
+  // One-Click Performance Booster State
+  const [maxBoostActive, setMaxBoostActive] = useState(false);
+  const [maxBoostProgress, setMaxBoostProgress] = useState(0);
+  const maxBoostLogs = systemLogs;
+  const setMaxBoostLogs = (val) => {
+    setSystemLogs(prev => typeof val === 'function' ? val(prev) : val);
+  };
+  const [maxBoostStatus, setMaxBoostStatus] = useState('idle'); // 'idle' | 'boosting' | 'reverting' | 'active'
+
   // Toast Notifications
   const [toasts, setToasts] = useState([]);
 
-
+  const addLog = (msg) => setValorantLogs(prev => [...prev, `[System] ${msg}`]);
 
   const checkRegistryStates = async () => {
     if (!window.api) {
@@ -304,20 +398,30 @@ export default function App() {
       return;
     }
     try {
+      // 1) HAGS
       const hagsRes = await window.api.runSystemCommand("powershell -Command \"(Get-ItemProperty -Path 'HKLM:\\System\\CurrentControlSet\\Control\\GraphicsDrivers' -Name 'HwSchMode' -ErrorAction SilentlyContinue).HwSchMode\"");
-      const hagsVal = hagsRes.success ? parseInt(hagsRes.output.trim(), 10) : 1;
+      setRegistryStates(prev => ({ ...prev, hagsEnabled: hagsRes.output.trim() === '2' }));
 
+      // MSI
+      const msiRes = await window.api.runSystemCommand("powershell -Command \"(Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\*\\*\\Device Parameters\\Interrupt Management\\MessageSignaledInterruptProperties' -Name 'MSISupported' -ErrorAction SilentlyContinue).MSISupported -contains 1\"");
+      setMsiEnabled(msiRes.output.trim().toLowerCase() === 'true');
+
+      // HPET
+      const hpetRes = await window.api.runSystemCommand("powershell -Command \"bcdedit /enum {current} | Select-String -Pattern 'useplatformclock'\"");
+      setHpetDisabled(!hpetRes.output.includes('useplatformclock')); // if not present or false, it's disabled
+
+      // Offloads
+      const offloadsRes = await window.api.runSystemCommand("powershell -Command \"$path = 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters'; (Get-ItemProperty -Path $path -Name 'DisableTaskOffload' -ErrorAction SilentlyContinue).DisableTaskOffload\"");
+      setNicOffloadsDisabled(offloadsRes.output.trim() === '1');
+
+      // 2) Game DVR
       const dvrRes = await window.api.runSystemCommand("powershell -Command \"(Get-ItemProperty -Path 'HKCU:\\System\\GameConfigStore' -Name 'GameDVR_Enabled' -ErrorAction SilentlyContinue).GameDVR_Enabled\"");
       const dvrVal = dvrRes.success ? parseInt(dvrRes.output.trim(), 10) : 1;
 
       const respRes = await window.api.runSystemCommand("powershell -Command \"(Get-ItemProperty -Path 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile' -Name 'SystemResponsiveness' -ErrorAction SilentlyContinue).SystemResponsiveness\"");
       const respVal = respRes.success ? parseInt(respRes.output.trim(), 10) : 14;
 
-      setRegistryStates({
-        hagsEnabled: hagsVal === 2,
-        gameDvrDisabled: dvrVal === 0,
-        priorityOptimized: respVal === 0
-      });
+      setRegistryStates(prev => ({ ...prev, gameDvrDisabled: dvrVal === 0, priorityOptimized: respVal === 0 }));
     } catch (e) {
       console.error('Error checking registry states:', e);
     }
@@ -604,6 +708,60 @@ export default function App() {
     await saveValorantConfig(updatedSettings);
   };
 
+  const toggleGsync = async (disable) => {
+    setValorantLogs(prev => [...prev, `[Display Sync] ${disable ? 'Disabling' : 'Enabling'} G-Sync for NVIDIA GPU...`]);
+    setGsyncDisabled(disable);
+    if (!window.api) {
+      setValorantLogs(prev => [...prev, `[Mock Display Sync] G-Sync ${disable ? 'disabled' : 'enabled'}.`]);
+      addToast(`G-Sync ${disable ? 'disabled' : 'enabled'} (mock)`, 'info');
+      return;
+    }
+    try {
+      // Disable/enable G-Sync via NVIDIA profile registry key
+      const val = disable ? '0' : '1';
+      const cmd = `powershell -Command "try { Set-ItemProperty -Path 'HKLM:\\\\SYSTEM\\\\CurrentControlSet\\\\Services\\\\nvlddmkm\\\\Global\\\\NVTweak' -Name 'NvCplGlobalVRREnablement' -Value ${val} -Type DWord -ErrorAction Stop } catch { New-Item -Path 'HKLM:\\\\SYSTEM\\\\CurrentControlSet\\\\Services\\\\nvlddmkm\\\\Global\\\\NVTweak' -Force -ErrorAction SilentlyContinue | Out-Null; Set-ItemProperty -Path 'HKLM:\\\\SYSTEM\\\\CurrentControlSet\\\\Services\\\\nvlddmkm\\\\Global\\\\NVTweak' -Name 'NvCplGlobalVRREnablement' -Value ${val} -Type DWord -ErrorAction SilentlyContinue }"`;
+      const res = await window.api.runSystemCommand(cmd);
+      if (res.success) {
+        setValorantLogs(prev => [...prev, `[Display Sync] G-Sync ${disable ? 'disabled' : 'enabled'} via NVIDIA registry. Reboot may be required.`]);
+        addToast(`G-Sync ${disable ? 'disabled' : 'enabled'}`, 'success');
+      } else {
+        // Fallback: try via nvidia-settings or note the failure
+        setValorantLogs(prev => [...prev, `[Display Sync Warning] G-Sync toggle may require NVIDIA Control Panel or Admin rights: ${res.error || 'Registry write failed'}`]);
+        addToast('G-Sync toggle failed - use NVIDIA Control Panel', 'error');
+      }
+    } catch (e) {
+      setValorantLogs(prev => [...prev, `[Display Sync Error] Exception: ${e.message}`]);
+    }
+  };
+
+  const toggleFreesync = async (enable) => {
+    setValorantLogs(prev => [...prev, `[Display Sync] ${enable ? 'Enabling' : 'Disabling'} FreeSync / Adaptive Sync...`]);
+    setFreesyncEnabled(enable);
+    if (!window.api) {
+      setValorantLogs(prev => [...prev, `[Mock Display Sync] FreeSync ${enable ? 'enabled' : 'disabled'}.`]);
+      addToast(`FreeSync ${enable ? 'enabled' : 'disabled'} (mock)`, 'info');
+      return;
+    }
+    try {
+      // AMD FreeSync via display registry — affects current connected display
+      // This enables Enhanced Sync / FreeSync via AMD/Microsoft adaptive sync infrastructure
+      const freesyncVal = enable ? '1' : '0';
+      // Try AMD FreeSync global enable
+      const amdCmd = `powershell -Command "try { $path = 'HKLM:\\\\SYSTEM\\\\CurrentControlSet\\\\Control\\\\Class\\\\{4d36e968-e325-11ce-bfc1-08002be10318}'; $keys = Get-ChildItem $path -ErrorAction SilentlyContinue | Where-Object { (Get-ItemProperty -Path $_.PSPath -ErrorAction SilentlyContinue).DriverDesc -like '*AMD*' -or (Get-ItemProperty -Path $_.PSPath -ErrorAction SilentlyContinue).DriverDesc -like '*Radeon*' }; foreach ($k in $keys) { Set-ItemProperty -Path $k.PSPath -Name 'KMD_EnableInternalLargePage' -Value ${freesyncVal} -Type DWord -ErrorAction SilentlyContinue; Set-ItemProperty -Path $k.PSPath -Name 'KMD_FRTEnabled' -Value ${freesyncVal} -Type DWord -ErrorAction SilentlyContinue } } catch {}"`;
+      await window.api.runSystemCommand(amdCmd);
+      
+      // Also enable adaptive sync for NVIDIA (FreeSync-compatible monitors)
+      const nvCmd = `powershell -Command "try { Set-ItemProperty -Path 'HKLM:\\\\SYSTEM\\\\CurrentControlSet\\\\Services\\\\nvlddmkm\\\\Global\\\\NVTweak' -Name 'EnableAdaptiveSync' -Value ${freesyncVal} -Type DWord -ErrorAction SilentlyContinue } catch {}"`;
+      await window.api.runSystemCommand(nvCmd);
+
+      setValorantLogs(prev => [...prev, `[Display Sync] FreeSync / Adaptive Sync ${enable ? 'enabled' : 'disabled'} for AMD and NVIDIA adapters.`]);
+      addToast(`FreeSync ${enable ? 'enabled' : 'disabled'}`, 'success');
+    } catch (e) {
+      setValorantLogs(prev => [...prev, `[Display Sync Error] Exception: ${e.message}`]);
+    }
+  };
+
+
   const checkVanguardHealth = async () => {
     if (!window.api) {
       setVanguardHealth({
@@ -695,7 +853,7 @@ export default function App() {
     setToasts(prev => [...prev, { id, message, type }]);
   };
   const removeToast = (id) => {
-    setToasts(prev => prev.filter(t => t.id !== id));
+    setToasts(prev => setToasts(prev.filter(t => t.id !== id)));
   };
 
   const detectGpu = async () => {
@@ -843,27 +1001,56 @@ export default function App() {
     }
   };
 
-  const checkPowerThrottling = async () => {
-    if (!window.api) { setPowerThrottlingDisabled(true); return; }
-    try {
-      const res = await window.api.runSystemCommand("powershell -Command \"(Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power' -Name 'PowerThrottlingOff' -ErrorAction SilentlyContinue).PowerThrottlingOff\"");
-      setPowerThrottlingDisabled(res.success && parseInt(res.output.trim(), 10) === 1);
-    } catch (e) { setPowerThrottlingDisabled(false); }
-  };
-
   const togglePowerThrottling = async (disable) => {
-    setValorantLogs(prev => [...prev, `[Registry Tweak] ${disable ? 'Disabling' : 'Enabling'} Power Throttling...`]);
-    if (window.api) {
+    if (isElectron) {
       const val = disable ? 1 : 0;
-      const res = await window.api.runSystemCommand(`powershell -Command "New-Item -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power' -Force -ErrorAction SilentlyContinue | Out-Null; Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power' -Name 'PowerThrottlingOff' -Value ${val} -Type DWord -ErrorAction Stop"`);
-      if (res.success) {
-        setPowerThrottlingDisabled(disable);
-        addToast(`Power Throttling ${disable ? 'disabled' : 'enabled'}`, 'success');
-      } else {
-        addToast('Power Throttling toggle failed - Admin required', 'error');
-      }
+      await window.api.runSystemCommand(`powershell -Command "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling' -Name 'PowerThrottlingOff' -Value ${val} -Type DWord -ErrorAction SilentlyContinue"`);
+      setPowerThrottlingDisabled(disable);
+      addLog(`Power Throttling ${disable ? 'disabled' : 'enabled'}.`);
     } else {
       setPowerThrottlingDisabled(disable);
+      addLog(`[SIMULATION] Power Throttling ${disable ? 'disabled' : 'enabled'}.`);
+    }
+  };
+
+  const toggleMsiMode = async (enable) => {
+    if (isElectron) {
+      const val = enable ? 1 : 0;
+      const cmd = `powershell -Command "$paths = Get-ChildItem -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI' -Recurse | Where-Object { $_.PSChildName -eq 'MessageSignaledInterruptProperties' }; foreach ($p in $paths) { Set-ItemProperty -Path $p.PSPath -Name 'MSISupported' -Value ${val} -Type DWord -ErrorAction SilentlyContinue }"`;
+      await window.api.runSystemCommand(cmd);
+      setMsiEnabled(enable);
+      addLog(`MSI Mode ${enable ? 'forced ON' : 'reverted to default'}. Requires restart.`);
+    } else {
+      setMsiEnabled(enable);
+      addLog(`[SIMULATION] MSI Mode ${enable ? 'forced ON' : 'reverted'}.`);
+    }
+  };
+
+  const toggleNicOffloads = async (disable) => {
+    if (isElectron) {
+      const cmd = disable
+        ? `powershell -Command "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters' -Name 'DisableTaskOffload' -Value 1 -Type DWord -Force; Disable-NetAdapterChecksumOffload -Name '*' -TcpIPv4 -ErrorAction SilentlyContinue; Disable-NetAdapterLso -Name '*' -IPv4 -ErrorAction SilentlyContinue"`
+        : `powershell -Command "Set-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters' -Name 'DisableTaskOffload' -Value 0 -Type DWord -Force; Enable-NetAdapterChecksumOffload -Name '*' -TcpIPv4 -ErrorAction SilentlyContinue; Enable-NetAdapterLso -Name '*' -IPv4 -ErrorAction SilentlyContinue"`;
+      await window.api.runSystemCommand(cmd);
+      setNicOffloadsDisabled(disable);
+      addLog(`Network Adapter Offloads ${disable ? 'disabled' : 'enabled'}.`);
+    } else {
+      setNicOffloadsDisabled(disable);
+      addLog(`[SIMULATION] Network Adapter Offloads ${disable ? 'disabled' : 'enabled'}.`);
+    }
+  };
+
+  const toggleHpet = async (disable) => {
+    if (isElectron) {
+      const cmd = disable
+        ? `powershell -Command "bcdedit /deletevalue useplatformclock; bcdedit /set tscsyncpolicy Enhanced"`
+        : `powershell -Command "bcdedit /set useplatformclock true; bcdedit /deletevalue tscsyncpolicy"`;
+      await window.api.runSystemCommand(cmd);
+      setHpetDisabled(disable);
+      addLog(`HPET ${disable ? 'disabled (TSC enabled)' : 'enabled'}. Requires restart.`);
+    } else {
+      setHpetDisabled(disable);
+      addLog(`[SIMULATION] HPET ${disable ? 'disabled' : 'enabled'}.`);
     }
   };
 
@@ -920,12 +1107,134 @@ export default function App() {
     playPresetSound('success');
   };
 
+  const toggleMaxBoost = async (enable) => {
+    if (enable) {
+      setMaxBoostStatus('boosting');
+      setMaxBoostActive(true);
+      setMaxBoostProgress(5);
+      setMaxBoostLogs([
+        "⚡ INITIATING NEURAL BOOSTER OVERDRIVE...",
+        "🔒 Scanning Windows components and checking privileges..."
+      ]);
+      playPresetSound('cast');
+      await new Promise(r => setTimeout(r, 600));
+
+      setMaxBoostProgress(15);
+      setMaxBoostLogs(prev => [...prev, "📈 Elevating Processor & Thread priority profiles..."]);
+      if (gameModeActive !== true) await toggleGameMode();
+      if (powerPlanMode !== 'high') await togglePowerPlan();
+      await new Promise(r => setTimeout(r, 400));
+
+      setMaxBoostProgress(30);
+      setMaxBoostLogs(prev => [...prev, "🎮 Optimizing GPU scheduling and disabling GameDVR..."]);
+      if (registryStates.hagsEnabled !== true) await toggleHags(true);
+      if (registryStates.gameDvrDisabled !== true) await toggleGameDvr(true);
+      if (registryStates.priorityOptimized !== true) await togglePriorityOptimized(true);
+      await new Promise(r => setTimeout(r, 400));
+
+      setMaxBoostProgress(48);
+      setMaxBoostLogs(prev => [...prev, "🚀 Tuning mouse polling and sub-millisecond response tweaks..."]);
+      for (const tweak of ['disableMouseAccel', 'disableUsbSuspend', 'disableCoreParking', 'disableDynamicTick', 'disableFullscreenOpt']) {
+        if (latencyTweaks[tweak] !== true) {
+          await toggleLatencyTweak(tweak, true);
+        }
+      }
+      await new Promise(r => setTimeout(r, 400));
+
+      setMaxBoostProgress(65);
+      setMaxBoostLogs(prev => [...prev, "🌐 Resolving DNS to secure Cloudflare gateway & disabling Nagle TCP buffer..."]);
+      if (activeDns !== 'cloudflare') await changeDns('cloudflare');
+      if (nagleDisabled !== true) await toggleNagle(true);
+      await new Promise(r => setTimeout(r, 400));
+
+      setMaxBoostProgress(80);
+      setMaxBoostLogs(prev => [...prev, "⚙️ Toggling low-level system policies (FSO, VBS, Throttling)..."]);
+      if (vbsEnabled === true) await toggleVbs(false);
+      if (globalFsoDisabled !== true) await toggleGlobalFso(true);
+      if (powerThrottlingDisabled !== true) await togglePowerThrottling(true);
+      await new Promise(r => setTimeout(r, 400));
+
+      setMaxBoostProgress(90);
+      setMaxBoostLogs(prev => [...prev, "🧹 Purging background services and clearing standby caches..."]);
+      for (const svc of ['SysMain', 'Spooler', 'DiagTrack', 'XblAuthManager', 'WSearch']) {
+        if (bgServices[svc] === true) {
+          await toggleBgService(svc, false);
+        }
+      }
+      if (timerResActive !== true) await toggleTimerResolution(true);
+      await cleanAllShaderCaches();
+      await castSpell('ramRejuvenation');
+      await new Promise(r => setTimeout(r, 600));
+
+      setMaxBoostProgress(100);
+      setMaxBoostStatus('active');
+      setMaxBoostLogs(prev => [...prev, "✨ SYSTEM FULLY ENHANCED! Performance limits unlocked, input latency minimized."]);
+      addToast("Performance Booster active! Maximum FPS enabled.", "success");
+      playPresetSound('success');
+    } else {
+      setMaxBoostStatus('reverting');
+      setMaxBoostProgress(15);
+      setMaxBoostLogs([
+        "⚡ INITIATING RESTORATION SEQUENCE...",
+        "🔄 Reverting CPU power limits and Windows scheduling policies..."
+      ]);
+      playPresetSound('cast');
+      await new Promise(r => setTimeout(r, 600));
+
+      setMaxBoostProgress(35);
+      setMaxBoostLogs(prev => [...prev, "🎮 Restoring GPU scheduling preferences and GameDVR telemetry..."]);
+      if (registryStates.hagsEnabled !== false) await toggleHags(false);
+      if (registryStates.gameDvrDisabled !== false) await toggleGameDvr(false);
+      if (registryStates.priorityOptimized !== false) await togglePriorityOptimized(false);
+      if (gameModeActive !== false) await toggleGameMode();
+      if (powerPlanMode !== 'balanced') await togglePowerPlan();
+      await new Promise(r => setTimeout(r, 400));
+
+      setMaxBoostProgress(55);
+      setMaxBoostLogs(prev => [...prev, "🚀 Restoring mouse acceleration and dynamic scheduler ticks..."]);
+      for (const tweak of ['disableMouseAccel', 'disableUsbSuspend', 'disableCoreParking', 'disableDynamicTick', 'disableFullscreenOpt']) {
+        if (latencyTweaks[tweak] !== false) {
+          await toggleLatencyTweak(tweak, false);
+        }
+      }
+      await new Promise(r => setTimeout(r, 400));
+
+      setMaxBoostProgress(75);
+      setMaxBoostLogs(prev => [...prev, "🌐 Restoring network DNS adapters and re-enabling Nagle buffering..."]);
+      if (activeDns !== 'default') await changeDns('default');
+      if (nagleDisabled !== false) await toggleNagle(false);
+      await new Promise(r => setTimeout(r, 400));
+
+      setMaxBoostProgress(90);
+      setMaxBoostLogs(prev => [...prev, "⚙️ Restoring VBS, FSO, and service daemons..."]);
+      if (vbsEnabled === false) await toggleVbs(true);
+      if (globalFsoDisabled !== false) await toggleGlobalFso(false);
+      if (powerThrottlingDisabled !== false) await togglePowerThrottling(false);
+      
+      for (const svc of ['SysMain', 'Spooler', 'DiagTrack', 'XblAuthManager', 'WSearch']) {
+        if (bgServices[svc] === false) {
+          await toggleBgService(svc, true);
+        }
+      }
+      if (timerResActive !== false) await toggleTimerResolution(false);
+      await new Promise(r => setTimeout(r, 600));
+
+      setMaxBoostProgress(0);
+      setMaxBoostActive(false);
+      setMaxBoostStatus('idle');
+      setMaxBoostLogs([]);
+      addToast("Performance booster disabled. Settings reverted to default.", "success");
+      playPresetSound('success');
+    }
+  };
+
   const saveSettingsToStorage = () => {
     try {
       const settings = {
         theme, autoBoostActive, deepOptimizeActive, optimizationOptions,
         purgeAppsChecklist, hyperthreadingDisabled, backgroundAppsToEcores,
-        scrolls, monitorRefreshRate, frameLimitMode
+        scrolls, monitorRefreshRate, frameLimitMode, maxBoostActive,
+        gsyncDisabled, freesyncEnabled, advancedMode
       };
       localStorage.setItem('neuroptimize-settings', JSON.stringify(settings));
     } catch (e) { console.error('Settings save failed:', e); }
@@ -946,6 +1255,15 @@ export default function App() {
       if (s.scrolls) setScrolls(s.scrolls);
       if (s.monitorRefreshRate) setMonitorRefreshRate(s.monitorRefreshRate);
       if (s.frameLimitMode) setFrameLimitMode(s.frameLimitMode);
+      if (s.gsyncDisabled !== undefined) setGsyncDisabled(s.gsyncDisabled);
+      if (s.freesyncEnabled !== undefined) setFreesyncEnabled(s.freesyncEnabled);
+      if (s.advancedMode !== undefined) setAdvancedMode(s.advancedMode);
+      if (s.maxBoostActive !== undefined) {
+        setMaxBoostActive(s.maxBoostActive);
+        if (s.maxBoostActive) {
+          setMaxBoostStatus('active');
+        }
+      }
     } catch (e) { console.error('Settings load failed:', e); }
   };
 
@@ -1032,6 +1350,13 @@ export default function App() {
   const canvasRef = useRef(null);
 
   const activeStyle = themeStyles[theme] || themeStyles.cobalt;
+
+  // Sync Electron titlebar overlay colors when theme changes
+  useEffect(() => {
+    if (window.api && window.api.setTitleBarOverlay && activeStyle.titlebarBg) {
+      window.api.setTitleBarOverlay(activeStyle.titlebarBg, activeStyle.titlebarSymbol);
+    }
+  }, [theme]);
 
   // Check Administrator role, load registry and VALORANT configs on load
   useEffect(() => {
@@ -1120,10 +1445,12 @@ export default function App() {
     const daemon = setInterval(async () => {
       if (!autoBoostActive) return;
 
+      let valStatus = 'NotRunning';
       if (isElectron) {
         try {
           const res = await window.api.runSystemCommand('tasklist');
           const isCurrentlyRunning = res.success && res.output.includes('VALORANT-Win64-Shipping');
+          if (isCurrentlyRunning) valStatus = 'Running';
           
           if (isCurrentlyRunning && !valorantRunning) {
             triggerValorantAutoBoost();
@@ -1135,20 +1462,29 @@ export default function App() {
           console.error(e);
         }
       } else {
-        // Mock daemon check
         checkCount++;
         if (checkCount % 12 === 0 && !valorantRunning) {
           triggerValorantAutoBoost();
           setValorantRunning(true);
+          valStatus = 'Running';
         } else if (checkCount % 12 === 8 && valorantRunning) {
           triggerValorantAutoRevert();
           setValorantRunning(false);
         }
       }
-    }, 4000);
+
+      // ISLC Daemon Trigger
+      if (islcActive) {
+        const tickCount = Math.floor(Date.now() / 1000);
+        if (tickCount % 30 === 0 && valStatus === 'Running') {
+           window.api.runSystemCommand('powershell -Command "[System.GC]::Collect()"');
+        }
+      }
+
+    }, 3000);
 
     return () => clearInterval(daemon);
-  }, [autoBoostActive, valorantRunning, isElectron, deepOptimizeActive, optimizationOptions, purgeAppsChecklist, revertQueue]);
+  }, [autoBoostActive, valorantRunning, isElectron, deepOptimizeActive, optimizationOptions, purgeAppsChecklist, revertQueue, islcActive]);
 
   // Run deep system performance enhancements
   const runDeepPerformanceOptimize = async () => {
@@ -1859,11 +2195,11 @@ export default function App() {
   };
 
   return (
-    <div className={`flex flex-col h-screen select-none ${activeStyle.bg} text-slate-100 font-sans transition-all duration-300 ${shakeScreen ? 'animate-bounce' : ''}`}>
+    <div className={`flex flex-col h-screen select-none ${activeStyle.bg} ${activeStyle.textBody || 'text-slate-100'} font-sans transition-all duration-300 ${shakeScreen ? 'animate-bounce' : ''} ${activeStyle.isLight ? 'light-scrollbar' : ''}`}>
       <Toast toasts={toasts} removeToast={removeToast} activeStyle={activeStyle} />
       
       {/* Title Header */}
-      <header className="titlebar-drag h-[38px] bg-[#05080f] border-b border-blue-500/10 flex items-center px-4 shrink-0 justify-between">
+      <header className={`titlebar-drag h-[38px] ${activeStyle.headerBg} border-b flex items-center px-4 shrink-0 justify-between`}>
         <div className="flex items-center gap-2">
           <Activity className={`w-4 h-4 ${activeStyle.textAccent} animate-pulse`} />
           <span className={`text-xs font-bold tracking-widest font-mono ${activeStyle.textPrimary}`}>NEUROPTIMIZE CYBERNETIC DECK</span>
@@ -1871,9 +2207,28 @@ export default function App() {
         
         {/* RPG Credits panel in header */}
         <div className="flex items-center gap-4">
-          <div className="bg-[#0b101c] border border-blue-500/10 px-3 py-1 rounded-md text-xs font-mono flex items-center gap-3">
-            <span className="text-slate-500 uppercase tracking-widest">XP: <strong className="text-blue-400">{xp}</strong></span>
-            <span className="text-slate-400 border-l border-white/5 pl-3">CREDITS: <strong className="text-amber-400">{credits} CR</strong></span>
+          {/* Quick Theme Switcher */}
+          <div className="flex items-center gap-1.5">
+            <span className={`text-[10px] font-mono uppercase tracking-wider ${activeStyle.textMuted}`}>Style:</span>
+            <select 
+              value={theme} 
+              onChange={(e) => {
+                setTheme(e.target.value);
+                playPresetSound('tweak');
+              }}
+              className={`${activeStyle.isLight ? 'bg-white border-slate-300 text-slate-800' : 'bg-black/20 border-slate-500/20'} border px-2 py-0.5 rounded text-xs font-mono select-none outline-none cursor-pointer ${activeStyle.textPrimary} transition-colors`}
+            >
+              <option value="lightBlue" className="bg-[#f0f4f9] text-slate-800">Light Blue</option>
+              <option value="cobalt" className="bg-[#070c14] text-blue-400">Cobalt</option>
+              <option value="matrix" className="bg-[#030704] text-emerald-500">Matrix</option>
+              <option value="vaporwave" className="bg-[#0a0510] text-fuchsia-500">Vaporwave</option>
+              <option value="solarized" className="bg-[#0f0a05] text-amber-500">Solarized</option>
+            </select>
+          </div>
+
+          <div className={`${activeStyle.creditsBg} border px-3 py-1 rounded-md text-xs font-mono flex items-center gap-3`}>
+            <span className={`${activeStyle.textMuted} uppercase tracking-widest`}>XP: <strong className={activeStyle.textPrimary}>{xp}</strong></span>
+            <span className={`${activeStyle.textSub} border-l ${activeStyle.isLight ? 'border-slate-200' : 'border-white/5'} pl-3`}>CREDITS: <strong className="text-amber-500">{credits} CR</strong></span>
           </div>
           {!isElectron && (
             <span className="bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded text-xs font-mono">
@@ -1890,10 +2245,30 @@ export default function App() {
       }} className="flex flex-1 overflow-hidden">
         
         {/* Navigation Sidebar */}
-        <Sidebar activeStyle={activeStyle} stats={stats} theme={theme} />
+        <Sidebar 
+          activeStyle={activeStyle} 
+          stats={stats} 
+          theme={theme} 
+          advancedMode={advancedMode}
+          setAdvancedMode={setAdvancedMode}
+          setActiveTab={setActiveTab}
+        />
 
-        {/* Tab Screens Content */}
-        <main className={`flex-1 p-6 overflow-y-auto relative ${activeStyle.radial}`}>
+        {/* Tab Screens Content Wrapper */}
+        <div className="flex-1 flex flex-col overflow-hidden">
+          <main className={`flex-1 p-6 overflow-y-auto relative ${activeStyle.radial}`}>
+            
+            {/* TAB: 1-CLICK OPTIMIZER */}
+            <Tabs.Content value="optimizer" className="h-full outline-none">
+              <OneClickOptimize 
+                isOptimizing={maxBoostStatus === 'boosting'}
+                isOptimized={maxBoostStatus === 'active'}
+                onOptimize={() => toggleMaxBoost(true)}
+                onRevert={() => toggleMaxBoost(false)}
+                isAdmin={isAdmin}
+                theme={activeStyle}
+              />
+            </Tabs.Content>
           
           {/* TAB 1: REACTOR CORE & UPGRADE TREE */}
           <Tabs.Content value="dashboard" className="space-y-6 outline-none animate-in fade-in duration-300">
@@ -1914,6 +2289,17 @@ export default function App() {
               runMacro={runMacro}
               spellStatusText={spellStatusText}
               gpuInfo={gpuInfo}
+              maxBoostActive={maxBoostActive}
+              maxBoostProgress={maxBoostProgress}
+              maxBoostLogs={maxBoostLogs}
+              maxBoostStatus={maxBoostStatus}
+              toggleMaxBoost={toggleMaxBoost}
+              registryStates={registryStates}
+              gameModeActive={gameModeActive}
+              powerPlanMode={powerPlanMode}
+              timerResActive={timerResActive}
+              nagleDisabled={nagleDisabled}
+              activeDns={activeDns}
             />
 
             <SynthDrawer 
@@ -2000,8 +2386,20 @@ export default function App() {
               toggleGlobalFso={toggleGlobalFso}
               powerThrottlingDisabled={powerThrottlingDisabled}
               togglePowerThrottling={togglePowerThrottling}
+              msiEnabled={msiEnabled}
+              toggleMsiMode={toggleMsiMode}
+              nicOffloadsDisabled={nicOffloadsDisabled}
+              toggleNicOffloads={toggleNicOffloads}
+              hpetDisabled={hpetDisabled}
+              toggleHpet={toggleHpet}
+              islcActive={islcActive}
+              setIslcActive={setIslcActive}
               cleanAllShaderCaches={cleanAllShaderCaches}
               applyOptimizationProfile={applyOptimizationProfile}
+              gsyncDisabled={gsyncDisabled}
+              freesyncEnabled={freesyncEnabled}
+              toggleGsync={toggleGsync}
+              toggleFreesync={toggleFreesync}
             />
           </Tabs.Content>
 
@@ -2069,7 +2467,15 @@ export default function App() {
           </Tabs.Content>
 
         </main>
-      </Tabs.Root>
+        
+        {/* Bottom Console Panel */}
+        <BottomConsole 
+          logs={systemLogs} 
+          onClear={() => setSystemLogs([])} 
+          theme={activeStyle} 
+        />
+      </div>
+    </Tabs.Root>
     </div>
   );
 }

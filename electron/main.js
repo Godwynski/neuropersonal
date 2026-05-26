@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, nativeTheme } = require('electron');
 const path = require('path');
 const os = require('os');
 const { exec, execSync } = require('child_process');
@@ -40,6 +40,18 @@ function createWindow() {
     mainWindow.show();
   });
 }
+
+// IPC Handler: Update titlebar overlay colors when theme changes
+ipcMain.handle('set-titlebar-overlay', async (event, { color, symbolColor }) => {
+  try {
+    if (mainWindow && mainWindow.setTitleBarOverlay) {
+      mainWindow.setTitleBarOverlay({ color, symbolColor, height: 35 });
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
 
 app.whenReady().then(() => {
   createWindow();
@@ -446,8 +458,9 @@ ipcMain.handle('detect-gpu', async () => {
         }
       }
 
-      // Fallback to powershell wmi if nvidia-smi fails or AMD/Intel
-      exec('powershell -Command "Get-CimInstance Win32_VideoController | Select-Object Name, DriverVersion, AdapterRAM, CurrentRefreshRate | ConvertTo-Json"', (err, wmiOut) => {
+      // Fallback to powershell wmi + registry if nvidia-smi fails or AMD/Intel
+      const psCommand = "powershell -Command \"$gpu = Get-CimInstance Win32_VideoController | Select-Object Name, DriverVersion, CurrentRefreshRate | Select-Object -First 1; $reg = Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0*' -ErrorAction SilentlyContinue | Where-Object { $_.DriverDesc -eq $gpu.Name } | Select-Object -First 1; if (-not $reg) { $reg = Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0*' -ErrorAction SilentlyContinue | Where-Object { $_.'HardwareInformation.qwMemorySize' -gt 0 } | Select-Object -First 1 }; $vram = 0; if ($reg -and $reg.'HardwareInformation.qwMemorySize') { $vram = $reg.'HardwareInformation.qwMemorySize' } else { $vram = $gpu.AdapterRAM }; [PSCustomObject]@{ Name = $gpu.Name; DriverVersion = $gpu.DriverVersion; CurrentRefreshRate = $gpu.CurrentRefreshRate; qwMemorySize = $vram } | ConvertTo-Json\"";
+      exec(psCommand, (err, wmiOut) => {
         if (err) return resolve({ success: false, error: err.message });
         try {
           let data = JSON.parse(wmiOut);
@@ -464,7 +477,7 @@ ipcMain.handle('detect-gpu', async () => {
               vendor,
               name,
               driverVersion: data.DriverVersion || '',
-              vramMB: data.AdapterRAM ? Math.round(data.AdapterRAM / (1024 * 1024)) : 0,
+              vramMB: data.qwMemorySize ? Math.round(Number(data.qwMemorySize) / (1024 * 1024)) : 0,
               temperature: 0,
               utilization: 0,
               refreshRate: data.CurrentRefreshRate || 0

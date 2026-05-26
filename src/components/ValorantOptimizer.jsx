@@ -65,15 +65,43 @@ export default function ValorantOptimizer({
   nicPowerSavingDisabled, toggleNicPower,
   globalFsoDisabled, toggleGlobalFso,
   powerThrottlingDisabled, togglePowerThrottling,
+  msiEnabled, toggleMsiMode,
+  nicOffloadsDisabled, toggleNicOffloads,
+  hpetDisabled, toggleHpet,
+  islcActive, setIslcActive,
   cleanAllShaderCaches,
-  applyOptimizationProfile
+  applyOptimizationProfile,
+  gsyncDisabled, toggleGsync,
+  freesyncEnabled, toggleFreesync
 }) {
+  // Theme-aware local helpers so every sub-section adapts to light/dark mode
+  const cardInner = activeStyle.isLight
+    ? 'bg-slate-50 border-slate-200'
+    : 'bg-slate-950/60 border-white/5';
+  const deepCard = activeStyle.isLight
+    ? 'bg-white border-slate-200'
+    : 'bg-[#05080e] border-white/5';
+  const pillInactive = activeStyle.isLight
+    ? 'bg-slate-100 border-slate-200 text-slate-500'
+    : 'bg-[#0f172a] border-white/5 text-slate-500';
+  const textH  = activeStyle.textBody  || 'text-slate-200';
+  const textS  = activeStyle.textSub   || 'text-slate-400';
+  const textM  = activeStyle.textMuted || 'text-slate-500';
+  const sectionBorder = activeStyle.isLight ? 'border-slate-200' : 'border-blue-500/10';
+  const sectionLabelBorder = activeStyle.isLight ? 'border-slate-200' : 'border-blue-500/5';
+  const bannerBg = activeStyle.isLight
+    ? 'bg-blue-50 border-slate-200'
+    : 'bg-[#0b1220]/85 border-blue-500/15';
+  const simBtn = activeStyle.isLight
+    ? 'bg-white border-slate-300 text-blue-600 hover:bg-blue-50'
+    : 'bg-[#0f172a] border-blue-500/20 text-blue-400 hover:bg-blue-500/10';
+
   return (
     <div className="space-y-6 outline-none animate-in fade-in duration-300">
-      <header className="flex justify-between items-center border-b border-blue-500/10 pb-4">
+      <header className={`flex justify-between items-center border-b ${sectionBorder} pb-4`}>
         <div>
-          <h1 className="text-xl font-bold tracking-widest font-mono text-slate-200">VALORANT ENGINE BOOSTER</h1>
-          <p className="text-xs text-indigo-400 font-mono mt-0.5">Optimize system parameters and purge junk caches to boost game FPS</p>
+          <h1 className={`text-xl font-bold tracking-widest font-mono ${textH}`}>VALORANT ENGINE BOOSTER</h1>
+          <p className={`text-xs ${activeStyle.textAccent} font-mono mt-0.5`}>Optimize system parameters and purge junk caches to boost game FPS</p>
         </div>
         <div className="flex gap-2 font-mono">
           {!isElectron && (
@@ -86,38 +114,56 @@ export default function ValorantOptimizer({
                   setValorantRunning(true);
                 }
               }} 
-              className="bg-[#0f172a] border border-blue-500/20 text-xs px-3 py-1.5 rounded hover:bg-blue-500/10 text-blue-400 cursor-pointer"
+              className={`border text-xs px-3 py-1.5 rounded cursor-pointer transition ${simBtn}`}
             >
               {valorantRunning ? 'Simulate Game Exit' : 'Simulate Game Launch'}
             </button>
           )}
-          <div className={`px-4 py-2 rounded-lg border flex items-center gap-2 ${valorantRunning ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 animate-pulse' : 'bg-slate-950 border-white/5 text-slate-500'}`}>
-            <div className={`w-2 h-2 rounded-full ${valorantRunning ? 'bg-emerald-500' : 'bg-slate-600'}`} />
+          <div className={`px-4 py-2 rounded-lg border flex items-center gap-2 ${valorantRunning ? 'bg-emerald-500/15 border-emerald-500/30 text-emerald-400 animate-pulse' : `${pillInactive}`}`}>
+            <div className={`w-2 h-2 rounded-full ${valorantRunning ? 'bg-emerald-500' : 'bg-slate-400'}`} />
             <span className="text-xs font-bold">{valorantRunning ? 'VALORANT RUNNING [BOOST ACTIVE]' : 'VALORANT NOT DETECTED'}</span>
           </div>
         </div>
       </header>
 
       {/* Auto Boost Toggle Banner */}
-      <div className="bg-[#0b1220]/85 border border-blue-500/15 rounded-xl p-5 flex flex-col md:flex-row justify-between items-center gap-4 font-mono text-xs">
+      <div className={`${bannerBg} border rounded-xl p-5 flex flex-col md:flex-row justify-between items-center gap-4 font-mono text-xs`}>
         <div className="space-y-1 max-w-xl">
-          <span className="text-xs font-bold text-slate-200 block">⚡ Allow Background Auto-Boosting Daemon</span>
-          <p className="text-xs text-slate-400 font-sans leading-relaxed">
+          <span className={`text-xs font-bold ${textH} block`}>⚡ Allow Background Auto-Boosting Daemon</span>
+          <p className={`text-xs ${textS} font-sans leading-relaxed`}>
             When enabled, NeurOptimize polls background processes. The second Valorant launches, it automatically sets the game to HIGH scheduling priority, collects memory junk, and flushes network ports.
           </p>
         </div>
         <button 
           onClick={() => setAutoBoostActive(!autoBoostActive)}
           className={`px-4 py-2.5 rounded-lg border font-bold shrink-0 transition cursor-pointer ${
-            autoBoostActive ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400' : 'bg-slate-950 border-white/5 text-slate-500'
+            autoBoostActive ? 'bg-emerald-500/15 border-emerald-500/35 text-emerald-400' : pillInactive
           }`}
         >
           {autoBoostActive ? 'AUTO-BOOST ENABLED' : 'AUTO-BOOST DISABLED'}
         </button>
       </div>
 
+      {/* ISLC Daemon Banner */}
+      <div className={`${bannerBg} border rounded-xl p-5 flex flex-col md:flex-row justify-between items-center gap-4 font-mono text-xs animate-in fade-in duration-300 delay-75`}>
+        <div className="space-y-1 max-w-xl">
+          <span className={`text-xs font-bold ${textH} block`}>🤖 Intelligent Standby List Cleaner (ISLC) Daemon</span>
+          <p className={`text-xs ${textS} font-sans leading-relaxed`}>
+            Monitors system RAM every 30 seconds while Valorant is running. Automatically triggers garbage collection on standby lists to prevent micro-stutters during heavy memory swapping.
+          </p>
+        </div>
+        <button 
+          onClick={() => setIslcActive(!islcActive)}
+          className={`px-4 py-2.5 rounded-lg border font-bold shrink-0 transition cursor-pointer ${
+            islcActive ? 'bg-cyan-500/15 border-cyan-500/35 text-cyan-400' : pillInactive
+          }`}
+        >
+          {islcActive ? 'ISLC DAEMON ACTIVE' : 'ISLC DAEMON DISABLED'}
+        </button>
+      </div>
+
       {/* Deep Performance Optimizer Panel */}
-      <div className={`p-6 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} space-y-6`}>
+      <div className={`p-6 rounded-xl border ${activeStyle.panelBg} space-y-6`}>
         {!isAdmin && deepOptimizeActive && (
           <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 p-3 rounded-lg flex items-start gap-2.5 font-sans text-xs">
             <span className="text-sm">⚠️</span>
@@ -126,12 +172,12 @@ export default function ValorantOptimizer({
             </div>
           </div>
         )}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-blue-500/10 pb-4">
+        <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b ${sectionBorder} pb-4`}>
           <div className="space-y-1">
-            <h3 className="text-xs font-mono font-bold tracking-widest text-slate-200 uppercase flex items-center gap-2">
+            <h3 className={`text-xs font-mono font-bold tracking-widest ${textH} uppercase flex items-center gap-2`}>
               <span className="text-rose-500 animate-pulse">🔥</span> DEEP PERFORMANCE OPTIMIZER (TEMPORARY TWEAKS)
             </h3>
-            <p className="text-xs text-slate-400 font-sans">
+            <p className={`text-xs ${textS} font-sans`}>
               Temporarily halts non-essential system workloads and purges memory-heavy background apps during gameplay.
             </p>
           </div>
@@ -159,7 +205,7 @@ export default function ValorantOptimizer({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 font-mono text-xs animate-in fade-in duration-300">
             {/* System Services Checkboxes */}
             <div className="space-y-4">
-              <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">1. System Services Workload Pause</span>
+              <span className={`text-slate-400 font-bold block border-b ${sectionLabelBorder} pb-1 uppercase tracking-wider`}>1. System Services Workload Pause</span>
               
               <label className="flex items-start gap-3 cursor-pointer group">
                 <input 
@@ -203,7 +249,7 @@ export default function ValorantOptimizer({
 
             {/* Background Apps Purge Checklist */}
             <div className="space-y-4">
-              <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">2. Background Processes Purge List</span>
+              <span className={`text-slate-400 font-bold block border-b ${sectionLabelBorder} pb-1 uppercase tracking-wider`}>2. Background Processes Purge List</span>
               <p className="text-slate-500 font-sans text-[11px] leading-relaxed mb-2">
                 Check browsers or launchers to terminate when VALORANT launches. Make sure to save any pending tasks before starting.
               </p>
@@ -242,7 +288,7 @@ export default function ValorantOptimizer({
       </div>
 
       {/* CLIENT & GPU OPTIMIZATION DECK */}
-      <div className={`p-6 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} space-y-6`}>
+      <div className={`p-6 rounded-xl border ${activeStyle.panelBg} space-y-6`}>
         {!isAdmin && (
           <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 p-3 rounded-lg flex items-start gap-2.5 font-sans text-xs">
             <span className="text-sm">⚠️</span>
@@ -251,12 +297,12 @@ export default function ValorantOptimizer({
             </div>
           </div>
         )}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-blue-500/10 pb-4">
+        <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b ${sectionBorder} pb-4`}>
           <div className="space-y-1">
-            <h3 className="text-xs font-mono font-bold tracking-widest text-slate-200 uppercase flex items-center gap-2">
+            <h3 className={`text-xs font-mono font-bold tracking-widest ${textH} uppercase flex items-center gap-2`}>
               <Monitor className="w-4 h-4 text-cyan-400" /> CLIENT & GPU OPTIMIZATION DECK
             </h3>
-            <p className="text-xs text-slate-400 font-sans">
+            <p className={`text-xs ${textS} font-sans`}>
               Scan accounts, customize Unreal engine graphic parameters in config files, and toggle Windows registry boosts for GPU scheduling & game latency.
             </p>
           </div>
@@ -266,7 +312,7 @@ export default function ValorantOptimizer({
           
           {/* Section 1: Graphics Settings Tuner */}
           <div className="space-y-4">
-            <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">
+            <span className={`text-slate-400 font-bold block border-b ${sectionLabelBorder} pb-1 uppercase tracking-wider`}>
               1. VALORANT Graphic Settings Tuner
             </span>
             
@@ -296,7 +342,7 @@ export default function ValorantOptimizer({
                 </div>
 
                 {selectedConfig && (
-                  <div className="space-y-3 bg-slate-950/60 p-4 rounded-lg border border-white/5 animate-in fade-in duration-300">
+                  <div className={`space-y-4 p-4 rounded-lg border ${cardInner} animate-in fade-in duration-300`}>
                     
                     {/* VSync toggle */}
                     <div className="flex justify-between items-center">
@@ -397,16 +443,16 @@ export default function ValorantOptimizer({
 
           {/* Section 2: Windows registry GPU tweaks */}
           <div className="space-y-4">
-            <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">
+            <span className={`text-slate-400 font-bold block border-b ${sectionLabelBorder} pb-1 uppercase tracking-wider`}>
               2. GPU & System Registry Latency Tweaks
             </span>
             
             <div className="space-y-3 font-mono">
               {/* Tweak 1: HAGS */}
-              <div className="flex justify-between items-start gap-4 bg-slate-950/60 p-3.5 rounded-lg border border-white/5">
+              <div className={`flex justify-between items-start gap-4 ${cardInner} p-3.5 rounded-lg border`}>
                 <div className="space-y-1">
-                  <span className="text-slate-200 font-bold block">Hardware GPU Scheduling (HAGS)</span>
-                  <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                  <span className={`text-slate-200 font-bold block`}>Hardware GPU Scheduling (HAGS)</span>
+                  <p className={`text-[11px] ${textS} font-sans leading-relaxed`}>
                     Reduces input latency and overhead by allowing your GPU to manage its memory. Requires restart.
                   </p>
                 </div>
@@ -415,7 +461,7 @@ export default function ValorantOptimizer({
                   className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
                     registryStates.hagsEnabled
                       ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
-                      : 'bg-slate-900 border-white/5 text-slate-500'
+                      : pillInactive
                   }`}
                 >
                   {registryStates.hagsEnabled ? 'HAGS ENABLED' : 'HAGS DISABLED'}
@@ -423,10 +469,10 @@ export default function ValorantOptimizer({
               </div>
 
               {/* Tweak 2: Disable Game DVR */}
-              <div className="flex justify-between items-start gap-4 bg-slate-950/60 p-3.5 rounded-lg border border-white/5">
+              <div className={`flex justify-between items-start gap-4 ${cardInner} p-3.5 rounded-lg border`}>
                 <div className="space-y-1">
-                  <span className="text-slate-200 font-bold block">Disable Windows Game Bar & DVR</span>
-                  <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                  <span className={`text-slate-200 font-bold block`}>Disable Windows Game Bar & DVR</span>
+                  <p className={`text-[11px] ${textS} font-sans leading-relaxed`}>
                     Turns off the background gaming capture and telemetry overlays which cause sudden frame drops.
                   </p>
                 </div>
@@ -435,7 +481,7 @@ export default function ValorantOptimizer({
                   className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
                     registryStates.gameDvrDisabled
                       ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
-                      : 'bg-slate-900 border-white/5 text-slate-500'
+                      : pillInactive
                   }`}
                 >
                   {registryStates.gameDvrDisabled ? 'DVR DISABLED' : 'DVR ENABLED'}
@@ -443,10 +489,10 @@ export default function ValorantOptimizer({
               </div>
 
               {/* Tweak 3: High Priority System Scheduler */}
-              <div className="flex justify-between items-start gap-4 bg-slate-950/60 p-3.5 rounded-lg border border-white/5">
+              <div className={`flex justify-between items-start gap-4 ${cardInner} p-3.5 rounded-lg border`}>
                 <div className="space-y-1">
-                  <span className="text-slate-200 font-bold block">System Profile Task Scheduling</span>
-                  <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                  <span className={`text-slate-200 font-bold block`}>System Profile Task Scheduling</span>
+                  <p className={`text-[11px] ${textS} font-sans leading-relaxed`}>
                     Optimizes the Windows Multimedia Scheduler priority values, assigning maximum CPU slices to gaming tasks.
                   </p>
                 </div>
@@ -455,7 +501,7 @@ export default function ValorantOptimizer({
                   className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
                     registryStates.priorityOptimized
                       ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
-                      : 'bg-slate-900 border-white/5 text-slate-500'
+                      : pillInactive
                   }`}
                 >
                   {registryStates.priorityOptimized ? 'OPTIMIZED' : 'DEFAULT'}
@@ -468,7 +514,7 @@ export default function ValorantOptimizer({
       </div>
 
       {/* ULTRA-LOW LATENCY & INPUT DECK */}
-      <div className={`p-6 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} space-y-6`}>
+      <div className={`p-6 rounded-xl border ${activeStyle.panelBg} space-y-6`}>
         {!isAdmin && (
           <div className="bg-amber-500/10 border border-amber-500/30 text-amber-400 p-3 rounded-lg flex items-start gap-2.5 font-sans text-xs">
             <span className="text-sm">⚠️</span>
@@ -477,12 +523,12 @@ export default function ValorantOptimizer({
             </div>
           </div>
         )}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-blue-500/10 pb-4">
+        <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b ${sectionBorder} pb-4`}>
           <div className="space-y-1">
-            <h3 className="text-xs font-mono font-bold tracking-widest text-slate-200 uppercase flex items-center gap-2">
+            <h3 className={`text-xs font-mono font-bold tracking-widest ${textH} uppercase flex items-center gap-2`}>
               <Zap className="w-4 h-4 text-amber-400 animate-pulse" /> ULTRA-LOW LATENCY & INPUT DECK
             </h3>
-            <p className="text-xs text-slate-400 font-sans">
+            <p className={`text-xs ${textS} font-sans`}>
               Optimize display frame-rates for Variable Refresh Rate monitors, eliminate peripheral input lag, and stabilize CPU 1% frametime lows.
             </p>
           </div>
@@ -492,13 +538,58 @@ export default function ValorantOptimizer({
           
           {/* Column 1: Display VRR Sync & Frame Limiter */}
           <div className="space-y-4">
-            <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">
-              1. Monitor Synchronization (FreeSync / G-Sync)
+            <span className={`text-slate-400 font-bold block border-b ${sectionLabelBorder} pb-1 uppercase tracking-wider`}>
+              1. Monitor Synchronization &amp; FPS Cap
             </span>
             
-            <div className="space-y-4 bg-slate-950/60 p-4 rounded-lg border border-white/5">
+            <div className={`space-y-4 p-4 rounded-lg border ${cardInner}`}>
+              {/* G-Sync Disable / FreeSync Enable toggles */}
+              <div className="space-y-2.5">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider block">Display Sync Technology</span>
+                
+                {/* G-Sync Disable Toggle */}
+                <div className={`flex justify-between items-start gap-4 ${cardInner} p-3 rounded-lg border`}>
+                  <div className="space-y-0.5">
+                    <span className="text-slate-200 font-bold block text-[11px]">Disable G-Sync (NVIDIA)</span>
+                    <p className={`text-[10px] ${textS} font-sans leading-relaxed`}>
+                      Turn off G-Sync to prevent frame timing overhead — best paired with FreeSync + uncapped FPS.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => toggleGsync(!gsyncDisabled)}
+                    className={`px-3 py-1.5 rounded font-bold border transition text-[10px] shrink-0 cursor-pointer ${
+                      gsyncDisabled
+                        ? 'bg-rose-500/10 border-rose-500/35 text-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.15)]'
+                        : pillInactive
+                    }`}
+                  >
+                    {gsyncDisabled ? 'G-SYNC OFF ✓' : 'G-SYNC ON'}
+                  </button>
+                </div>
+
+                {/* FreeSync Enable Toggle */}
+                <div className={`flex justify-between items-start gap-4 ${cardInner} p-3 rounded-lg border`}>
+                  <div className="space-y-0.5">
+                    <span className="text-slate-200 font-bold block text-[11px]">Enable FreeSync / Adaptive Sync</span>
+                    <p className={`text-[10px] ${textS} font-sans leading-relaxed`}>
+                      Activates AMD FreeSync or NVIDIA Adaptive Sync for tear-free frames without VSync latency.
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => toggleFreesync(!freesyncEnabled)}
+                    className={`px-3 py-1.5 rounded font-bold border transition text-[10px] shrink-0 cursor-pointer ${
+                      freesyncEnabled
+                        ? 'bg-cyan-500/10 border-cyan-500/35 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.15)]'
+                        : pillInactive
+                    }`}
+                  >
+                    {freesyncEnabled ? 'FREESYNC ACTIVE ✓' : 'FREESYNC OFF'}
+                  </button>
+                </div>
+              </div>
+
               {/* Hz selector */}
-              <div className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1 border-t border-white/5 pt-3">
                 <label className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Monitor Refresh Rate (Hz)</label>
                 <select
                   value={monitorRefreshRate}
@@ -520,52 +611,52 @@ export default function ValorantOptimizer({
               </div>
 
               {/* VRR Preset buttons */}
-              <div className="flex flex-col gap-2 pt-1">
-                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Synchronization Preset</span>
+              <div className="flex flex-col gap-2">
+                <span className="text-[10px] text-slate-500 font-bold uppercase tracking-wider">FPS Cap Mode</span>
                 <div className="grid grid-cols-2 gap-2">
-                  <button
-                    onClick={() => applyFrameLimitSettings('vrr', monitorRefreshRate)}
-                    className={`p-2.5 rounded-lg border font-bold text-center transition cursor-pointer text-[11px] flex flex-col justify-center items-center gap-1 ${
-                      frameLimitMode === 'vrr'
-                        ? 'bg-cyan-500/10 border-cyan-500/35 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.15)]'
-                        : 'bg-slate-900 border-white/5 text-slate-400 hover:text-slate-300'
-                    }`}
-                  >
-                    <span className="block font-bold">VRR SYNC (G-Sync/FreeSync)</span>
-                    <span className="text-[9px] font-sans font-normal opacity-85 block">Caps FPS to {monitorRefreshRate - 3} FPS (VSync Off)</span>
-                  </button>
                   <button
                     onClick={() => applyFrameLimitSettings('uncapped', monitorRefreshRate)}
                     className={`p-2.5 rounded-lg border font-bold text-center transition cursor-pointer text-[11px] flex flex-col justify-center items-center gap-1 ${
                       frameLimitMode === 'uncapped'
                         ? 'bg-amber-500/10 border-amber-500/35 text-amber-400 shadow-[0_0_8px_rgba(245,158,11,0.15)]'
-                        : 'bg-slate-900 border-white/5 text-slate-400 hover:text-slate-300'
+                        : pillInactive
                     }`}
                   >
-                    <span className="block font-bold">RAW UNCAPPED</span>
-                    <span className="text-[9px] font-sans font-normal opacity-85 block">Sets FPS limit to Unlimited (0)</span>
+                    <span className="block font-bold">⚡ RAW UNCAPPED</span>
+                    <span className="text-[9px] font-sans font-normal opacity-85 block">No FPS limit — max performance</span>
+                  </button>
+                  <button
+                    onClick={() => applyFrameLimitSettings('vrr', monitorRefreshRate)}
+                    className={`p-2.5 rounded-lg border font-bold text-center transition cursor-pointer text-[11px] flex flex-col justify-center items-center gap-1 ${
+                      frameLimitMode === 'vrr'
+                        ? 'bg-cyan-500/10 border-cyan-500/35 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.15)]'
+                        : pillInactive
+                    }`}
+                  >
+                    <span className="block font-bold">VRR SYNC CAP</span>
+                    <span className="text-[9px] font-sans font-normal opacity-85 block">Caps to {monitorRefreshRate - 3} FPS for stable VRR</span>
                   </button>
                 </div>
               </div>
 
               <div className="text-[10px] text-slate-500 font-sans leading-relaxed pt-2 border-t border-white/5">
-                💡 <strong>Why caps matter:</strong> To make VRR (G-Sync/FreeSync) work without latency spikes, FPS must be restricted just below your monitor's maximum range to prevent standard VSync from taking over. Raw Uncapped yields the maximum possible FPS but can introduce frame tearing.
+                💡 <strong>Recommended:</strong> Disable G-Sync + Enable FreeSync + <span className="text-amber-400">Uncapped FPS</span>. FreeSync handles tear prevention while uncapped FPS minimizes latency and prevents stutters from adaptive sync range limits.
               </div>
             </div>
           </div>
 
           {/* Column 2: Inputs & Hardware Tweaks */}
           <div className="space-y-4">
-            <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">
+            <span className={`text-slate-400 font-bold block border-b ${sectionLabelBorder} pb-1 uppercase tracking-wider`}>
               2. Inputs & Core Latency Tweaks
             </span>
             
             <div className="space-y-3 font-mono">
               {/* Mouse acceleration */}
-              <div className="flex justify-between items-start gap-4 bg-slate-950/60 p-3 rounded-lg border border-white/5">
+              <div className={`flex justify-between items-start gap-4 ${cardInner} p-3 rounded-lg border`}>
                 <div className="space-y-1">
-                  <span className="text-slate-200 font-bold block">Disable Mouse Acceleration</span>
-                  <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                  <span className={`text-slate-200 font-bold block`}>Disable Mouse Acceleration</span>
+                  <p className={`text-[11px] ${textS} font-sans leading-relaxed`}>
                     Forces Windows pointer speed curves to absolute 1-to-1 raw input ratios.
                   </p>
                 </div>
@@ -574,7 +665,7 @@ export default function ValorantOptimizer({
                   className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
                     latencyTweaks.disableMouseAccel
                       ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
-                      : 'bg-slate-900 border-white/5 text-slate-500'
+                      : pillInactive
                   }`}
                 >
                   {latencyTweaks.disableMouseAccel ? 'ACCEL DISABLED' : 'DEFAULT'}
@@ -582,10 +673,10 @@ export default function ValorantOptimizer({
               </div>
 
               {/* USB Selective suspend */}
-              <div className="flex justify-between items-start gap-4 bg-slate-950/60 p-3 rounded-lg border border-white/5">
+              <div className={`flex justify-between items-start gap-4 ${cardInner} p-3 rounded-lg border`}>
                 <div className="space-y-1">
-                  <span className="text-slate-200 font-bold block">Disable USB selective suspend</span>
-                  <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                  <span className={`text-slate-200 font-bold block`}>Disable USB selective suspend</span>
+                  <p className={`text-[11px] ${textS} font-sans leading-relaxed`}>
                     Prevents USB root ports from powering down, reducing mouse/keyboard wake latency.
                   </p>
                 </div>
@@ -594,7 +685,7 @@ export default function ValorantOptimizer({
                   className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
                     latencyTweaks.disableUsbSuspend
                       ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
-                      : 'bg-slate-900 border-white/5 text-slate-500'
+                      : pillInactive
                   }`}
                 >
                   {latencyTweaks.disableUsbSuspend ? 'POWER SLEEP OFF' : 'DEFAULT'}
@@ -602,10 +693,10 @@ export default function ValorantOptimizer({
               </div>
 
               {/* Core Parking */}
-              <div className="flex justify-between items-start gap-4 bg-slate-950/60 p-3 rounded-lg border border-white/5">
+              <div className={`flex justify-between items-start gap-4 ${cardInner} p-3 rounded-lg border`}>
                 <div className="space-y-1">
-                  <span className="text-slate-200 font-bold block">Disable CPU Core Parking (1% Lows)</span>
-                  <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                  <span className={`text-slate-200 font-bold block`}>Disable CPU Core Parking (1% Lows)</span>
+                  <p className={`text-[11px] ${textS} font-sans leading-relaxed`}>
                     Stops physical cores from entering deep sleep states, eliminating CPU power-state frame spikes.
                   </p>
                 </div>
@@ -614,7 +705,7 @@ export default function ValorantOptimizer({
                   className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
                     latencyTweaks.disableCoreParking
                       ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
-                      : 'bg-slate-900 border-white/5 text-slate-500'
+                      : pillInactive
                   }`}
                 >
                   {latencyTweaks.disableCoreParking ? 'PARKING DISABLED' : 'DEFAULT'}
@@ -622,10 +713,10 @@ export default function ValorantOptimizer({
               </div>
 
               {/* Dynamic tick */}
-              <div className="flex justify-between items-start gap-4 bg-slate-950/60 p-3 rounded-lg border border-white/5">
+              <div className={`flex justify-between items-start gap-4 ${cardInner} p-3 rounded-lg border`}>
                 <div className="space-y-1">
-                  <span className="text-slate-200 font-bold block">Disable Windows Dynamic Tick</span>
-                  <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                  <span className={`text-slate-200 font-bold block`}>Disable Windows Dynamic Tick</span>
+                  <p className={`text-[11px] ${textS} font-sans leading-relaxed`}>
                     Forces Windows to maintain uniform scheduler clock periods for frame smoothness.
                   </p>
                 </div>
@@ -634,7 +725,7 @@ export default function ValorantOptimizer({
                   className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
                     latencyTweaks.disableDynamicTick
                       ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
-                      : 'bg-slate-900 border-white/5 text-slate-500'
+                      : pillInactive
                   }`}
                 >
                   {latencyTweaks.disableDynamicTick ? 'TICK CONSTANT' : 'DEFAULT'}
@@ -642,24 +733,45 @@ export default function ValorantOptimizer({
               </div>
 
               {/* Fullscreen Optimizations */}
-              <div className="flex justify-between items-start gap-4 bg-slate-950/60 p-3 rounded-lg border border-white/5">
+              <div className={`flex justify-between items-start gap-4 ${cardInner} p-3 rounded-lg border`}>
                 <div className="space-y-1">
-                  <span className="text-slate-200 font-bold block">Force Exclusive Fullscreen (VALORANT)</span>
-                  <p className="text-[11px] text-slate-500 font-sans leading-relaxed">
+                  <span className={`text-slate-200 font-bold block`}>Force Exclusive Fullscreen (VALORANT)</span>
+                  <p className={`text-[11px] ${textS} font-sans leading-relaxed`}>
                     Bypasses the DWM overlay pipeline completely, trimming display render queue latency.
                   </p>
                 </div>
-                <button
-                  onClick={() => toggleLatencyTweak('disableFullscreenOpt', !latencyTweaks.disableFullscreenOpt)}
+                <button 
+                  onClick={() => toggleLatencyTweak('disableFullscreenOpt', !latencyTweaks.disableFullscreenOpt)} 
                   className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
                     latencyTweaks.disableFullscreenOpt
                       ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
-                      : 'bg-slate-900 border-white/5 text-slate-500'
+                      : pillInactive
                   }`}
                 >
                   {latencyTweaks.disableFullscreenOpt ? 'EXCLUSIVE FORCE' : 'DEFAULT'}
                 </button>
               </div>
+
+              {/* MSI Mode */}
+              <div className={`flex justify-between items-start gap-4 ${cardInner} p-3 rounded-lg border`}>
+                <div className="space-y-1">
+                  <span className={`text-slate-200 font-bold block`}>Force MSI Mode (GPU & USB)</span>
+                  <p className={`text-[11px] ${textS} font-sans leading-relaxed`}>
+                    Forces Message Signaled Interrupts (MSISupported) for display adapters, providing direct CPU lanes for inputs and frames.
+                  </p>
+                </div>
+                <button 
+                  onClick={() => toggleMsiMode(!msiEnabled)} 
+                  className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
+                    msiEnabled
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                      : pillInactive
+                  }`}
+                >
+                  {msiEnabled ? 'MSI MODE ON' : 'LINE-BASED (DEFAULT)'}
+                </button>
+              </div>
+
             </div>
           </div>
 
@@ -667,13 +779,13 @@ export default function ValorantOptimizer({
       </div>
 
       {/* VANGUARD HEALTH & COMPLIANCE BOARD */}
-      <div className={`p-6 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} space-y-6 animate-in fade-in duration-300`}>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-blue-500/10 pb-4">
+      <div className={`p-6 rounded-xl border ${activeStyle.panelBg} space-y-6 animate-in fade-in duration-300`}>
+        <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b ${sectionBorder} pb-4`}>
           <div className="space-y-1">
-            <h3 className="text-xs font-mono font-bold tracking-widest text-slate-200 uppercase flex items-center gap-2">
+            <h3 className={`text-xs font-mono font-bold tracking-widest ${textH} uppercase flex items-center gap-2`}>
               <span className="text-[#ff4655] animate-pulse">🛡️</span> VANGUARD HEALTH & COMPLIANCE BOARD
             </h3>
-            <p className="text-xs text-slate-400 font-sans">
+            <p className={`text-xs ${textS} font-sans`}>
               Diagnose system parameters to ensure full Vanguard compatibility and prevent game client connection drops or freezes.
             </p>
           </div>
@@ -687,7 +799,7 @@ export default function ValorantOptimizer({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4 font-mono text-xs">
           {/* Secure Boot Check */}
-          <div className="bg-slate-950/60 p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+          <div className={`p-4 rounded-lg border ${cardInner} flex flex-col justify-between`}>
             <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Secure Boot Status</span>
             <div className="my-3 flex items-center gap-2">
               <div className={`w-2.5 h-2.5 rounded-full ${vanguardHealth.secureBoot === 'enabled' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`} />
@@ -695,11 +807,11 @@ export default function ValorantOptimizer({
                 {vanguardHealth.secureBoot}
               </span>
             </div>
-            <p className="text-[10px] text-slate-500 font-sans leading-relaxed">Required by Vanguard on Windows 11 systems.</p>
+            <p className={`text-[10px] ${textS} font-sans leading-relaxed`}>Required by Vanguard on Windows 11 systems.</p>
           </div>
 
           {/* TPM 2.0 Check */}
-          <div className="bg-slate-950/60 p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+          <div className={`p-4 rounded-lg border ${cardInner} flex flex-col justify-between`}>
             <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">TPM 2.0 Verification</span>
             <div className="my-3 flex items-center gap-2">
               <div className={`w-2.5 h-2.5 rounded-full ${vanguardHealth.tpm2 === 'active' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`} />
@@ -707,11 +819,11 @@ export default function ValorantOptimizer({
                 {vanguardHealth.tpm2}
               </span>
             </div>
-            <p className="text-[10px] text-slate-500 font-sans leading-relaxed">Trusted Platform Module 2.0 encryption check.</p>
+            <p className={`text-[10px] ${textS} font-sans leading-relaxed`}>Trusted Platform Module 2.0 encryption check.</p>
           </div>
 
           {/* CSM Check */}
-          <div className="bg-slate-950/60 p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+          <div className={`p-4 rounded-lg border ${cardInner} flex flex-col justify-between`}>
             <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">CSM Compatibility</span>
             <div className="my-3 flex items-center gap-2">
               <div className={`w-2.5 h-2.5 rounded-full ${vanguardHealth.csmDisabled === 'disabled' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'}`} />
@@ -719,11 +831,11 @@ export default function ValorantOptimizer({
                 {vanguardHealth.csmDisabled === 'disabled' ? 'INACTIVE (UEFI)' : 'ACTIVE / UNKNOWN'}
               </span>
             </div>
-            <p className="text-[10px] text-slate-500 font-sans leading-relaxed">CSM must be turned OFF in BIOS for Secure Boot compatibility.</p>
+            <p className={`text-[10px] ${textS} font-sans leading-relaxed`}>CSM must be turned OFF in BIOS for Secure Boot compatibility.</p>
           </div>
 
           {/* VPN/Proxy Active */}
-          <div className="bg-slate-950/60 p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+          <div className={`p-4 rounded-lg border ${cardInner} flex flex-col justify-between`}>
             <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">VPN Interface Status</span>
             <div className="my-3 flex items-center gap-2">
               <div className={`w-2.5 h-2.5 rounded-full ${!vanguardHealth.vpnActive ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.5)]'}`} />
@@ -731,11 +843,11 @@ export default function ValorantOptimizer({
                 {vanguardHealth.vpnActive ? 'VPN DETECTED' : 'CLEAR'}
               </span>
             </div>
-            <p className="text-[10px] text-slate-500 font-sans leading-relaxed">Active VPN tunnels can disrupt matchmaking protocols.</p>
+            <p className={`text-[10px] ${textS} font-sans leading-relaxed`}>Active VPN tunnels can disrupt matchmaking protocols.</p>
           </div>
 
           {/* AMD Driver Warning */}
-          <div className="bg-slate-950/60 p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+          <div className={`p-4 rounded-lg border ${cardInner} flex flex-col justify-between`}>
             <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">AMD RX Driver Check</span>
             <div className="my-3 flex items-center gap-2">
               <div className={`w-2.5 h-2.5 rounded-full ${!vanguardHealth.gpuDriverWarning ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`} />
@@ -743,11 +855,11 @@ export default function ValorantOptimizer({
                 {vanguardHealth.gpuDriverWarning ? 'WARNING' : 'CLEAR'}
               </span>
             </div>
-            <p className="text-[10px] text-slate-500 font-sans leading-relaxed">AMD RX Driver v32.0.31007.1017 causes game client crashes.</p>
+            <p className={`text-[10px] ${textS} font-sans leading-relaxed`}>AMD RX Driver v32.0.31007.1017 causes game client crashes.</p>
           </div>
 
           {/* Incompatible Driver Scanner */}
-          <div className="bg-slate-950/60 p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+          <div className={`p-4 rounded-lg border ${cardInner} flex flex-col justify-between`}>
             <span className="text-slate-400 text-[10px] font-bold uppercase tracking-wider block">Vulnerable Drivers</span>
             <div className="my-3 flex items-center gap-2">
               <div className={`w-2.5 h-2.5 rounded-full ${(!vanguardHealth.flaggedDrivers || vanguardHealth.flaggedDrivers.length === 0) ? 'bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]' : 'bg-rose-500 shadow-[0_0_8px_rgba(239,68,68,0.5)]'}`} />
@@ -755,7 +867,7 @@ export default function ValorantOptimizer({
                 {(!vanguardHealth.flaggedDrivers || vanguardHealth.flaggedDrivers.length === 0) ? 'CLEAR' : 'FLAGGED'}
               </span>
             </div>
-            <p className="text-[10px] text-slate-500 font-sans leading-relaxed">
+            <p className={`text-[10px] ${textS} font-sans leading-relaxed`}>
               {(!vanguardHealth.flaggedDrivers || vanguardHealth.flaggedDrivers.length === 0)
                 ? 'No vulnerable or incompatible drivers (inpoutx64, gdrv) found.'
                 : `Found: ${vanguardHealth.flaggedDrivers.join(', ')}. Uninstall associated app.`}
@@ -765,13 +877,13 @@ export default function ValorantOptimizer({
       </div>
 
       {/* ADVANCED CPU SCHEDULER & WINDOWS SERVICES DECK */}
-      <div className={`p-6 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} space-y-6 animate-in fade-in duration-300`}>
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b border-blue-500/10 pb-4">
+      <div className={`p-6 rounded-xl border ${activeStyle.panelBg} space-y-6 animate-in fade-in duration-300`}>
+        <div className={`flex flex-col md:flex-row justify-between items-start md:items-center gap-4 border-b ${sectionBorder} pb-4`}>
           <div className="space-y-1">
-            <h3 className="text-xs font-mono font-bold tracking-widest text-slate-200 uppercase flex items-center gap-2">
+            <h3 className={`text-xs font-mono font-bold tracking-widest ${textH} uppercase flex items-center gap-2`}>
               <Cpu className="w-4 h-4 text-indigo-400" /> ADVANCED CPU SCHEDULER & ENVIRONMENT DECK
             </h3>
-            <p className="text-xs text-slate-400 font-sans">
+            <p className={`text-xs ${textS} font-sans`}>
               Optimize thread scheduler affinities for physical and efficiency processor cores, lock system clock speed periods, and configure local DNS.
             </p>
           </div>
@@ -780,12 +892,12 @@ export default function ValorantOptimizer({
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 font-mono text-xs">
           {/* Section 1: Process Affinity & Priority Controls */}
           <div className="space-y-4">
-            <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">
+            <span className={`text-slate-400 font-bold block border-b ${sectionLabelBorder} pb-1 uppercase tracking-wider`}>
               1. CPU Thread Affinity & Priority
             </span>
-            <div className="space-y-3 bg-slate-950/60 p-4 rounded-lg border border-white/5">
+            <div className={`space-y-3 p-4 rounded-lg border ${cardInner}`}>
               <div className="flex justify-between items-center border-b border-white/5 pb-2">
-                <span className="text-slate-300 font-bold font-sans">Auto-High Priority</span>
+                <span className={`text-slate-300 font-bold font-sans`}>Auto-High Priority</span>
                 <span className="text-emerald-400 font-bold text-[10px] bg-emerald-500/10 px-2 py-0.5 rounded">STANDBY</span>
               </div>
               <p className="text-[10px] text-slate-500 font-sans leading-relaxed mb-3">
@@ -801,7 +913,7 @@ export default function ValorantOptimizer({
                 />
                 <div className="space-y-0.5">
                   <span className="text-slate-200 group-hover:text-cyan-400 transition font-bold block">Disable Hyperthreading (SMT)</span>
-                  <span className="text-slate-500 font-sans block leading-normal text-[10px]">
+                  <span className={`text-[10px] ${textM} font-sans block leading-normal`}>
                     Affinitizes VALORANT only to physical cores, stabilizing frame delivery and 1% lows.
                   </span>
                 </div>
@@ -816,17 +928,17 @@ export default function ValorantOptimizer({
                 />
                 <div className="space-y-0.5">
                   <span className="text-slate-200 group-hover:text-cyan-400 transition font-bold block">Restrain Background Apps</span>
-                  <span className="text-slate-500 font-sans block leading-normal text-[10px]">
+                  <span className={`text-[10px] ${textM} font-sans block leading-normal`}>
                     Binds browsers, launchers, and Discord to Efficiency (E) cores so performance cores focus solely on the game.
                   </span>
                 </div>
               </label>
 
               <div className="flex justify-between items-center border-t border-white/5 pt-3 mt-1">
-                <span className="text-slate-300 font-bold font-sans">Auto Power Plan</span>
+                <span className={`text-slate-300 font-bold font-sans`}>Auto Power Plan</span>
                 <span className="text-cyan-400 font-bold text-[10px] bg-cyan-500/10 px-2 py-0.5 rounded">ACTIVE</span>
               </div>
-              <p className="text-[10px] text-slate-500 font-sans leading-relaxed">
+              <p className={`text-[10px] ${textS} font-sans leading-relaxed`}>
                 Switches the system scheme to High Performance on launch and reverts it to Balanced on exit.
               </p>
             </div>
@@ -834,10 +946,10 @@ export default function ValorantOptimizer({
 
           {/* Section 2: Timer Resolution & Network DNS */}
           <div className="space-y-4">
-            <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">
+            <span className={`text-slate-400 font-bold block border-b ${sectionLabelBorder} pb-1 uppercase tracking-wider`}>
               2. Latency Timers & Connection
             </span>
-            <div className="space-y-3 bg-slate-950/60 p-4 rounded-lg border border-white/5">
+            <div className={`space-y-3 p-4 rounded-lg border ${cardInner}`}>
               {/* Timer resolution override */}
               <div className="flex justify-between items-center pb-2 border-b border-white/5">
                 <div className="space-y-0.5">
@@ -845,14 +957,34 @@ export default function ValorantOptimizer({
                   <span className="text-[10px] text-slate-500 font-sans block">Force system tick rate to 0.50 ms.</span>
                 </div>
                 <button
-                  onClick={() => toggleTimerResolution(!timerResActive)}
+                  onClick={toggleTimerResolution}
                   className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
                     timerResActive
                       ? 'bg-cyan-500/10 border-cyan-500/35 text-cyan-400 shadow-[0_0_8px_rgba(6,182,212,0.15)]'
-                      : 'bg-slate-900 border-white/5 text-slate-500'
+                      : pillInactive
                   }`}
                 >
                   {timerResActive ? '0.50 ms LOCKED' : 'WINDOWS DEFAULT'}
+                </button>
+              </div>
+
+              {/* HPET Disable */}
+              <div className="flex justify-between items-center pb-2 border-b border-white/5 mt-2">
+                <div className="space-y-0.5">
+                  <span className={`text-slate-200 font-bold block`}>Disable HPET (Platform Clock)</span>
+                  <p className={`text-[10px] ${textS} font-sans leading-relaxed`}>
+                    Forces Windows to use the CPU's native Time Stamp Counter (TSC), resolving DPC latency spikes caused by motherboard timer desync.
+                  </p>
+                </div>
+                <button
+                  onClick={() => toggleHpet(!hpetDisabled)}
+                  className={`px-3 py-1.5 rounded font-bold border transition text-xs shrink-0 cursor-pointer ${
+                    hpetDisabled
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.15)]'
+                      : pillInactive
+                  }`}
+                >
+                  {hpetDisabled ? 'HPET DISABLED (TSC)' : 'ENABLED (DEFAULT)'}
                 </button>
               </div>
 
@@ -865,7 +997,7 @@ export default function ValorantOptimizer({
                     className={`py-1.5 rounded border font-bold text-center transition cursor-pointer text-[10px] ${
                       activeDns === 'cloudflare'
                         ? 'bg-cyan-500/10 border-cyan-500/35 text-cyan-400'
-                        : 'bg-slate-900 border-white/5 text-slate-400'
+                        : pillInactive
                     }`}
                   >
                     Cloudflare (1.1.1.1)
@@ -875,7 +1007,7 @@ export default function ValorantOptimizer({
                     className={`py-1.5 rounded border font-bold text-center transition cursor-pointer text-[10px] ${
                       activeDns === 'google'
                         ? 'bg-cyan-500/10 border-cyan-500/35 text-cyan-400'
-                        : 'bg-slate-900 border-white/5 text-slate-400'
+                        : pillInactive
                     }`}
                   >
                     Google (8.8.8.8)
@@ -885,7 +1017,7 @@ export default function ValorantOptimizer({
                     className={`py-1.5 rounded border font-bold text-center transition cursor-pointer text-[10px] ${
                       activeDns === 'default'
                         ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400'
-                        : 'bg-slate-900 border-white/5 text-slate-400'
+                        : pillInactive
                     }`}
                   >
                     Reset (DHCP)
@@ -900,22 +1032,22 @@ export default function ValorantOptimizer({
 
           {/* Section 3: Safe Background Windows Services */}
           <div className="space-y-4">
-            <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">
+            <span className={`text-slate-400 font-bold block border-b ${sectionLabelBorder} pb-1 uppercase tracking-wider`}>
               3. Safely Disable Windows Services
             </span>
-            <div className="space-y-3 bg-slate-950/60 p-4 rounded-lg border border-white/5">
-              <p className="text-[10px] text-slate-500 font-sans leading-relaxed mb-1">
+            <div className={`space-y-3 p-4 rounded-lg border ${cardInner}`}>
+              <p className={`text-[10px] ${textM} font-sans leading-relaxed`}>
                 Turn off non-essential telemetry and background schedulers to reclaim CPU cycles.
               </p>
 
               {/* SysMain toggle */}
               <div className="flex justify-between items-center">
-                <span className="text-[11px] text-slate-300 font-sans font-bold">SysMain (SuperFetch)</span>
+                <span className={`text-[11px] ${textH} font-sans font-bold block`}>SysMain (SuperFetch)</span>
                 <button
                   onClick={() => toggleBgService('SysMain', !bgServices.SysMain)}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
                     bgServices.SysMain
-                      ? 'bg-slate-900 border-white/5 text-slate-400'
+                      ? pillInactive
                       : 'bg-rose-500/10 border-rose-500/35 text-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.1)]'
                   }`}
                 >
@@ -925,12 +1057,12 @@ export default function ValorantOptimizer({
 
               {/* Spooler toggle */}
               <div className="flex justify-between items-center mt-2">
-                <span className="text-[11px] text-slate-300 font-sans font-bold">Print Spooler</span>
+                <span className={`text-[11px] ${textH} font-sans font-bold block`}>Print Spooler</span>
                 <button
                   onClick={() => toggleBgService('Spooler', !bgServices.Spooler)}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
                     bgServices.Spooler
-                      ? 'bg-slate-900 border-white/5 text-slate-400'
+                      ? pillInactive
                       : 'bg-rose-500/10 border-rose-500/35 text-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.1)]'
                   }`}
                 >
@@ -940,12 +1072,12 @@ export default function ValorantOptimizer({
 
               {/* Telemetry toggle */}
               <div className="flex justify-between items-center mt-2">
-                <span className="text-[11px] text-slate-300 font-sans font-bold">Connected Telemetry (DiagTrack)</span>
+                <span className={`text-[11px] ${textH} font-sans font-bold block`}>Connected Telemetry (DiagTrack)</span>
                 <button
                   onClick={() => toggleBgService('DiagTrack', !bgServices.DiagTrack)}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
                     bgServices.DiagTrack
-                      ? 'bg-slate-900 border-white/5 text-slate-400'
+                      ? pillInactive
                       : 'bg-rose-500/10 border-rose-500/35 text-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.1)]'
                   }`}
                 >
@@ -955,12 +1087,12 @@ export default function ValorantOptimizer({
 
               {/* Xbox Live toggle */}
               <div className="flex justify-between items-center mt-2">
-                <span className="text-[11px] text-slate-300 font-sans font-bold">Xbox Live Auth Manager</span>
+                <span className={`text-[11px] ${textH} font-sans font-bold block`}>Xbox Live Auth Manager</span>
                 <button
                   onClick={() => toggleBgService('XblAuthManager', !bgServices.XblAuthManager)}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
                     bgServices.XblAuthManager
-                      ? 'bg-slate-900 border-white/5 text-slate-400'
+                      ? pillInactive
                       : 'bg-rose-500/10 border-rose-500/35 text-rose-400 shadow-[0_0_8px_rgba(239,68,68,0.1)]'
                   }`}
                 >
@@ -972,13 +1104,13 @@ export default function ValorantOptimizer({
 
           {/* Section 4: Deep System & Network Tuning */}
           <div className="space-y-4">
-            <span className="text-slate-400 font-bold block border-b border-blue-500/5 pb-1 uppercase tracking-wider">
+            <span className={`text-slate-400 font-bold block border-b ${sectionLabelBorder} pb-1 uppercase tracking-wider`}>
               4. Deep System & Network Tuning
             </span>
-            <div className="space-y-3 bg-slate-950/60 p-4 rounded-lg border border-white/5">
+            <div className={`space-y-3 p-4 rounded-lg border ${cardInner}`}>
               
               <div className="flex justify-between items-center">
-                <span className="text-[11px] text-slate-300 font-sans font-bold">VBS / Memory Integrity</span>
+                <span className={`text-[11px] ${textH} font-sans font-bold block`}>VBS / Memory Integrity</span>
                 <button
                   onClick={() => toggleVbs(!vbsEnabled)}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
@@ -992,13 +1124,27 @@ export default function ValorantOptimizer({
               </div>
 
               <div className="flex justify-between items-center mt-2">
-                <span className="text-[11px] text-slate-300 font-sans font-bold">Nagle's Algorithm (TCP)</span>
+                <span className={`text-[11px] ${textH} font-sans font-bold block`}>Network Interrupt Moderation & Offloads</span>
+                <button
+                  onClick={() => toggleNicOffloads(!nicOffloadsDisabled)}
+                  className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
+                    nicOffloadsDisabled
+                      ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]'
+                      : pillInactive
+                  }`}
+                >
+                  {nicOffloadsDisabled ? 'DISABLED (Instant)' : 'ENABLED (Batched)'}
+                </button>
+              </div>
+
+              <div className="flex justify-between items-center mt-2">
+                <span className={`text-[11px] ${textH} font-sans font-bold block`}>Nagle's Algorithm (TCP)</span>
                 <button
                   onClick={() => toggleNagle(!nagleDisabled)}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
                     nagleDisabled
                       ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]'
-                      : 'bg-slate-900 border-white/5 text-slate-400'
+                      : pillInactive
                   }`}
                 >
                   {nagleDisabled ? 'DISABLED (Low Ping)' : 'ENABLED (Default)'}
@@ -1006,13 +1152,13 @@ export default function ValorantOptimizer({
               </div>
 
               <div className="flex justify-between items-center mt-2">
-                <span className="text-[11px] text-slate-300 font-sans font-bold">Windows Memory Compression</span>
+                <span className={`text-[11px] ${textH} font-sans font-bold block`}>Windows Memory Compression</span>
                 <button
                   onClick={() => toggleMemCompression(!memCompressionEnabled)}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
                     !memCompressionEnabled
                       ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]'
-                      : 'bg-slate-900 border-white/5 text-slate-400'
+                      : pillInactive
                   }`}
                 >
                   {!memCompressionEnabled ? 'DISABLED (No Stutter)' : 'ENABLED (Default)'}
@@ -1020,13 +1166,13 @@ export default function ValorantOptimizer({
               </div>
 
               <div className="flex justify-between items-center mt-2">
-                <span className="text-[11px] text-slate-300 font-sans font-bold">NIC Power Saving</span>
+                <span className={`text-[11px] ${textH} font-sans font-bold block`}>NIC Power Saving</span>
                 <button
                   onClick={() => toggleNicPower(!nicPowerSavingDisabled)}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
                     nicPowerSavingDisabled
                       ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]'
-                      : 'bg-slate-900 border-white/5 text-slate-400'
+                      : pillInactive
                   }`}
                 >
                   {nicPowerSavingDisabled ? 'DISABLED (Stable)' : 'ENABLED (Default)'}
@@ -1034,13 +1180,13 @@ export default function ValorantOptimizer({
               </div>
 
               <div className="flex justify-between items-center mt-2">
-                <span className="text-[11px] text-slate-300 font-sans font-bold">Global Fullscreen Optimizations</span>
+                <span className={`text-[11px] ${textH} font-sans font-bold block`}>Global Fullscreen Optimizations</span>
                 <button
                   onClick={() => toggleGlobalFso(!globalFsoDisabled)}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
                     globalFsoDisabled
                       ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]'
-                      : 'bg-slate-900 border-white/5 text-slate-400'
+                      : pillInactive
                   }`}
                 >
                   {globalFsoDisabled ? 'DISABLED (Exclusive)' : 'ENABLED (Borderless)'}
@@ -1048,13 +1194,13 @@ export default function ValorantOptimizer({
               </div>
 
               <div className="flex justify-between items-center mt-2">
-                <span className="text-[11px] text-slate-300 font-sans font-bold">Power Throttling</span>
+                <span className={`text-[11px] ${textH} font-sans font-bold block`}>Power Throttling</span>
                 <button
                   onClick={() => togglePowerThrottling(!powerThrottlingDisabled)}
                   className={`px-2 py-0.5 rounded text-[10px] font-bold border transition ${
                     powerThrottlingDisabled
                       ? 'bg-emerald-500/10 border-emerald-500/35 text-emerald-400 shadow-[0_0_8px_rgba(16,185,129,0.1)]'
-                      : 'bg-slate-900 border-white/5 text-slate-400'
+                      : pillInactive
                   }`}
                 >
                   {powerThrottlingDisabled ? 'DISABLED (Max Perf)' : 'ENABLED (Throttled)'}
@@ -1069,7 +1215,7 @@ export default function ValorantOptimizer({
         <div className="lg:col-span-2 space-y-6">
           
           {/* Optimization Profile Engine */}
-          <div className={`p-6 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} space-y-4`}>
+          <div className={`p-6 rounded-xl border ${activeStyle.panelBg} space-y-4`}>
             <h3 className="text-xs font-mono font-bold tracking-widest text-cyan-400 uppercase border-b border-cyan-500/10 pb-2">
               Optimization Profile Engine
             </h3>
@@ -1102,7 +1248,7 @@ export default function ValorantOptimizer({
           </div>
 
           {/* One Click FPS Boosters */}
-          <div className={`p-6 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} space-y-4`}>
+          <div className={`p-6 rounded-xl border ${activeStyle.panelBg} space-y-4`}>
             <h3 className="text-xs font-mono font-bold tracking-widest text-blue-400 uppercase border-b border-blue-500/5 pb-2">
               Windows Gaming Enhancers (FPS Controls)
             </h3>
@@ -1112,7 +1258,7 @@ export default function ValorantOptimizer({
               {/* CPU Priority */}
               <button 
                 onClick={forceValorantPriority}
-                className="bg-slate-950/40 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/35 p-4 rounded-lg text-left transition group cursor-pointer"
+                className={`p-4 rounded-lg border text-left transition group cursor-pointer ${deepCard}`}
               >
                 <Cpu className="w-5 h-5 text-blue-400 mb-2" />
                 <span className="font-bold text-slate-200 block">High CPU Priority</span>
@@ -1123,7 +1269,7 @@ export default function ValorantOptimizer({
               {/* Game Mode */}
               <button 
                 onClick={toggleGameMode}
-                className="bg-slate-950/40 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/35 p-4 rounded-lg text-left transition group cursor-pointer"
+                className={`p-4 rounded-lg border text-left transition group cursor-pointer ${deepCard}`}
               >
                 <Zap className="w-5 h-5 text-blue-400 mb-2" />
                 <span className="font-bold text-slate-200 block">Enable Game Mode</span>
@@ -1134,7 +1280,7 @@ export default function ValorantOptimizer({
               {/* Power Plan */}
               <button 
                 onClick={togglePowerPlan}
-                className="bg-slate-950/40 hover:bg-blue-500/10 border border-blue-500/10 hover:border-blue-500/35 p-4 rounded-lg text-left transition group cursor-pointer"
+                className={`p-4 rounded-lg border text-left transition group cursor-pointer ${deepCard}`}
               >
                 <Settings className="w-5 h-5 text-blue-400 mb-2" />
                 <span className="font-bold text-slate-200 block">Max Performance Plan</span>
@@ -1146,8 +1292,8 @@ export default function ValorantOptimizer({
           </div>
 
           {/* Storage Cleaners */}
-          <div className={`p-6 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} space-y-4`}>
-            <div className="flex justify-between items-center border-b border-blue-500/5 pb-2">
+          <div className={`p-6 rounded-xl border ${activeStyle.panelBg} space-y-4`}>
+            <div className={`flex justify-between items-center border-b ${sectionBorder} pb-4`}>
               <h3 className="text-xs font-mono font-bold tracking-widest text-blue-400 uppercase">
                 Game Storage & Shader Cache Scrubbers
               </h3>
@@ -1159,20 +1305,20 @@ export default function ValorantOptimizer({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 font-mono text-xs">
               
               {/* Clean logs */}
-              <div className="bg-[#05080e] p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+              <div className={`${deepCard} p-4 rounded-lg border flex flex-col justify-between`}>
                 <div className="space-y-1">
                   <span className="font-bold text-slate-200 block">Wipe Game Log Cache</span>
-                  <p className="text-xs text-slate-400 font-sans">Removes crash reports and telemetry logs inside Local AppData.</p>
+                  <p className={`text-xs ${textS} font-sans`}>Removes crash reports and telemetry logs inside Local AppData.</p>
                   <span className="text-indigo-400 block text-[10px] font-bold">Logs Size: {valorantLogsSize}</span>
                 </div>
                 <button onClick={clearValorantLogs} disabled={cleaningVal || valorantLogsSize === 'Click Scan' || valorantLogsSize === '0.00 Bytes'} className="bg-blue-600 hover:bg-blue-500 text-white w-full py-1.5 rounded mt-4 transition font-bold cursor-pointer disabled:opacity-50">Clear Logs</button>
               </div>
 
               {/* Clean shaders */}
-              <div className="bg-[#05080e] p-4 rounded-lg border border-white/5 flex flex-col justify-between">
+              <div className={`${deepCard} p-4 rounded-lg border flex flex-col justify-between`}>
                 <div className="space-y-1">
                   <span className="font-bold text-slate-200 block">Scrub NVIDIA DXCache</span>
-                  <p className="text-xs text-slate-400 font-sans">Empties shader database tables. Resolves sudden game stutter issues.</p>
+                  <p className={`text-xs ${textS} font-sans`}>Empties shader database tables. Resolves sudden game stutter issues.</p>
                   <span className="text-indigo-400 block text-[10px] font-bold">Cache Size: {shaderCacheSize}</span>
                 </div>
                 <button onClick={cleanAllShaderCaches} disabled={cleaningVal || shaderCacheSize === 'Click Scan' || shaderCacheSize === '0.00 Bytes'} className="bg-blue-600 hover:bg-blue-500 text-white w-full py-1.5 rounded mt-4 transition font-bold cursor-pointer disabled:opacity-50">Purge Shader Caches</button>
@@ -1186,7 +1332,7 @@ export default function ValorantOptimizer({
         {/* Right column sidebar: Valorant Optimizer logs feed */}
         <div className="space-y-6 flex flex-col justify-between">
           
-          <div className={`p-6 rounded-xl bg-slate-950/40 border ${activeStyle.panelBg} space-y-4`}>
+          <div className={`p-6 rounded-xl border ${activeStyle.panelBg} space-y-4`}>
             <h3 className="text-xs font-mono font-bold tracking-widest text-blue-400 uppercase border-b border-blue-500/10 pb-2">
               Optimization Stats
             </h3>
@@ -1210,7 +1356,7 @@ export default function ValorantOptimizer({
             </div>
           </div>
 
-          <div className="bg-[#05080e]/60 border border-blue-500/5 p-4 rounded-xl h-[200px] font-mono text-xs flex flex-col flex-1 mt-6">
+          <div className={`${deepCard} p-4 rounded-xl border h-[200px] font-mono text-xs flex flex-col flex-1 mt-6`}>
             <span className="text-xs text-slate-500 block uppercase font-bold tracking-widest border-b border-blue-500/5 pb-1.5 mb-2 shrink-0">Boost Log Feeds</span>
             <div className="overflow-y-auto flex-1 space-y-1.5 pr-1 text-slate-400 select-text">
               {valorantLogs.length === 0 ? (
