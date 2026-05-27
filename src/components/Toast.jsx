@@ -53,14 +53,14 @@ function ToastItem({ toast, removeToast, activeStyle }) {
   }
 
   return (
-    <div className={`${isLight ? 'bg-white border' : 'bg-slate-950/92 backdrop-blur-md border'} ${borderCol} ${shadow} p-3 rounded-xl flex items-start gap-3 animate-in slide-in-from-right-10 fade-in duration-300 pointer-events-auto`}>
-      <span className={`text-sm font-bold ${textCol}`}>{icon}</span>
-      <div className="flex-1 font-mono">
-        <p className={`text-xs ${textCol}`}>{toast.message}</p>
+    <div className={`${isLight ? 'bg-white border' : 'bg-slate-950/95 backdrop-blur-md border'} ${borderCol} ${shadow} p-3.5 rounded-xl flex items-start gap-3 animate-in slide-in-from-right-10 fade-in duration-300 pointer-events-auto font-sans shadow-lg`}>
+      <span className={`text-base font-bold ${textCol} mt-0.5 shrink-0`}>{icon}</span>
+      <div className="flex-1">
+        <p className={`text-sm font-medium ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>{toast.message}</p>
       </div>
       <button 
         onClick={() => removeToast(toast.id)} 
-        className={`transition-colors text-xs p-0.5 ${isLight ? 'text-slate-400 hover:text-slate-700' : 'text-slate-500 hover:text-slate-300'}`}
+        className={`transition-colors text-sm p-0.5 hover:scale-105 active:scale-95 shrink-0 ${isLight ? 'text-slate-400 hover:text-slate-700' : 'text-slate-500 hover:text-slate-300'}`}
       >
         ✕
       </button>

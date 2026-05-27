@@ -15,66 +15,6 @@ function writePowerShellHelpers() {
       fs.mkdirSync(userDataPath, { recursive: true });
     }
     
-    // Write memory cleaner script
-    const memoryCleanerContent = `$code = @"
-using System;
-using System.Runtime.InteropServices;
-public class MemoryCleaner {
-    [DllImport("ntdll.dll")]
-    public static extern int NtSetSystemInformation(int classId, IntPtr info, int length);
-    [DllImport("psapi.dll")]
-    public static extern bool EmptyWorkingSet(IntPtr hProcess);
-    [DllImport("kernel32.dll", SetLastError = true)]
-    public static extern bool OpenProcessToken(IntPtr ProcessHandle, uint DesiredAccess, out IntPtr TokenHandle);
-    [DllImport("advapi32.dll", SetLastError = true, CharSet = CharSet.Auto)]
-    public static extern bool LookupPrivilegeValue(string lpSystemName, string lpName, out long lpLuid);
-    [DllImport("advapi32.dll", SetLastError = true)]
-    public static extern bool AdjustTokenPrivileges(IntPtr TokenHandle, bool DisableAll, ref TOKEN_PRIVILEGES NewState, int BufferLength, IntPtr PrevState, IntPtr ReturnLength);
-    [StructLayout(LayoutKind.Sequential, Pack = 1)]
-    public struct TOKEN_PRIVILEGES {
-        public int PrivilegeCount;
-        public long Luid;
-        public int Attributes;
-    }
-    private static bool EnablePrivilege(string privilege) {
-        IntPtr hToken;
-        long luid;
-        if (!OpenProcessToken(System.Diagnostics.Process.GetCurrentProcess().Handle, 0x0020 | 0x0008, out hToken)) return false;
-        if (!LookupPrivilegeValue(null, privilege, out luid)) return false;
-        TOKEN_PRIVILEGES tp = new TOKEN_PRIVILEGES();
-        tp.PrivilegeCount = 1;
-        tp.Luid = luid;
-        tp.Attributes = 0x00000002;
-        return AdjustTokenPrivileges(hToken, false, ref tp, 0, IntPtr.Zero, IntPtr.Zero);
-    }
-    public static bool FlushStandby() {
-        EnablePrivilege("SeProfileSingleProcessPrivilege");
-        IntPtr pCmd = Marshal.AllocHGlobal(sizeof(int));
-        Marshal.WriteInt32(pCmd, 4); // Command 4 = Purge standby list
-        int res = NtSetSystemInformation(80, pCmd, sizeof(int));
-        Marshal.FreeHGlobal(pCmd);
-        return res == 0;
-    }
-}
-"@
-try {
-    Add-Type -TypeDefinition $code -ErrorAction SilentlyContinue
-} catch {}
-
-Get-Process | Where-Object { $_.Id -gt 4 -and $_.ProcessName -notlike "System" -and $_.ProcessName -notlike "Idle" } | ForEach-Object {
-    try {
-        $handle = $_.Handle
-        if ($handle -ne 0) {
-            [MemoryCleaner]::EmptyWorkingSet($handle) | Out-Null
-        }
-    } catch {}
-}
-
-$res = [MemoryCleaner]::FlushStandby()
-echo "Standby Flush Success: $res"
-`;
-    fs.writeFileSync(path.join(userDataPath, 'purge_standby.ps1'), memoryCleanerContent, 'utf8');
-
     // Write timer resolution script
     const timerResContent = `param (
     [int]$ParentPid
@@ -302,7 +242,9 @@ function parseGameUserSettings(filePath) {
     postProcessQuality: 3,
     viewDistanceQuality: 3,
     shadingQuality: 3,
-    vsync: true
+    vsync: true,
+    texturePoolSizeLimit: 0,
+    rawInputBuffer: true
   };
 
   let currentSection = '';
@@ -327,9 +269,12 @@ function parseGameUserSettings(filePath) {
       if (key === 'sg.PostProcessQuality') settings.postProcessQuality = parseInt(value, 10) || 0;
       if (key === 'sg.ViewDistanceQuality') settings.viewDistanceQuality = parseInt(value, 10) || 0;
       if (key === 'sg.ShadingQuality') settings.shadingQuality = parseInt(value, 10) || 0;
+      if (key === 'sg.TexturePoolSizeLimit') settings.texturePoolSizeLimit = parseInt(value, 10) || 0;
     } else if (currentSection === '/Script/Engine.GameUserSettings') {
       if (key === 'bUseVSync') settings.vsync = value.toLowerCase() === 'true';
       if (key === 'FrameRateLimit') settings.frameRateLimit = parseFloat(value) || 0;
+    } else if (currentSection === '/Script/Engine.InputSettings') {
+      if (key === 'bUseRawInputBuffer') settings.rawInputBuffer = value.toLowerCase() === 'true';
     }
   }
   return settings;
@@ -359,8 +304,10 @@ function saveGameUserSettings(filePath, newSettings) {
     'sg.PostProcessQuality': false,
     'sg.ViewDistanceQuality': false,
     'sg.ShadingQuality': false,
+    'sg.TexturePoolSizeLimit': false,
     'bUseVSync': false,
-    'FrameRateLimit': false
+    'FrameRateLimit': false,
+    'bUseRawInputBuffer': false
   };
 
   for (let i = 0; i < lines.length; i++) {
@@ -406,6 +353,9 @@ function saveGameUserSettings(filePath, newSettings) {
       } else if (key === 'sg.ShadingQuality' && newSettings.shadingQuality !== undefined) {
         line = `sg.ShadingQuality=${parseInt(newSettings.shadingQuality, 10)}`;
         updatedKeys[key] = true;
+      } else if (key === 'sg.TexturePoolSizeLimit' && newSettings.texturePoolSizeLimit !== undefined) {
+        line = `sg.TexturePoolSizeLimit=${parseInt(newSettings.texturePoolSizeLimit, 10)}`;
+        updatedKeys[key] = true;
       }
     } else if (currentSection === '/Script/Engine.GameUserSettings') {
       if (key === 'bUseVSync' && newSettings.vsync !== undefined) {
@@ -415,6 +365,11 @@ function saveGameUserSettings(filePath, newSettings) {
         line = `FrameRateLimit=${parseFloat(newSettings.frameRateLimit).toFixed(6)}`;
         updatedKeys['FrameRateLimit'] = true;
       }
+    } else if (currentSection === '/Script/Engine.InputSettings') {
+      if (key === 'bUseRawInputBuffer' && newSettings.rawInputBuffer !== undefined) {
+        line = `bUseRawInputBuffer=${newSettings.rawInputBuffer ? 'True' : 'False'}`;
+        updatedKeys['bUseRawInputBuffer'] = true;
+      }
     }
     
     updatedLines.push(line);
@@ -422,11 +377,14 @@ function saveGameUserSettings(filePath, newSettings) {
 
   let scalabilityIdx = -1;
   let gameSettingsIdx = -1;
+  let inputSettingsIdx = -1;
   for (let i = 0; i < updatedLines.length; i++) {
     if (updatedLines[i].trim() === '[ScalabilityGroups]') {
       scalabilityIdx = i;
     } else if (updatedLines[i].trim() === '[/Script/Engine.GameUserSettings]') {
       gameSettingsIdx = i;
+    } else if (updatedLines[i].trim() === '[/Script/Engine.InputSettings]') {
+      inputSettingsIdx = i;
     }
   }
 
@@ -456,10 +414,17 @@ function saveGameUserSettings(filePath, newSettings) {
     if (!updatedKeys['sg.ShadingQuality'] && newSettings.shadingQuality !== undefined) {
       keysToInsert.push(`sg.ShadingQuality=${parseInt(newSettings.shadingQuality, 10)}`);
     }
+    if (!updatedKeys['sg.TexturePoolSizeLimit'] && newSettings.texturePoolSizeLimit !== undefined) {
+      keysToInsert.push(`sg.TexturePoolSizeLimit=${parseInt(newSettings.texturePoolSizeLimit, 10)}`);
+    }
     if (keysToInsert.length > 0) {
       updatedLines.splice(scalabilityIdx + 1, 0, ...keysToInsert);
+      const shift = keysToInsert.length;
       if (gameSettingsIdx > scalabilityIdx) {
-        gameSettingsIdx += keysToInsert.length;
+        gameSettingsIdx += shift;
+      }
+      if (inputSettingsIdx > scalabilityIdx) {
+        inputSettingsIdx += shift;
       }
     }
   } else {
@@ -472,6 +437,7 @@ function saveGameUserSettings(filePath, newSettings) {
     if (newSettings.postProcessQuality !== undefined) keysToInsert.push(`sg.PostProcessQuality=${parseInt(newSettings.postProcessQuality, 10)}`);
     if (newSettings.viewDistanceQuality !== undefined) keysToInsert.push(`sg.ViewDistanceQuality=${parseInt(newSettings.viewDistanceQuality, 10)}`);
     if (newSettings.shadingQuality !== undefined) keysToInsert.push(`sg.ShadingQuality=${parseInt(newSettings.shadingQuality, 10)}`);
+    if (newSettings.texturePoolSizeLimit !== undefined) keysToInsert.push(`sg.TexturePoolSizeLimit=${parseInt(newSettings.texturePoolSizeLimit, 10)}`);
     updatedLines.push(...keysToInsert);
   }
 
@@ -485,6 +451,10 @@ function saveGameUserSettings(filePath, newSettings) {
     }
     if (extraKeys.length > 0) {
       updatedLines.splice(gameSettingsIdx + 1, 0, ...extraKeys);
+      const shift = extraKeys.length;
+      if (inputSettingsIdx > gameSettingsIdx) {
+        inputSettingsIdx += shift;
+      }
     }
   } else {
     const keysToInsert = ['[/Script/Engine.GameUserSettings]'];
@@ -495,6 +465,15 @@ function saveGameUserSettings(filePath, newSettings) {
       keysToInsert.push(`FrameRateLimit=${parseFloat(newSettings.frameRateLimit).toFixed(6)}`);
     }
     updatedLines.push(...keysToInsert);
+  }
+
+  if (inputSettingsIdx !== -1) {
+    if (!updatedKeys['bUseRawInputBuffer'] && newSettings.rawInputBuffer !== undefined) {
+      updatedLines.splice(inputSettingsIdx + 1, 0, `bUseRawInputBuffer=${newSettings.rawInputBuffer ? 'True' : 'False'}`);
+    }
+  } else if (newSettings.rawInputBuffer !== undefined) {
+    updatedLines.push('[/Script/Engine.InputSettings]');
+    updatedLines.push(`bUseRawInputBuffer=${newSettings.rawInputBuffer ? 'True' : 'False'}`);
   }
 
   fs.writeFileSync(filePath, updatedLines.join('\r\n'), 'utf8');
@@ -610,24 +589,6 @@ ipcMain.handle('set-timer-resolution', async (event, active) => {
   }
 });
 
-// IPC Handler: Standby memory and working set purge
-ipcMain.handle('purge-standby-memory', async () => {
-  return new Promise((resolve) => {
-    try {
-      const userDataPath = app.getPath('userData');
-      const scriptPath = path.join(userDataPath, 'purge_standby.ps1');
-      exec(`powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "${scriptPath}"`, (error, stdout, stderr) => {
-        if (error) {
-          resolve({ success: false, error: error.message, output: stderr });
-        } else {
-          resolve({ success: true, output: stdout.trim() });
-        }
-      });
-    } catch (err) {
-      resolve({ success: false, error: err.message });
-    }
-  });
-});
 
 // IPC Handler: GPU Detection
 ipcMain.handle('detect-gpu', async () => {
@@ -653,7 +614,7 @@ ipcMain.handle('detect-gpu', async () => {
       }
 
       // Fallback to powershell wmi + registry if nvidia-smi fails or AMD/Intel
-      const psCommand = "powershell -Command \"$gpu = Get-CimInstance Win32_VideoController | Select-Object Name, DriverVersion, CurrentRefreshRate | Select-Object -First 1; $reg = Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0*' -ErrorAction SilentlyContinue | Where-Object { $_.DriverDesc -eq $gpu.Name } | Select-Object -First 1; if (-not $reg) { $reg = Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0*' -ErrorAction SilentlyContinue | Where-Object { $_.'HardwareInformation.qwMemorySize' -gt 0 } | Select-Object -First 1 }; $vram = 0; if ($reg -and $reg.'HardwareInformation.qwMemorySize') { $vram = $reg.'HardwareInformation.qwMemorySize' } else { $vram = $gpu.AdapterRAM }; [PSCustomObject]@{ Name = $gpu.Name; DriverVersion = $gpu.DriverVersion; CurrentRefreshRate = $gpu.CurrentRefreshRate; qwMemorySize = $vram } | ConvertTo-Json\"";
+      const psCommand = "powershell -Command \"$gpu = Get-CimInstance Win32_VideoController | Select-Object Name, DriverVersion, CurrentRefreshRate | Select-Object -First 1; $reg = Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0*' -ErrorAction SilentlyContinue | Where-Object { $_.DriverDesc -eq $gpu.Name } | Select-Object -First 1; if (-not $reg) { $reg = Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-11ce-bfc1-08002be10318}\\0*' -ErrorAction SilentlyContinue | Where-Object { $_.'HardwareInformation.qwMemorySize' -gt 0 } | Select-Object -First 1 }; $vram = 0; if ($reg -and $reg.'HardwareInformation.qwMemorySize') { $vram = $reg.'HardwareInformation.qwMemorySize' } else { $vram = $gpu.AdapterRAM }; $util = 0; try { $samples = (Get-Counter '\\GPU Engine(*engtype_3D)\\Utilization Percentage' -ErrorAction SilentlyContinue).CounterSamples | Where-Object CookedValue; if ($samples) { $util = ($samples.CookedValue | Measure-Object -Sum).Sum; if ($util -gt 100) { $util = 100 } } else { $samples = (Get-Counter '\\GPU Engine(*)\\Utilization Percentage' -ErrorAction SilentlyContinue).CounterSamples | Where-Object CookedValue; if ($samples) { $util = ($samples.CookedValue | Measure-Object -Maximum).Maximum } } } catch {}; [PSCustomObject]@{ Name = $gpu.Name; DriverVersion = $gpu.DriverVersion; CurrentRefreshRate = $gpu.CurrentRefreshRate; qwMemorySize = $vram; Utilization = [Math]::Round($util) } | ConvertTo-Json\"";
       exec(psCommand, (err, wmiOut) => {
         if (err) return resolve({ success: false, error: err.message });
         try {
@@ -673,7 +634,7 @@ ipcMain.handle('detect-gpu', async () => {
               driverVersion: data.DriverVersion || '',
               vramMB: data.qwMemorySize ? Math.round(Number(data.qwMemorySize) / (1024 * 1024)) : 0,
               temperature: 0,
-              utilization: 0,
+              utilization: data.Utilization || 0,
               refreshRate: data.CurrentRefreshRate || 0
             }
           });

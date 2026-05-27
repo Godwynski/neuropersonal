@@ -13,6 +13,5 @@ contextBridge.exposeInMainWorld('api', {
   backupRegistry: (keyPath, valueName) => ipcRenderer.invoke('backup-registry', { keyPath, valueName }),
   setTitleBarOverlay: (color, symbolColor) => ipcRenderer.invoke('set-titlebar-overlay', { color, symbolColor }),
   setTimerResolution: (active) => ipcRenderer.invoke('set-timer-resolution', active),
-  purgeStandbyMemory: () => ipcRenderer.invoke('purge-standby-memory'),
   selectValorantPath: () => ipcRenderer.invoke('select-valorant-path')
 });
