@@ -1,16 +1,16 @@
 import React, { useEffect } from 'react';
 
-export default function Toast({ toasts, removeToast, activeStyle }) {
+export default function Toast({ toasts, removeToast }) {
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-sm pointer-events-none">
+    <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 max-w-xs pointer-events-none">
       {toasts.map((t) => (
-        <ToastItem key={t.id} toast={t} removeToast={removeToast} activeStyle={activeStyle} />
+        <ToastItem key={t.id} toast={t} removeToast={removeToast} />
       ))}
     </div>
   );
 }
 
-function ToastItem({ toast, removeToast, activeStyle }) {
+function ToastItem({ toast, removeToast }) {
   useEffect(() => {
     const timer = setTimeout(() => {
       removeToast(toast.id);
@@ -18,51 +18,39 @@ function ToastItem({ toast, removeToast, activeStyle }) {
     return () => clearTimeout(timer);
   }, [toast.id, removeToast]);
 
-  const isLight = activeStyle?.isLight;
-
-  let borderCol = '';
-  let textCol = '';
-  let shadow = '';
-  let icon = '';
+  let typeStyle = 'border-slate-300 bg-white text-slate-800';
+  let icon = '•';
 
   switch (toast.type) {
     case 'success':
-      borderCol = 'border-emerald-400/60';
-      textCol = isLight ? 'text-emerald-700' : 'text-emerald-400';
-      shadow = 'shadow-[0_4px_16px_rgba(16,185,129,0.15)]';
+      typeStyle = 'border-green-300 bg-green-50 text-green-800';
       icon = '✓';
       break;
     case 'error':
-      borderCol = 'border-rose-400/60';
-      textCol = isLight ? 'text-rose-700' : 'text-rose-400';
-      shadow = 'shadow-[0_4px_16px_rgba(239,68,68,0.15)]';
-      icon = '✕';
+      typeStyle = 'border-red-300 bg-red-50 text-red-800';
+      icon = '×';
       break;
     case 'warning':
-      borderCol = 'border-amber-400/60';
-      textCol = isLight ? 'text-amber-700' : 'text-amber-400';
-      shadow = 'shadow-[0_4px_16px_rgba(245,158,11,0.15)]';
-      icon = '⚠';
+      typeStyle = 'border-amber-300 bg-amber-50 text-amber-800';
+      icon = '!';
       break;
-    default:
-      borderCol = 'border-cyan-400/60';
-      textCol = isLight ? 'text-cyan-700' : 'text-cyan-400';
-      shadow = 'shadow-[0_4px_16px_rgba(6,182,212,0.15)]';
-      icon = 'ℹ';
+    case 'info':
+      typeStyle = 'border-blue-300 bg-blue-50 text-blue-800';
+      icon = 'i';
       break;
   }
 
   return (
-    <div className={`${isLight ? 'bg-white border' : 'bg-slate-950/95 backdrop-blur-md border'} ${borderCol} ${shadow} p-3.5 rounded-xl flex items-start gap-3 animate-in slide-in-from-right-10 fade-in duration-300 pointer-events-auto font-sans shadow-lg`}>
-      <span className={`text-base font-bold ${textCol} mt-0.5 shrink-0`}>{icon}</span>
-      <div className="flex-1">
-        <p className={`text-sm font-medium ${isLight ? 'text-slate-800' : 'text-slate-200'}`}>{toast.message}</p>
+    <div className={`p-3 border rounded text-xs flex items-center justify-between gap-3 shadow-md pointer-events-auto font-sans ${typeStyle}`}>
+      <span className="font-bold shrink-0">{icon}</span>
+      <div className="flex-1 min-w-0 font-medium truncate">
+        {toast.message}
       </div>
       <button 
         onClick={() => removeToast(toast.id)} 
-        className={`transition-colors text-sm p-0.5 hover:scale-105 active:scale-95 shrink-0 ${isLight ? 'text-slate-400 hover:text-slate-700' : 'text-slate-500 hover:text-slate-300'}`}
+        className="text-slate-400 hover:text-slate-700 font-bold shrink-0 cursor-pointer font-mono"
       >
-        ✕
+        ×
       </button>
     </div>
   );

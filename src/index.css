@@ -2,36 +2,15 @@
 
 @layer base {
   body {
-    background-color: #090d16;
-    color: #f8fafc;
+    background-color: #ffffff;
+    color: #1a1a1a;
+    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    margin: 0;
+    padding: 0;
   }
 }
 
-/* Custom Scrollbar Styles */
-::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.12);
-  border-radius: 9999px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.22);
-}
-
-/* Light mode scrollbar override */
-.light-scrollbar ::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.14);
-}
-.light-scrollbar ::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.24);
-}
-
-/* Draggable Region for Window Header */
+/* Draggable Region for Electron Window Header */
 .titlebar-drag {
   -webkit-app-region: drag;
   user-select: none;
@@ -41,16 +20,19 @@
   -webkit-app-region: no-drag;
 }
 
-/* Cybernetic SVG and scanner animations */
-@keyframes dash {
-  to {
-    stroke-dashoffset: -40;
+/* Skeleton Loading Animation placeholder */
+@keyframes skeleton-shimmer {
+  0% {
+    background-color: #f3f4f6;
+  }
+  50% {
+    background-color: #e5e7eb;
+  }
+  100% {
+    background-color: #f3f4f6;
   }
 }
 
-@keyframes shimmer {
-  to {
-    transform: translateX(350px);
-  }
+.skeleton-loading {
+  animation: skeleton-shimmer 1.5s infinite ease-in-out;
 }
-
