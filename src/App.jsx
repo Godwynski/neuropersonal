@@ -183,6 +183,7 @@ export default function App() {
     setSystemLogs(prev => typeof val === 'function' ? val(prev) : val);
   };
   const [maxBoostStatus, setMaxBoostStatus] = useState('idle'); // 'idle' | 'boosting' | 'reverting' | 'active'
+  const [boostProfile, setBoostProfile] = useState('safe'); // 'safe' | 'aggressive'
 
   // Toast Notifications
   const [toasts, setToasts] = useState([]);
@@ -734,45 +735,78 @@ export default function App() {
     }
   };
 
-  const toggleMaxBoost = async (enable) => {
+  const toggleMaxBoost = async (enable, profileType = 'safe') => {
     if (enable) {
       setMaxBoostStatus('boosting');
       setMaxBoostActive(true);
       setMaxBoostProgress(10);
       await new Promise(r => setTimeout(r, 200));
 
-      setMaxBoostProgress(30);
-      if (gameModeActive !== true) await toggleGameMode();
-      if (powerPlanMode !== 'high') await togglePowerPlan();
-      await new Promise(r => setTimeout(r, 200));
+      if (profileType === 'safe') {
+        setMaxBoostProgress(30);
+        if (gameModeActive !== true) await toggleGameMode();
+        if (powerPlanMode !== 'high') await togglePowerPlan();
+        await new Promise(r => setTimeout(r, 200));
 
-      setMaxBoostProgress(60);
-      if (registryStates.hagsEnabled !== true) await toggleHags(true);
-      if (registryStates.gameDvrDisabled !== true) await toggleGameDvr(true);
-      if (registryStates.priorityOptimized !== true) await togglePriorityOptimized(true);
-      
-      for (const tweak of ['disableMouseAccel', 'disableUsbSuspend', 'disableCoreParking', 'disableDynamicTick', 'disableFullscreenOpt']) {
-        if (latencyTweaks[tweak] !== true) {
-          await toggleLatencyTweak(tweak, true);
+        setMaxBoostProgress(60);
+        if (registryStates.gameDvrDisabled !== true) await toggleGameDvr(true);
+        for (const tweak of ['disableMouseAccel', 'disableUsbSuspend']) {
+          if (latencyTweaks[tweak] !== true) {
+            await toggleLatencyTweak(tweak, true);
+          }
         }
-      }
-      await new Promise(r => setTimeout(r, 200));
+        await new Promise(r => setTimeout(r, 200));
 
-      setMaxBoostProgress(85);
-      if (globalFsoDisabled !== true) await toggleGlobalFso(true);
-      if (powerThrottlingDisabled !== true) await togglePowerThrottling(true);
+        setMaxBoostProgress(85);
+        await cleanAllShaderCaches();
 
-      for (const svc of ['SysMain', 'XblAuthManager']) {
-        if (bgServices[svc] === true) {
-          await toggleBgService(svc, false);
+        setMaxBoostProgress(100);
+        setMaxBoostStatus('active');
+        addToast("Safe Performance Boost activated!", "success");
+      } else {
+        // Aggressive / Competitive
+        setMaxBoostProgress(25);
+        if (gameModeActive !== true) await toggleGameMode();
+        if (powerPlanMode !== 'high') await togglePowerPlan();
+        await new Promise(r => setTimeout(r, 200));
+
+        setMaxBoostProgress(45);
+        if (registryStates.gameDvrDisabled !== true) await toggleGameDvr(true);
+        for (const tweak of ['disableMouseAccel', 'disableUsbSuspend']) {
+          if (latencyTweaks[tweak] !== true) {
+            await toggleLatencyTweak(tweak, true);
+          }
         }
-      }
-      if (timerResActive !== true) await toggleTimerResolution(true);
-      await cleanAllShaderCaches();
+        await new Promise(r => setTimeout(r, 200));
 
-      setMaxBoostProgress(100);
-      setMaxBoostStatus('active');
-      addToast("Performance booster active!", "success");
+        setMaxBoostProgress(65);
+        if (registryStates.hagsEnabled !== true) await toggleHags(true);
+        if (registryStates.priorityOptimized !== true) await togglePriorityOptimized(true);
+        await new Promise(r => setTimeout(r, 200));
+
+        setMaxBoostProgress(80);
+        for (const tweak of ['disableCoreParking', 'disableDynamicTick', 'disableFullscreenOpt']) {
+          if (latencyTweaks[tweak] !== true) {
+            await toggleLatencyTweak(tweak, true);
+          }
+        }
+        if (globalFsoDisabled !== true) await toggleGlobalFso(true);
+        if (powerThrottlingDisabled !== true) await togglePowerThrottling(true);
+        await new Promise(r => setTimeout(r, 200));
+
+        setMaxBoostProgress(95);
+        for (const svc of ['SysMain', 'XblAuthManager']) {
+          if (bgServices[svc] === true) {
+            await toggleBgService(svc, false);
+          }
+        }
+        if (timerResActive !== true) await toggleTimerResolution(true);
+        await cleanAllShaderCaches();
+
+        setMaxBoostProgress(100);
+        setMaxBoostStatus('active');
+        addToast("Aggressive Performance Boost activated! System optimized.", "success");
+      }
     } else {
       setMaxBoostStatus('reverting');
       setMaxBoostProgress(20);
@@ -1384,9 +1418,11 @@ export default function App() {
               <OneClickOptimize 
                 isOptimizing={maxBoostStatus === 'boosting'}
                 isOptimized={maxBoostStatus === 'active'}
-                onOptimize={() => toggleMaxBoost(true)}
+                onOptimize={() => toggleMaxBoost(true, boostProfile)}
                 onRevert={() => toggleMaxBoost(false)}
                 isAdmin={isAdmin}
+                boostProfile={boostProfile}
+                setBoostProfile={setBoostProfile}
               />
             </Tabs.Content>
           
@@ -1410,6 +1446,7 @@ export default function App() {
                 gameModeActive={gameModeActive}
                 powerPlanMode={powerPlanMode}
                 timerResActive={timerResActive}
+                boostProfile={boostProfile}
               />
             </Tabs.Content>
 

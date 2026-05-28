@@ -264,28 +264,49 @@ export default function ValorantOptimizer({
             )}
 
             <div className="space-y-2 text-xs">
-              <div className="flex justify-between items-center p-2 border border-slate-200 bg-white rounded">
-                <div>
-                  <span className="font-bold">Hardware GPU Scheduling (HAGS)</span>
-                  <p className="text-[10px] text-slate-500">Toggles Windows scheduler optimization registry key.</p>
+              <div className="p-3 border border-slate-200 bg-white rounded space-y-2">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold">Hardware GPU Scheduling (HAGS)</span>
+                      <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border bg-amber-50 border-amber-200 text-amber-700">Aggressive</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-normal">Toggles Windows GPU scheduler optimization registry key.</p>
+                    <p className="text-[9px] text-amber-700 bg-amber-50/50 p-1 border border-amber-100 rounded leading-normal font-semibold">
+                      ⚠️ Warning: HAGS can cause micro-stuttering and memory leaks in CPU-bound games like VALORANT.
+                    </p>
+                  </div>
+                  <button onClick={() => toggleHags(!registryStates.hagsEnabled)} className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-xs font-bold cursor-pointer shrink-0">{registryStates.hagsEnabled ? 'ENABLED' : 'DISABLED'}</button>
                 </div>
-                <button onClick={() => toggleHags(!registryStates.hagsEnabled)} className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-xs font-bold cursor-pointer">{registryStates.hagsEnabled ? 'ENABLED' : 'DISABLED'}</button>
               </div>
 
-              <div className="flex justify-between items-center p-2 border border-slate-200 bg-white rounded">
-                <div>
-                  <span className="font-bold">Disable Windows GameDVR</span>
-                  <p className="text-[10px] text-slate-500">Suspends background game capture telemetry tools.</p>
+              <div className="p-3 border border-slate-200 bg-white rounded space-y-2">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold">Disable Windows GameDVR</span>
+                      <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border bg-green-50 border-green-200 text-green-700">Safe</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-normal">Suspends background game capture telemetry tools.</p>
+                  </div>
+                  <button onClick={() => toggleGameDvr(!registryStates.gameDvrDisabled)} className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-xs font-bold cursor-pointer shrink-0">{registryStates.gameDvrDisabled ? 'DISABLED' : 'ENABLED'}</button>
                 </div>
-                <button onClick={() => toggleGameDvr(!registryStates.gameDvrDisabled)} className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-xs font-bold cursor-pointer">{registryStates.gameDvrDisabled ? 'DISABLED' : 'ENABLED'}</button>
               </div>
 
-              <div className="flex justify-between items-center p-2 border border-slate-200 bg-white rounded">
-                <div>
-                  <span className="font-bold">Multimedia Priority Lock</span>
-                  <p className="text-[10px] text-slate-500">Sets scheduling class preferences to GPU High.</p>
+              <div className="p-3 border border-slate-200 bg-white rounded space-y-2">
+                <div className="flex justify-between items-start gap-2">
+                  <div className="space-y-0.5">
+                    <div className="flex items-center gap-2">
+                      <span className="font-bold">Multimedia Priority Lock</span>
+                      <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border bg-amber-50 border-amber-200 text-amber-700">Aggressive</span>
+                    </div>
+                    <p className="text-[10px] text-slate-500 leading-normal">Sets scheduling class preferences to GPU High.</p>
+                    <p className="text-[9px] text-amber-700 bg-amber-50/50 p-1 border border-amber-100 rounded leading-normal font-semibold">
+                      ⚠️ Warning: Starves background system tasks (audio, keyboard/mouse polling, Vanguard check) causing severe 1% low frame drops.
+                    </p>
+                  </div>
+                  <button onClick={() => togglePriorityOptimized(!registryStates.priorityOptimized)} className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-xs font-bold cursor-pointer shrink-0">{registryStates.priorityOptimized ? 'OPTIMIZED' : 'DEFAULT'}</button>
                 </div>
-                <button onClick={() => togglePriorityOptimized(!registryStates.priorityOptimized)} className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-xs font-bold cursor-pointer">{registryStates.priorityOptimized ? 'OPTIMIZED' : 'DEFAULT'}</button>
               </div>
             </div>
           </div>
@@ -336,18 +357,90 @@ export default function ValorantOptimizer({
 
             <div className="space-y-2 text-xs">
               {[
-                { label: 'Disable Mouse Acceleration', active: latencyTweaks.disableMouseAccel, onClick: () => toggleLatencyTweak('disableMouseAccel', !latencyTweaks.disableMouseAccel) },
-                { label: 'Disable USB Selective Suspend', active: latencyTweaks.disableUsbSuspend, onClick: () => toggleLatencyTweak('disableUsbSuspend', !latencyTweaks.disableUsbSuspend) },
-                { label: 'Disable CPU Core Parking', active: latencyTweaks.disableCoreParking, onClick: () => toggleLatencyTweak('disableCoreParking', !latencyTweaks.disableCoreParking) },
-                { label: 'Disable Windows Dynamic Tick', active: latencyTweaks.disableDynamicTick, onClick: () => toggleLatencyTweak('disableDynamicTick', !latencyTweaks.disableDynamicTick) },
-                { label: 'Force Exclusive Fullscreen Mode', active: latencyTweaks.disableFullscreenOpt, onClick: () => toggleLatencyTweak('disableFullscreenOpt', !latencyTweaks.disableFullscreenOpt) },
-                { label: 'Force MSI Interrupt Mode', active: msiEnabled, onClick: () => toggleMsiMode(!msiEnabled) },
-                { label: 'Foreground CPU Quantum Boost', active: latencyTweaks.prioritySeparation, onClick: () => toggleLatencyTweak('prioritySeparation', !latencyTweaks.prioritySeparation) },
-                { label: 'Persistent High CPU Priority Registry Key', active: persistentPriorityEnabled, onClick: () => togglePersistentPriority(!persistentPriorityEnabled) }
+                { 
+                  label: 'Disable Mouse Acceleration', 
+                  active: latencyTweaks.disableMouseAccel, 
+                  onClick: () => toggleLatencyTweak('disableMouseAccel', !latencyTweaks.disableMouseAccel),
+                  tier: 'safe',
+                  desc: 'Eliminates precision enhancement scaling for raw tracking.'
+                },
+                { 
+                  label: 'Disable USB Selective Suspend', 
+                  active: latencyTweaks.disableUsbSuspend, 
+                  onClick: () => toggleLatencyTweak('disableUsbSuspend', !latencyTweaks.disableUsbSuspend),
+                  tier: 'safe',
+                  desc: 'Prevents USB controllers from dropping power, reducing mouse/keyboard wake latency.'
+                },
+                { 
+                  label: 'Disable CPU Core Parking', 
+                  active: latencyTweaks.disableCoreParking, 
+                  onClick: () => toggleLatencyTweak('disableCoreParking', !latencyTweaks.disableCoreParking),
+                  tier: 'aggressive',
+                  desc: 'Keeps all cores active.',
+                  warning: 'Can cause high heat and thermal throttling on laptops/low-cooling setups.'
+                },
+                { 
+                  label: 'Disable Windows Dynamic Tick', 
+                  active: latencyTweaks.disableDynamicTick, 
+                  onClick: () => toggleLatencyTweak('disableDynamicTick', !latencyTweaks.disableDynamicTick),
+                  tier: 'aggressive',
+                  desc: 'Stops the OS clock timer from turning off during CPU idle.',
+                  warning: 'May increase interrupt overhead and destabilize frame rate on modern architectures.'
+                },
+                { 
+                  label: 'Force Exclusive Fullscreen Mode', 
+                  active: latencyTweaks.disableFullscreenOpt, 
+                  onClick: () => toggleLatencyTweak('disableFullscreenOpt', !latencyTweaks.disableFullscreenOpt),
+                  tier: 'aggressive',
+                  desc: 'Applies compatibility override to the game executable.',
+                  warning: 'Can increase input latency on modern Windows Flip Model display pipelines.'
+                },
+                { 
+                  label: 'Force MSI Interrupt Mode', 
+                  active: msiEnabled, 
+                  onClick: () => toggleMsiMode(!msiEnabled),
+                  tier: 'aggressive',
+                  desc: 'Configures GPU to use Message Signaled Interrupts (MSI).',
+                  warning: 'If driver or device doesn\'t support MSI, it can crash your display driver or cause mouse stuttering.'
+                },
+                { 
+                  label: 'Foreground CPU Quantum Boost', 
+                  active: latencyTweaks.prioritySeparation, 
+                  onClick: () => toggleLatencyTweak('prioritySeparation', !latencyTweaks.prioritySeparation),
+                  tier: 'aggressive',
+                  desc: 'Allocates shorter, variable priority quanta slices to the game thread.',
+                  warning: 'Can starve crucial background system threads (like mouse input, audio, and Vanguard), causing severe 1% low spikes.'
+                },
+                { 
+                  label: 'Persistent High CPU Priority', 
+                  active: persistentPriorityEnabled, 
+                  onClick: () => togglePersistentPriority(!persistentPriorityEnabled),
+                  tier: 'safe',
+                  desc: 'Configures Windows IFEO to automatically run the game in high priority.'
+                }
               ].map((item, idx) => (
-                <div key={idx} className="flex justify-between items-center p-2 border border-slate-200 bg-white rounded">
-                  <span className="font-bold">{item.label}</span>
-                  <button onClick={item.onClick} className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-xs font-bold cursor-pointer">{item.active ? 'TWEAKED' : 'DEFAULT'}</button>
+                <div key={idx} className="p-3 border border-slate-200 bg-white rounded space-y-2">
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-800">{item.label}</span>
+                        <span className={`px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border ${
+                          item.tier === 'safe' 
+                            ? 'bg-green-50 border-green-200 text-green-700' 
+                            : 'bg-amber-50 border-amber-200 text-amber-700'
+                        }`}>
+                          {item.tier}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 leading-normal">{item.desc}</p>
+                      {item.warning && (
+                        <p className="text-[9px] text-amber-700 bg-amber-50/50 p-1 border border-amber-100 rounded leading-normal font-semibold">
+                          ⚠️ Warning: {item.warning}
+                        </p>
+                      )}
+                    </div>
+                    <button onClick={item.onClick} className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-xs font-bold cursor-pointer shrink-0">{item.active ? 'TWEAKED' : 'DEFAULT'}</button>
+                  </div>
                 </div>
               ))}
             </div>
@@ -361,29 +454,95 @@ export default function ValorantOptimizer({
           <div className="border border-slate-200 bg-slate-50 p-4 rounded space-y-3">
             <h2 className="text-xs font-bold uppercase tracking-wider text-slate-600 border-b border-slate-200 pb-1.5">Timers & Services</h2>
             
-            <div className="flex justify-between items-center p-2 border border-slate-200 bg-white rounded">
-              <div>
-                <span className="font-bold">System Clock Lock (0.5ms)</span>
-                <p className="text-[10px] text-slate-500">Locks hardware timer resolution value.</p>
+            <div className="p-3 border border-slate-200 bg-white rounded space-y-2">
+              <div className="flex justify-between items-start gap-2">
+                <div className="space-y-0.5">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold text-slate-800">System Clock Lock (0.5ms)</span>
+                    <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border bg-amber-50 border-amber-200 text-amber-700">Aggressive</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500 leading-normal">Locks hardware timer resolution value to 0.5ms.</p>
+                  <p className="text-[9px] text-amber-700 bg-amber-50/50 p-1 border border-amber-100 rounded leading-normal font-semibold">
+                    ⚠️ Warning: The background loop for setting timer resolution can add context switching overhead and heat on modern CPUs.
+                  </p>
+                </div>
+                <button onClick={() => toggleTimerResolution(!timerResActive)} className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-xs font-bold cursor-pointer shrink-0">{timerResActive ? 'LOCKED' : 'DEFAULT'}</button>
               </div>
-              <button onClick={() => toggleTimerResolution(!timerResActive)} className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-xs font-bold cursor-pointer">{timerResActive ? 'LOCKED' : 'DEFAULT'}</button>
             </div>
 
-            <div className="p-2 border border-slate-200 bg-white rounded space-y-3">
+            <div className="p-3 border border-slate-200 bg-white rounded space-y-3">
               <span className="font-bold block text-slate-700 border-b border-slate-100 pb-1">Windows OS Services</span>
               <div className="space-y-3">
                 {[
-                  { label: 'NIC Power Savings', active: nicPowerSavingDisabled, onClick: () => toggleNicPower(!nicPowerSavingDisabled), actL: 'DISABLED', inactL: 'ENABLED' },
-                  { label: 'Global Fullscreen Opt', active: globalFsoDisabled, onClick: () => toggleGlobalFso(!globalFsoDisabled), actL: 'DISABLED', inactL: 'ENABLED' },
-                  { label: 'Power Throttling Policy', active: powerThrottlingDisabled, onClick: () => togglePowerThrottling(!powerThrottlingDisabled), actL: 'DISABLED', inactL: 'ENABLED' },
-                  { label: 'SysMain (Superfetch)', active: !bgServices.SysMain, onClick: () => toggleBgService('SysMain', !bgServices.SysMain), actL: 'DISABLED', inactL: 'RUNNING' },
-                  { label: 'Xbox Live Auth Service', active: !bgServices.XblAuthManager, onClick: () => toggleBgService('XblAuthManager', !bgServices.XblAuthManager), actL: 'DISABLED', inactL: 'RUNNING' }
+                  { 
+                    label: 'NIC Power Savings', 
+                    active: nicPowerSavingDisabled, 
+                    onClick: () => toggleNicPower(!nicPowerSavingDisabled), 
+                    actL: 'DISABLED', 
+                    inactL: 'ENABLED',
+                    tier: 'safe',
+                    desc: 'Disables Energy Efficient Ethernet to stop adapter latency spikes.'
+                  },
+                  { 
+                    label: 'Global Fullscreen Opt', 
+                    active: globalFsoDisabled, 
+                    onClick: () => toggleGlobalFso(!globalFsoDisabled), 
+                    actL: 'DISABLED', 
+                    inactL: 'ENABLED',
+                    tier: 'aggressive',
+                    desc: 'Disables Windows FSO globally.',
+                    warning: 'Can degrade performance on modern Flip Model DX12 displays.'
+                  },
+                  { 
+                    label: 'Power Throttling Policy', 
+                    active: powerThrottlingDisabled, 
+                    onClick: () => togglePowerThrottling(!powerThrottlingDisabled), 
+                    actL: 'DISABLED', 
+                    inactL: 'ENABLED',
+                    tier: 'aggressive',
+                    desc: 'Stops Windows from power-throttling background processes.',
+                    warning: 'Can cause higher battery consumption and scheduling issues on hybrid CPUs.'
+                  },
+                  { 
+                    label: 'SysMain (Superfetch)', 
+                    active: !bgServices.SysMain, 
+                    onClick: () => toggleBgService('SysMain', !bgServices.SysMain), 
+                    actL: 'DISABLED', 
+                    inactL: 'RUNNING',
+                    tier: 'aggressive',
+                    desc: 'Disables SysMain page-caching service.',
+                    warning: 'May slow down game launch/load times on setups with SSDs or 16GB+ RAM.'
+                  },
+                  { 
+                    label: 'Xbox Live Auth Service', 
+                    active: !bgServices.XblAuthManager, 
+                    onClick: () => toggleBgService('XblAuthManager', !bgServices.XblAuthManager), 
+                    actL: 'DISABLED', 
+                    inactL: 'RUNNING',
+                    tier: 'safe',
+                    desc: 'Safe to disable if you do not use Xbox Live / Game Pass services.'
+                  }
                 ].map((item, idx) => (
-                  <div key={idx} className="flex justify-between items-center gap-2">
-                    <div>
-                      <span className="font-bold block text-slate-800">{item.label}</span>
+                  <div key={idx} className="flex justify-between items-start gap-2 border-b border-slate-100 pb-2.5 last:border-0 last:pb-0">
+                    <div className="space-y-0.5">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-slate-800 text-[11px]">{item.label}</span>
+                        <span className={`px-1 rounded text-[7px] font-bold uppercase tracking-wide border ${
+                          item.tier === 'safe' 
+                            ? 'bg-green-50 border-green-200 text-green-700' 
+                            : 'bg-amber-50 border-amber-200 text-amber-700'
+                        }`}>
+                          {item.tier}
+                        </span>
+                      </div>
+                      <p className="text-[10px] text-slate-500 leading-normal">{item.desc}</p>
+                      {item.warning && (
+                        <p className="text-[9px] text-amber-700 bg-amber-50/50 p-1 border border-amber-100 rounded leading-normal font-semibold">
+                          ⚠️ {item.warning}
+                        </p>
+                      )}
                     </div>
-                    <button onClick={item.onClick} className="px-2.5 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-[10px] font-bold cursor-pointer">{item.active ? item.actL : item.inactL}</button>
+                    <button onClick={item.onClick} className="px-2.5 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-[10px] font-bold cursor-pointer shrink-0">{item.active ? item.actL : item.inactL}</button>
                   </div>
                 ))}
               </div>

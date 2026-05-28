@@ -17,7 +17,8 @@ export default function Dashboard({
   registryStates,
   gameModeActive,
   powerPlanMode,
-  timerResActive
+  timerResActive,
+  boostProfile = 'safe'
 }) {
   return (
     <div className="space-y-6 font-sans text-slate-800 bg-white p-2">
@@ -41,18 +42,23 @@ export default function Dashboard({
 
         <div className="flex flex-col md:flex-row gap-4 items-stretch">
           <div className="p-3 border border-slate-200 bg-white rounded text-center flex flex-col justify-between md:w-48">
-            <span className="text-xs font-bold text-slate-600">Engine Overdrive</span>
+            <div>
+              <span className="text-xs font-bold text-slate-650 block">Engine Overdrive</span>
+              <span className={`text-[9px] font-mono font-bold uppercase ${boostProfile === 'safe' ? 'text-green-650' : 'text-amber-700'}`}>
+                ({boostProfile} profile)
+              </span>
+            </div>
             <div className="my-2">
               <button
-                onClick={() => toggleMaxBoost(!maxBoostActive)}
+                onClick={() => toggleMaxBoost(!maxBoostActive, boostProfile)}
                 disabled={maxBoostStatus === 'boosting' || maxBoostStatus === 'reverting'}
-                className="px-4 py-2 bg-slate-800 text-white hover:bg-slate-700 text-xs font-bold rounded cursor-pointer disabled:bg-slate-300"
+                className="px-4 py-2 bg-slate-800 text-white hover:bg-slate-700 text-xs font-bold rounded cursor-pointer disabled:bg-slate-300 w-full"
               >
                 {maxBoostActive ? 'ACTIVE' : 'BOOST'}
               </button>
             </div>
             <div className="text-[10px] text-slate-500">
-              Latency Adjustment: {maxBoostActive ? '−12.8ms' : '0.0ms'}
+              Latency Adjustment: {maxBoostActive ? (boostProfile === 'safe' ? '−6.2ms' : '−12.8ms') : '0.0ms'}
             </div>
           </div>
 

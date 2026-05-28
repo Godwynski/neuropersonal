@@ -1,6 +1,14 @@
 import React from 'react';
 
-export default function OneClickOptimize({ isOptimizing, isOptimized, onOptimize, onRevert, isAdmin }) {
+export default function OneClickOptimize({ 
+  isOptimizing, 
+  isOptimized, 
+  onOptimize, 
+  onRevert, 
+  isAdmin, 
+  boostProfile = 'safe', 
+  setBoostProfile 
+}) {
   return (
     <div className="flex flex-col items-center justify-center min-h-full p-6 font-sans bg-white text-slate-800">
       <div className="text-center mb-8 max-w-xl">
@@ -18,7 +26,7 @@ export default function OneClickOptimize({ isOptimizing, isOptimized, onOptimize
 
       {/* Bare Skeleton Container */}
       <div className="w-full max-w-sm border border-slate-200 bg-slate-50 rounded p-6 flex flex-col items-center">
-        <div className="mb-4 w-12 h-12 rounded-full border-2 border-slate-350 bg-slate-100 flex items-center justify-center font-bold text-slate-500">
+        <div className="mb-4 w-12 h-12 rounded-full border-2 border-slate-300 bg-slate-100 flex items-center justify-center font-bold text-slate-500">
           {isOptimizing ? '...' : isOptimized ? '✓' : '!'}
         </div>
 
@@ -33,6 +41,61 @@ export default function OneClickOptimize({ isOptimizing, isOptimized, onOptimize
               ? 'Windows is tuned for reduced system latency.' 
               : 'Windows defaults currently active.'}
         </p>
+
+        {/* Profile Selector tabs */}
+        {!isOptimized && !isOptimizing && (
+          <div className="w-full mb-5 text-xs">
+            <label className="block text-slate-500 font-bold mb-2 uppercase text-[10px] tracking-wide text-center">
+              Select Optimization Profile
+            </label>
+            <div className="grid grid-cols-2 gap-2 border border-slate-200 p-1 bg-white rounded">
+              <button
+                type="button"
+                onClick={() => setBoostProfile('safe')}
+                className={`py-2 px-3 font-bold rounded cursor-pointer transition-colors text-center ${
+                  boostProfile === 'safe'
+                    ? 'bg-green-50 border border-green-200 text-green-700 font-bold'
+                    : 'bg-white hover:bg-slate-50 border border-transparent text-slate-500'
+                }`}
+              >
+                Safe Boost
+              </button>
+              <button
+                type="button"
+                onClick={() => setBoostProfile('aggressive')}
+                className={`py-2 px-3 font-bold rounded cursor-pointer transition-colors text-center ${
+                  boostProfile === 'aggressive'
+                    ? 'bg-amber-50 border border-amber-200 text-amber-705 font-bold'
+                    : 'bg-white hover:bg-slate-50 border border-transparent text-slate-500'
+                }`}
+              >
+                Max Boost
+              </button>
+            </div>
+            
+            <div className="mt-3 p-2 bg-slate-100/60 rounded text-[11px] leading-relaxed border border-slate-200/50">
+              {boostProfile === 'safe' ? (
+                <div>
+                  <span className="font-bold text-green-700 block mb-0.5">🟢 Safe Profile details:</span>
+                  Flushes DNS, cleans temp/shader caches, turns on Windows Game Mode, sets High Power Plan, and disables background DVR.
+                  <span className="font-semibold text-slate-500 block mt-1">✓ Safely lowers latency without CPU stutters or 1% lows.</span>
+                </div>
+              ) : (
+                <div>
+                  <span className="font-bold text-amber-700 block mb-0.5">⚠️ Max Profile details:</span>
+                  Applies all Safe tweaks PLUS HAGS, core parking overrides, disabling dynamic tick, custom priority separation, and service disabling.
+                  <span className="font-semibold text-amber-700 block mt-1">⚡ Warning: Overrides CPU scheduler. May cause 1% lows and system lag on some hardware.</span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {isOptimized && (
+          <div className="w-full mb-5 text-[11px] p-2.5 bg-slate-100 rounded border border-slate-200 text-center font-semibold text-slate-600">
+            Active Profile: <span className={boostProfile === 'safe' ? 'text-green-700 font-bold uppercase' : 'text-amber-700 font-bold uppercase'}>{boostProfile === 'safe' ? 'Safe Boost' : 'Max Boost'}</span>
+          </div>
+        )}
 
         <button
           onClick={isOptimized ? onRevert : onOptimize}
