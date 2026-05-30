@@ -11,7 +11,7 @@
     "preview": "vite preview"
   },
   "keywords": [],
-  "author": "",
+  "author": "Neuroptimize Team",
   "license": "ISC",
   "build": {
     "appId": "com.neuroptimize.app",
