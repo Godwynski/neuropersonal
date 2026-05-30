@@ -10,6 +10,8 @@ function DashboardContent() {
   const {
     isElectron,
     isInitializing,
+    isProcessing,
+    processingMessage,
     toasts,
     removeToast,
     systemLogs,
@@ -42,6 +44,16 @@ function DashboardContent() {
               <span className="w-8 h-8 rounded-full border-2 border-slate-200 border-t-slate-800 animate-spin" />
               <div className="font-bold text-xs text-slate-800">Initializing Control Deck</div>
               <p className="text-[10px] text-slate-500">Querying hardware telemetry and subsystem configuration...</p>
+            </div>
+          </div>
+        )}
+
+        {isProcessing && (
+          <div className="absolute inset-0 bg-slate-950/50 backdrop-blur-[3px] flex items-center justify-center z-50 transition-all duration-200">
+            <div className="bg-white border border-slate-200 p-6 rounded-lg shadow-2xl flex flex-col items-center gap-3 max-w-xs text-center">
+              <span className="w-8 h-8 rounded-full border-2 border-slate-100 border-t-indigo-600 animate-spin" />
+              <div className="font-bold text-xs text-slate-800">Applying Optimization Tweak</div>
+              <p className="text-[10px] text-slate-500 font-medium">{processingMessage || 'Please wait while Windows configures settings...'}</p>
             </div>
           </div>
         )}

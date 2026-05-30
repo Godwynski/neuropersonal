@@ -191,12 +191,34 @@ export function AppProvider({ children }) {
   // Registry Rollback State & Actions
   const [registryBackups, setRegistryBackups] = useState([]);
 
+  // Locking/Executing State
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [processingMessage, setProcessingMessage] = useState('');
+
   const addToast = (message, type = 'info') => {
     const id = Date.now() + Math.random();
     setToasts(prev => [...prev, { id, message, type }]);
   };
   const removeToast = (id) => {
     setToasts(prev => prev.filter(t => t.id !== id));
+  };
+
+  const executeOperation = async (message, asyncFn) => {
+    if (isProcessing) {
+      addToast('System is currently executing an operation. Please wait.', 'warning');
+      return;
+    }
+    setIsProcessing(true);
+    setProcessingMessage(message);
+    try {
+      await asyncFn();
+    } catch (e) {
+      console.error(`Operation [${message}] failed:`, e);
+      addToast(`Operation failed: ${e.message || e}`, 'error');
+    } finally {
+      setIsProcessing(false);
+      setProcessingMessage('');
+    }
   };
   
   const loadRegistryBackups = async () => {
@@ -242,6 +264,20 @@ export function AppProvider({ children }) {
         await loadRegistryBackups();
       } else {
         addToast(`Failed to clear backups: ${res.error}`, 'error');
+      }
+    }
+  };
+
+  const restoreAllBackups = async () => {
+    if (window.api && window.api.restoreAllRegistryBackups) {
+      const res = await window.api.restoreAllRegistryBackups();
+      if (res.success) {
+        addToast('All registry values restored successfully!', 'success');
+        await loadRegistryBackups();
+        await checkRegistryStates();
+        await checkLatencyRegistryStates();
+      } else {
+        addToast(`Restore all failed: ${res.error}`, 'error');
       }
     }
   };
@@ -1456,8 +1492,9 @@ export function AppProvider({ children }) {
       toasts, setToasts,
       isInitializing, setIsInitializing,
       registryBackups, setRegistryBackups,
+      isProcessing, processingMessage,
       addToast, removeToast,
-      loadRegistryBackups, restoreBackup, deleteBackup, clearAllBackups,
+      loadRegistryBackups, restoreBackup, deleteBackup, clearAllBackups, restoreAllBackups, executeOperation,
       checkRegistryStates, toggleHags, toggleGameDvr, togglePriorityOptimized,
       loadValorantConfigs, saveValorantConfig, applyTournamentPreset,
       checkLatencyRegistryStates, toggleLatencyTweak, applyFrameLimitSettings,

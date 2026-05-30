@@ -749,6 +749,34 @@ ipcMain.handle('clear-all-registry-backups', async () => {
   }
 });
 
+ipcMain.handle('restore-all-registry-backups', async () => {
+  try {
+    const p = getBackupsFilePath();
+    if (fs.existsSync(p)) {
+      const backups = JSON.parse(fs.readFileSync(p, 'utf8'));
+      for (const backup of backups) {
+        const ensurePathCmd = `powershell -Command "if (-not (Test-Path '${backup.keyPath}')) { New-Item -Path '${backup.keyPath}' -Force | Out-Null }"`;
+        try { execSync(ensurePathCmd); } catch(e) {}
+        
+        let typeParam = 'DWord';
+        let valParam = backup.value;
+        if (isNaN(backup.value)) {
+          typeParam = 'String';
+          valParam = `"${backup.value}"`;
+        }
+        
+        const setCmd = `powershell -Command "Set-ItemProperty -Path '${backup.keyPath}' -Name '${backup.valueName}' -Value ${valParam} -Type ${typeParam} -Force"`;
+        execSync(setCmd);
+      }
+      fs.writeFileSync(p, JSON.stringify([], null, 2), 'utf8');
+      return { success: true };
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
 ipcMain.handle('kill-process', async (event, processName) => {
   const allowlist = ['chrome.exe', 'msedge.exe', 'spotify.exe', 'discord.exe', 'steam.exe', 'OneDrive.exe'];
   if (!allowlist.includes(processName)) {
@@ -1322,17 +1350,17 @@ ipcMain.handle('select-valorant-path', async () => {
 
 ipcMain.handle('check-vbs-status', async () => {
   try {
-    const vbsRes = execSync("powershell -Command \"(Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard' -Name 'EnableVirtualizationBasedSecurity' -ErrorAction SilentlyContinue).EnableVirtualizationBasedSecurity\"").toString().trim();
-    const miRes = execSync("powershell -Command \"(Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity' -Name 'Enabled' -ErrorAction SilentlyContinue).Enabled\"").toString().trim();
+    const vbsRes = execSync("powershell -Command \"(Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard' -Name 'EnableVirtualizationBasedSecurity' -ErrorAction SilentlyContinue).EnableVirtualizationBasedSecurity\"", { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
+    const miRes = execSync("powershell -Command \"(Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\DeviceGuard\\Scenarios\\HypervisorEnforcedCodeIntegrity' -Name 'Enabled' -ErrorAction SilentlyContinue).Enabled\"", { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
     
     let vmPlatform = 'unknown';
     let hypervisorPlatform = 'unknown';
     try {
-      const vmRes = execSync("powershell -Command \"(Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -ErrorAction SilentlyContinue).State\"").toString().trim();
+      const vmRes = execSync("powershell -Command \"(Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -ErrorAction SilentlyContinue).State\"", { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
       vmPlatform = vmRes.toLowerCase() === 'enabled' ? 'enabled' : 'disabled';
     } catch (e) { /* feature may not exist */ }
     try {
-      const hvRes = execSync("powershell -Command \"(Get-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -ErrorAction SilentlyContinue).State\"").toString().trim();
+      const hvRes = execSync("powershell -Command \"(Get-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -ErrorAction SilentlyContinue).State\"", { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
       hypervisorPlatform = hvRes.toLowerCase() === 'enabled' ? 'enabled' : 'disabled';
     } catch (e) { /* feature may not exist */ }
 
@@ -1377,7 +1405,7 @@ ipcMain.handle('toggle-vbs', async (event, enable) => {
 
 ipcMain.handle('check-hpet-status', async () => {
   try {
-    const res = execSync("powershell -Command \"bcdedit /enum {current} | Select-String -Pattern 'useplatformclock'\"").toString().trim();
+    const res = execSync("powershell -Command \"bcdedit /enum {current} | Select-String -Pattern 'useplatformclock'\"", { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
     const hpetDisabled = res.toLowerCase().includes('no') || res.toLowerCase().includes('false');
     return { success: true, hpetDisabled };
   } catch (err) {

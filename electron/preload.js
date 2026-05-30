@@ -42,6 +42,7 @@ contextBridge.exposeInMainWorld('api', {
   getRegistryBackups: () => ipcRenderer.invoke('get-registry-backups'),
   restoreRegistryBackup: (backupIndex) => ipcRenderer.invoke('restore-registry-backup', backupIndex),
   deleteRegistryBackup: (backupIndex) => ipcRenderer.invoke('delete-registry-backup', backupIndex),
-  clearAllRegistryBackups: () => ipcRenderer.invoke('clear-all-registry-backups')
+  clearAllRegistryBackups: () => ipcRenderer.invoke('clear-all-registry-backups'),
+  restoreAllRegistryBackups: () => ipcRenderer.invoke('restore-all-registry-backups')
 });
 
