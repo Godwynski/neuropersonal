@@ -1106,6 +1106,23 @@ export function AppProvider({ children }) {
     addToast("Auto-Boost applied successfully!", "success");
   };
 
+  const launchValorant = async () => {
+    await triggerValorantAutoBoost();
+    if (window.api && window.api.launchValorant) {
+      setSystemLogs(prev => [...prev, `[Launcher] Launching VALORANT via Riot Client...`].slice(-200));
+      const res = await window.api.launchValorant(valorantPath);
+      if (res.success) {
+        addToast("VALORANT launched successfully!", "success");
+      } else {
+        addToast(`Failed to launch: ${res.error}`, "error");
+        setSystemLogs(prev => [...prev, `[Launcher Error] ${res.error}`].slice(-200));
+      }
+    } else {
+      setValorantRunning(true);
+      addToast("VALORANT launch simulated", "success");
+    }
+  };
+
   // Environment Check
   useEffect(() => {
     if (!window.api) {
@@ -1157,6 +1174,9 @@ export function AppProvider({ children }) {
         setStats(data);
         if (typeof data.isAdmin === 'boolean') {
           setIsAdmin(data.isAdmin);
+        }
+        if (typeof data.valorantRunning === 'boolean') {
+          setValorantRunning(data.valorantRunning);
         }
       } catch (err) {
         console.error(err);
@@ -1377,6 +1397,7 @@ export function AppProvider({ children }) {
     <AppContext.Provider value={{
       isElectron, setIsElectron,
       systemLogs, setSystemLogs,
+      valorantLogs: systemLogs,
       stats, setStats,
       tempFolderSize, setTempFolderSize,
       scanningTemp, setScanningTemp,
@@ -1451,7 +1472,7 @@ export function AppProvider({ children }) {
       applyOptimizationProfile, toggleMaxBoost, toggleBgService,
       toggleTimerResolution, runDeepPerformanceOptimize, triggerValorantAutoRevert,
       triggerValorantAutoBoost, runDiagnosticFix, runMacro, scanTempFolder,
-      purgeTempFolder, launchAdminPanel, formatBytes
+      purgeTempFolder, launchAdminPanel, formatBytes, launchValorant
     }}>
       {children}
     </AppContext.Provider>

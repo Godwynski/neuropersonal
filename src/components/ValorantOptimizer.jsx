@@ -10,6 +10,7 @@ export default function ValorantOptimizer() {
     browseValorantPath,
     valorantRunning,
     setValorantRunning,
+    launchValorant,
     autoBoostActive,
     setAutoBoostActive,
     gameModeActive,
@@ -71,6 +72,23 @@ export default function ValorantOptimizer() {
     // Feature 5: Hardware Bottleneck
     hardwareInfo, toggleLegacyRebar
   } = useAppContext();
+  const optimizedCount = [
+    registryStates.gameDvrDisabled === true,
+    registryStates.priorityOptimized === true,
+    latencyTweaks.disableMouseAccel === true,
+    latencyTweaks.disableUsbSuspend === true,
+    persistentPriorityEnabled === true,
+    timerResActive === true,
+    hpetDisabled === true,
+    nicPowerSavingDisabled === true,
+    powerThrottlingDisabled === true,
+    !bgServices.XblAuthManager,
+    !vbsStatus.vbsEnabled,
+    (gpuInfo.vendor === 'nvidia' && gsyncDisabled) || (gpuInfo.vendor === 'amd' && amdOptimizations.mpoDisabled)
+  ].filter(Boolean).length;
+  const totalOptimizations = 12;
+  const optimizationPercentage = Math.round((optimizedCount / totalOptimizations) * 100);
+
   return (
     <div className="space-y-6 font-sans text-slate-800 bg-white p-2">
       
@@ -80,27 +98,51 @@ export default function ValorantOptimizer() {
           <h1 className="text-lg font-bold">Valorant Engine Booster</h1>
           <p className="text-[11px] text-slate-500">System tweaks and caches for tactile gaming performance.</p>
         </div>
-        <div className="flex gap-2 text-xs">
-          {!isElectron && (
+        <div className="flex items-center gap-2.5 text-xs">
+          {!valorantRunning ? (
             <button 
-              onClick={() => {
-                if (valorantRunning) {
-                  setValorantRunning(false);
-                } else {
-                  triggerValorantAutoBoost();
-                  setValorantRunning(true);
-                }
-              }} 
-              className="border border-slate-300 px-2 py-1 rounded bg-white hover:bg-slate-50 cursor-pointer"
+              onClick={launchValorant}
+              className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded flex items-center gap-1.5 font-bold transition-all cursor-pointer"
             >
-              {valorantRunning ? 'Simulate Exit' : 'Simulate Launch'}
+              <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                <path d="M8 5v14l11-7z"/>
+              </svg>
+              LAUNCH VALORANT
             </button>
+          ) : (
+            !isElectron && (
+              <button 
+                onClick={() => setValorantRunning(false)} 
+                className="border border-slate-300 px-2 py-1 rounded bg-white hover:bg-slate-50 cursor-pointer"
+              >
+                Simulate Exit
+              </button>
+            )
           )}
           <span className={`px-2 py-1 border rounded font-mono font-bold ${valorantRunning ? 'bg-green-50 border-green-300 text-green-700' : 'bg-slate-100 border-slate-300 text-slate-500'}`}>
-            STATUS: {valorantRunning ? 'RUNNING' : 'NOT RUNNING'}
+            GAME STATUS: {valorantRunning ? 'VALORANT IS OPEN (BOOST ACTIVE)' : 'VALORANT IS CLOSED'}
           </span>
         </div>
       </header>
+
+      {/* Optimization Score Dashboard Tracker */}
+      <div className="p-4 border border-indigo-150 bg-indigo-50/50 rounded-lg flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 text-xs">
+        <div className="space-y-1">
+          <span className="font-bold text-slate-700 block">Overall Performance Optimization Score</span>
+          <p className="text-[10px] text-slate-500">This score measures how many system tweaks are currently configured to maximize gaming FPS.</p>
+        </div>
+        <div className="w-full sm:w-64 space-y-1.5">
+          <div className="flex justify-between font-bold text-indigo-750 text-[10px]">
+            <span>{optimizedCount} of {totalOptimizations} Tweaks Active</span>
+            <span>{optimizationPercentage}% OPTIMIZED</span>
+          </div>
+          <div className="w-full h-2.5 bg-slate-200 rounded-full overflow-hidden border border-slate-350">
+            <div className={`h-full transition-all duration-500 ${
+              optimizationPercentage >= 80 ? 'bg-green-500' : optimizationPercentage >= 50 ? 'bg-amber-500' : 'bg-rose-500'
+            }`} style={{ width: `${optimizationPercentage}%` }} />
+          </div>
+        </div>
+      </div>
 
       {!isAdmin && (
         <div className="p-3 border border-amber-350 bg-amber-50 text-amber-800 text-xs rounded">
@@ -267,12 +309,28 @@ export default function ValorantOptimizer() {
                 <div className="flex justify-between items-start gap-2">
                   <div className="space-y-0.5">
                     <div className="flex items-center gap-2">
-                      <span className="font-bold">Disable Windows GameDVR</span>
-                      <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border bg-green-50 border-green-200 text-green-700">Safe</span>
+                      <span className="font-bold text-slate-800">Windows GameDVR Telemetry</span>
+                      <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border bg-green-50 border-green-200 text-green-700">Safe Tweak</span>
+                      <span className="text-[10px] font-semibold text-green-600">(+1-2% FPS / Prevents Telemetry Spikes)</span>
                     </div>
-                    <p className="text-[10px] text-slate-500 leading-normal">Suspends background game capture telemetry tools to save CPU cycles.</p>
+                    <p className="text-[10px] text-slate-500 leading-normal">
+                      Background game capture telemetry tools consume CPU cycles.
+                      <span className="font-bold text-indigo-600 ml-1">Recommendation: DISABLE for best FPS.</span>
+                    </p>
+                    <div className="text-[10px] font-mono text-slate-550 pt-0.5">
+                      Current Status: {registryStates.gameDvrDisabled ? '🔴 Disabled (Optimal)' : '🟢 Active (May Throttling CPU)'}
+                    </div>
                   </div>
-                  <button onClick={() => toggleGameDvr(!registryStates.gameDvrDisabled)} className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-xs font-bold cursor-pointer shrink-0">{registryStates.gameDvrDisabled ? 'DISABLED' : 'ENABLED'}</button>
+                  <button 
+                    onClick={() => toggleGameDvr(!registryStates.gameDvrDisabled)} 
+                    className={`px-3 py-1.5 border rounded text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                      registryStates.gameDvrDisabled 
+                        ? 'bg-green-600 border-green-700 text-white hover:bg-green-700' 
+                        : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+                    }`}
+                  >
+                    {registryStates.gameDvrDisabled ? '⚡ OPTIMIZED' : '⚠️ OPTIMIZE'}
+                  </button>
                 </div>
               </div>
             </div>
@@ -285,24 +343,49 @@ export default function ValorantOptimizer() {
             <div className="p-2 border border-slate-200 bg-white rounded text-xs space-y-3">
               <div className="flex justify-between items-center">
                 <div>
-                  <span className="font-bold">Disable NVIDIA G-Sync</span>
-                  <p className="text-[10px] text-slate-500">Skips timing alignment controls on NV display buffers.</p>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold">NVIDIA G-Sync Bypass</span>
+                    <span className="text-[10px] font-semibold text-green-600">(Reduces Input Latency)</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500">Skips buffer alignment timing checks. <span className="font-bold text-indigo-600">Recommendation: DISABLE for lowest input delay.</span></p>
+                  <div className="text-[10px] font-mono text-slate-550 pt-0.5">
+                    Current Status: {gsyncDisabled ? '🔴 Disabled (Optimal for Latency)' : '🟢 Enabled (Variable Frame Align)'}
+                  </div>
                 </div>
                 <button 
                   onClick={() => toggleGsync(!gsyncDisabled)} 
                   disabled={gpuInfo && gpuInfo.vendor !== 'nvidia'}
-                  className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-xs font-bold cursor-pointer disabled:opacity-40"
+                  className={`px-3 py-1.5 border rounded text-xs font-bold transition-all shrink-0 cursor-pointer disabled:opacity-40 ${
+                    gsyncDisabled 
+                      ? 'bg-green-600 border-green-700 text-white hover:bg-green-700' 
+                      : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+                  }`}
                 >
-                  {gsyncDisabled ? 'DISABLED' : 'ENABLED'}
+                  {gsyncDisabled ? '⚡ OPTIMIZED' : '⚠️ OPTIMIZE'}
                 </button>
               </div>
 
               <div className="flex justify-between items-center border-t border-slate-100 pt-3">
                 <div>
-                  <span className="font-bold">Adaptive Sync Tweak</span>
-                  <p className="text-[10px] text-slate-500">Toggles registry keys for FreeSync pipelines.</p>
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold">AMD FreeSync Tweak</span>
+                    <span className="text-[10px] font-semibold text-green-600">(Minimizes AMD Sync Overhead)</span>
+                  </div>
+                  <p className="text-[10px] text-slate-500">Configures adaptive sync keys. <span className="font-bold text-indigo-600">Recommendation: DISABLE for maximum frames, or ENABLE to stop screen tearing.</span></p>
+                  <div className="text-[10px] font-mono text-slate-550 pt-0.5">
+                    Current Status: {freesyncEnabled ? '🟢 Enabled' : '🔴 Disabled'}
+                  </div>
                 </div>
-                <button onClick={() => toggleFreesync(!freesyncEnabled)} className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-xs font-bold cursor-pointer">{freesyncEnabled ? 'ACTIVE' : 'OFF'}</button>
+                <button 
+                  onClick={() => toggleFreesync(!freesyncEnabled)} 
+                  className={`px-3 py-1.5 border rounded text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                    freesyncEnabled 
+                      ? 'bg-green-600 border-green-700 text-white hover:bg-green-700' 
+                      : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  {freesyncEnabled ? '⚡ OPTIMIZED' : '⚠️ OPTIMIZE'}
+                </button>
               </div>
 
               <div className="flex flex-col gap-1 border-t border-slate-100 pt-3">
@@ -317,8 +400,8 @@ export default function ValorantOptimizer() {
               </div>
 
               <div className="grid grid-cols-2 gap-2 border-t border-slate-100 pt-3">
-                <button onClick={() => applyFrameLimitSettings('uncapped', monitorRefreshRate)} className={`p-2 border text-center font-bold rounded cursor-pointer ${frameLimitMode === 'uncapped' ? 'bg-slate-200 border-slate-400' : 'bg-white border-slate-200'}`}>UNCAPPED</button>
-                <button onClick={() => applyFrameLimitSettings('vrr', monitorRefreshRate)} className={`p-2 border text-center font-bold rounded cursor-pointer ${frameLimitMode === 'vrr' ? 'bg-slate-200 border-slate-400' : 'bg-white border-slate-200'}`}>VRR CAP ({monitorRefreshRate - 3}Hz)</button>
+                <button onClick={() => applyFrameLimitSettings('uncapped', monitorRefreshRate)} className={`p-2 border text-center font-bold rounded cursor-pointer ${frameLimitMode === 'uncapped' ? 'bg-green-600 border-green-700 text-white' : 'bg-white border-slate-200'}`}>UNCAPPED (⚡ MAX FPS)</button>
+                <button onClick={() => applyFrameLimitSettings('vrr', monitorRefreshRate)} className={`p-2 border text-center font-bold rounded cursor-pointer ${frameLimitMode === 'vrr' ? 'bg-green-600 border-green-700 text-white' : 'bg-white border-slate-200'}`}>VRR CAP ({monitorRefreshRate - 3}Hz)</button>
               </div>
             </div>
 
@@ -329,21 +412,27 @@ export default function ValorantOptimizer() {
                   active: latencyTweaks.disableMouseAccel, 
                   onClick: () => toggleLatencyTweak('disableMouseAccel', !latencyTweaks.disableMouseAccel),
                   tier: 'safe',
-                  desc: 'Eliminates precision enhancement scaling for raw tracking.'
+                  desc: 'Eliminates speed-based acceleration. Recommendation: DISABLE for raw 1:1 mouse input accuracy.',
+                  status: (act) => act ? '🔴 Disabled (Optimal)' : '🟢 Enabled (Throttles Precision)',
+                  benefit: 'Raw 1:1 Cursor Precision'
                 },
                 { 
                   label: 'Disable USB Selective Suspend', 
                   active: latencyTweaks.disableUsbSuspend, 
                   onClick: () => toggleLatencyTweak('disableUsbSuspend', !latencyTweaks.disableUsbSuspend),
                   tier: 'safe',
-                  desc: 'Prevents USB controllers from dropping power, reducing mouse/keyboard wake latency.'
+                  desc: 'Prevents USB slots from powering down. Recommendation: DISABLE for instant peripheral response.',
+                  status: (act) => act ? '🔴 Disabled (Optimal)' : '🟢 Active (May Sleep USB Devices)',
+                  benefit: 'Zero Wake-up USB Latency'
                 },
                 { 
                   label: 'Persistent High CPU Priority', 
                   active: persistentPriorityEnabled, 
                   onClick: () => togglePersistentPriority(!persistentPriorityEnabled),
                   tier: 'safe',
-                  desc: 'Configures Windows IFEO to automatically run the game in high priority on launch.'
+                  desc: 'Instructs Windows scheduler to run Valorant on priority. Recommendation: ENABLE for best frame delivery.',
+                  status: (act) => act ? '🟢 Active (Optimal)' : '🔴 Inactive (Normal Scheduler)',
+                  benefit: '+3-5% Game Thread FPS'
                 }
               ].map((item, idx) => (
                 <div key={idx} className="p-3 border border-slate-200 bg-white rounded space-y-2">
@@ -354,10 +443,23 @@ export default function ValorantOptimizer() {
                         <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border bg-green-50 border-green-200 text-green-700">
                           {item.tier}
                         </span>
+                        <span className="text-[10px] font-semibold text-green-600">({item.benefit})</span>
                       </div>
                       <p className="text-[10px] text-slate-500 leading-normal">{item.desc}</p>
+                      <div className="text-[10px] font-mono text-slate-550 pt-0.5">
+                        Current Status: {item.status(item.active)}
+                      </div>
                     </div>
-                    <button onClick={item.onClick} className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-xs font-bold cursor-pointer shrink-0">{item.active ? 'TWEAKED' : 'DEFAULT'}</button>
+                    <button 
+                      onClick={item.onClick} 
+                      className={`px-3 py-1.5 border rounded text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                        item.active 
+                          ? 'bg-green-600 border-green-700 text-white hover:bg-green-700' 
+                          : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      {item.active ? '⚡ OPTIMIZED' : '⚠️ OPTIMIZE'}
+                    </button>
                   </div>
                 </div>
               ))}
@@ -516,11 +618,24 @@ export default function ValorantOptimizer() {
                 <div className="space-y-0.5">
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-slate-800">System Clock Lock (0.5ms)</span>
-                    <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border bg-green-50 border-green-200 text-green-700">Safe</span>
+                    <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border bg-green-50 border-green-200 text-green-700">Safe Tweak</span>
+                    <span className="text-[10px] font-semibold text-green-600">(Reduces Micro-Stuttering)</span>
                   </div>
-                  <p className="text-[10px] text-slate-500 leading-normal">Locks hardware timer resolution value to 0.5ms for optimal input responsiveness.</p>
+                  <p className="text-[10px] text-slate-500 leading-normal">Forces system timer precision to 0.5ms. <span className="font-bold text-indigo-600">Recommendation: ENABLE for smooth frame delivery.</span></p>
+                  <div className="text-[10px] font-mono text-slate-550 pt-0.5">
+                    Current Status: {timerResActive ? '🟢 Locked to 0.5ms (Optimal)' : '🔴 Default Windows Timer'}
+                  </div>
                 </div>
-                <button onClick={() => toggleTimerResolution(!timerResActive)} className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-xs font-bold cursor-pointer shrink-0">{timerResActive ? 'LOCKED' : 'DEFAULT'}</button>
+                <button 
+                  onClick={() => toggleTimerResolution(!timerResActive)} 
+                  className={`px-3 py-1.5 border rounded text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                    timerResActive 
+                      ? 'bg-green-600 border-green-700 text-white hover:bg-green-700' 
+                      : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+                  }`}
+                >
+                  {timerResActive ? '⚡ OPTIMIZED' : '⚠️ OPTIMIZE'}
+                </button>
               </div>
             </div>
 
@@ -531,13 +646,17 @@ export default function ValorantOptimizer() {
                   <div className="flex items-center gap-2">
                     <span className="font-bold text-slate-800">Disable HPET (Platform Clock)</span>
                     <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border bg-amber-50 border-amber-200 text-amber-700">aggressive</span>
+                    <span className="text-[10px] font-semibold text-green-600">(Solves Frametime Spikes)</span>
                     {hpetRebootRequired && (
                       <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border bg-rose-50 border-rose-200 text-rose-700 animate-pulse">REBOOT REQUIRED</span>
                     )}
                   </div>
-                  <p className="text-[10px] text-slate-500 leading-normal">Resolves micro-stuttering on AMD Ryzen + Asus motherboard combinations. Requires reboot.</p>
+                  <p className="text-[10px] text-slate-500 leading-normal">Bypasses BIOS platform clock. <span className="font-bold text-indigo-600">Recommendation: DISABLE to stop frame time variance on Ryzen platforms.</span></p>
+                  <div className="text-[10px] font-mono text-slate-550 pt-0.5">
+                    Current Status: {hpetDisabled ? '🔴 Disabled (Optimal)' : '🟢 Active'}
+                  </div>
                   <p className="text-[9px] text-amber-700 bg-amber-50/50 p-1 border border-amber-100 rounded leading-normal font-semibold">
-                    ⚠️ Modifies Windows Boot Configuration Data. Changes take effect after restart.
+                    ⚠️ Modifies Boot Manager clock sync. Requires system restart to take effect.
                   </p>
                 </div>
                 <button 
@@ -547,9 +666,13 @@ export default function ValorantOptimizer() {
                       toggleHpet(!hpetDisabled);
                     }
                   }} 
-                  className="px-3 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-xs font-bold cursor-pointer shrink-0"
+                  className={`px-3 py-1.5 border rounded text-xs font-bold transition-all shrink-0 cursor-pointer ${
+                    hpetDisabled 
+                      ? 'bg-green-600 border-green-700 text-white hover:bg-green-700' 
+                      : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+                  }`}
                 >
-                  {hpetDisabled ? 'DISABLED' : 'DEFAULT'}
+                  {hpetDisabled ? '⚡ OPTIMIZED' : '⚠️ OPTIMIZE'}
                 </button>
               </div>
             </div>
@@ -562,29 +685,29 @@ export default function ValorantOptimizer() {
                     label: 'NIC Power Savings', 
                     active: nicPowerSavingDisabled, 
                     onClick: () => toggleNicPower(!nicPowerSavingDisabled), 
-                    actL: 'DISABLED', 
-                    inactL: 'ENABLED',
                     tier: 'safe',
-                    desc: 'Disables Energy Efficient Ethernet to stop adapter latency spikes.'
+                    desc: 'Disables Energy Efficient Ethernet. Recommendation: DISABLE to prevent network latency spikes.',
+                    status: (act) => act ? '🔴 Disabled (Optimal)' : '🟢 Active (Adaptive Power)',
+                    benefit: 'Stable Ping / No Adapter sleep'
                   },
                   { 
                     label: 'Power Throttling Policy', 
                     active: powerThrottlingDisabled, 
                     onClick: () => togglePowerThrottling(!powerThrottlingDisabled), 
-                    actL: 'DISABLED', 
-                    inactL: 'ENABLED',
                     tier: 'aggressive',
-                    desc: 'Stops Windows from power-throttling background processes.',
-                    warning: 'Can cause higher battery consumption and scheduling issues on hybrid CPUs.'
+                    desc: 'Stops thread power gating. Recommendation: DISABLE to allocate full CPU core throughput.',
+                    status: (act) => act ? '🔴 Disabled (Optimal)' : '🟢 Active (Core Power Throttling)',
+                    warning: 'Can cause higher battery consumption on laptops.',
+                    benefit: 'Stable High Core Clocks'
                   },
                   { 
                     label: 'Xbox Live Auth Service', 
                     active: !bgServices.XblAuthManager, 
                     onClick: () => toggleBgService('XblAuthManager', !bgServices.XblAuthManager), 
-                    actL: 'DISABLED', 
-                    inactL: 'RUNNING',
                     tier: 'safe',
-                    desc: 'Safe to disable if you do not use Xbox Live / Game Pass services.'
+                    desc: 'Stops Xbox login background services. Recommendation: DISABLE if you do not play Xbox games.',
+                    status: (act) => act ? '🔴 Disabled (Optimal)' : '🟢 Active (Consuming Thread Heap)',
+                    benefit: 'Saves System Memory'
                   }
                 ].map((item, idx) => (
                   <div key={idx} className="flex justify-between items-start gap-2 border-b border-slate-100 pb-2.5 last:border-0 last:pb-0">
@@ -598,6 +721,7 @@ export default function ValorantOptimizer() {
                         }`}>
                           {item.tier}
                         </span>
+                        <span className="text-[10px] font-semibold text-green-600">({item.benefit})</span>
                       </div>
                       <p className="text-[10px] text-slate-500 leading-normal">{item.desc}</p>
                       {item.warning && (
@@ -605,8 +729,20 @@ export default function ValorantOptimizer() {
                           ⚠️ {item.warning}
                         </p>
                       )}
+                      <div className="text-[10px] font-mono text-slate-550 pt-0.5">
+                        Current Status: {item.status(item.active)}
+                      </div>
                     </div>
-                    <button onClick={item.onClick} className="px-2.5 py-1 border border-slate-200 bg-white hover:bg-slate-100 rounded text-[10px] font-bold cursor-pointer shrink-0">{item.active ? item.actL : item.inactL}</button>
+                    <button 
+                      onClick={item.onClick} 
+                      className={`px-2.5 py-1 border rounded text-[10px] font-bold transition-all shrink-0 cursor-pointer ${
+                        item.active 
+                          ? 'bg-green-600 border-green-700 text-white hover:bg-green-700' 
+                          : 'bg-slate-100 border-slate-300 text-slate-700 hover:bg-slate-200'
+                      }`}
+                    >
+                      {item.active ? '⚡ OPTIMIZED' : '⚠️ OPTIMIZE'}
+                    </button>
                   </div>
                 ))}
               </div>
@@ -615,16 +751,19 @@ export default function ValorantOptimizer() {
             {/* Feature 1: VBS & Core Isolation Panel */}
             <div className="p-3 border border-slate-200 bg-white rounded space-y-3">
               <div className="flex justify-between items-center border-b border-slate-100 pb-1">
-                <span className="font-bold block text-slate-700">Virtualization Security</span>
+                <div>
+                  <span className="font-bold block text-slate-750">Virtualization Security (VBS)</span>
+                  <span className="text-[10px] font-semibold text-rose-600 leading-none">(Up to -20% FPS Throttle)</span>
+                </div>
                 {vbsRebootRequired && (
                   <span className="px-1.5 py-0.5 rounded text-[8px] font-bold uppercase tracking-wide border bg-rose-50 border-rose-200 text-rose-700 animate-pulse">REBOOT REQUIRED</span>
                 )}
               </div>
               <div className="grid grid-cols-2 gap-2">
                 {[
-                  { label: 'VBS', ok: !vbsStatus.vbsEnabled, detail: vbsStatus.vbsEnabled ? 'ACTIVE' : 'OFF' },
-                  { label: 'Mem Integrity', ok: !vbsStatus.memoryIntegrity, detail: vbsStatus.memoryIntegrity ? 'ACTIVE' : 'OFF' },
-                  { label: 'VM Platform', ok: vbsStatus.vmPlatform !== 'enabled', detail: (vbsStatus.vmPlatform || 'unknown').toUpperCase() },
+                  { label: 'VBS Shield', ok: !vbsStatus.vbsEnabled, detail: vbsStatus.vbsEnabled ? '🟢 ACTIVE (Warn)' : '🔴 DISABLED (Optimal)' },
+                  { label: 'Core Isolation', ok: !vbsStatus.memoryIntegrity, detail: vbsStatus.memoryIntegrity ? '🟢 ACTIVE (Warn)' : '🔴 DISABLED (Optimal)' },
+                  { label: 'VM Support', ok: vbsStatus.vmPlatform !== 'enabled', detail: (vbsStatus.vmPlatform || 'unknown').toUpperCase() },
                   { label: 'Hypervisor', ok: vbsStatus.hypervisorPlatform !== 'enabled', detail: (vbsStatus.hypervisorPlatform || 'unknown').toUpperCase() }
                 ].map((item, idx) => (
                   <div key={idx} className="p-1.5 border border-slate-200 bg-slate-50 rounded text-center">
@@ -641,9 +780,13 @@ export default function ValorantOptimizer() {
                     }
                   }}
                   disabled={!vbsStatus.vbsEnabled && !vbsStatus.memoryIntegrity}
-                  className="flex-1 py-1.5 px-2 bg-slate-800 hover:bg-slate-700 text-white rounded text-[10px] font-bold cursor-pointer disabled:opacity-40 text-center"
+                  className={`flex-1 py-1.5 px-2 rounded text-[10px] font-bold cursor-pointer disabled:opacity-40 text-center ${
+                    (!vbsStatus.vbsEnabled && !vbsStatus.memoryIntegrity)
+                      ? 'bg-green-600 border-green-700 text-white'
+                      : 'bg-slate-800 text-white hover:bg-slate-700'
+                  }`}
                 >
-                  DISABLE ALL
+                  {(!vbsStatus.vbsEnabled && !vbsStatus.memoryIntegrity) ? '⚡ OPTIMIZED' : 'DISABLE ALL'}
                 </button>
                 <button
                   onClick={() => {
@@ -657,7 +800,7 @@ export default function ValorantOptimizer() {
                   ENABLE ALL
                 </button>
               </div>
-              <p className="text-[9px] text-slate-500 leading-normal">VBS adds a security layer that can reduce gaming FPS by up to 20%. Safe to disable for gaming-only machines. Windows updates may silently re-enable it.</p>
+              <p className="text-[9px] text-slate-500 leading-normal">Virtualization security adds a hypervisor overlay that degrades gaming framerates by up to 20%. Safe to disable for gaming-only computers. Windows Updates may silently re-enable it.</p>
             </div>
           </div>
 
@@ -690,8 +833,12 @@ export default function ValorantOptimizer() {
                     <label key={appKey} className="flex items-center gap-1.5 cursor-pointer">
                       <input 
                         type="checkbox" 
-                        checked={purgeAppsChecklist[appKey]}
-                        onChange={(e) => setPurgeAppsChecklist(prev => ({ ...prev, [appKey]: e.target.checked }))}
+                        checked={!!Reflect.get(purgeAppsChecklist, appKey)}
+                        onChange={(e) => {
+                          const nextList = { ...purgeAppsChecklist };
+                          Reflect.set(nextList, appKey, e.target.checked);
+                          setPurgeAppsChecklist(nextList);
+                        }}
                         className="cursor-pointer"
                       />
                       <span className="capitalize">{appKey}</span>

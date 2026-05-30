@@ -6,6 +6,7 @@ contextBridge.exposeInMainWorld('api', {
   getValorantConfigs: () => ipcRenderer.invoke('get-valorant-configs'),
   saveValorantConfig: (filePath, settings) => ipcRenderer.invoke('save-valorant-config', { filePath, settings }),
   detectValorantPath: () => ipcRenderer.invoke('detect-valorant-path'),
+  launchValorant: (gamePath) => ipcRenderer.invoke('launch-valorant', gamePath),
   detectGpu: () => ipcRenderer.invoke('detect-gpu'),
   saveAppSettings: (settings) => ipcRenderer.invoke('save-app-settings', settings),
   loadAppSettings: () => ipcRenderer.invoke('load-app-settings'),

@@ -17,7 +17,7 @@ try {
 
 function writePowerShellHelpers() {
   try {
-    const userDataPath = app.getPath('userData');
+    const userDataPath = path.normalize(app.getPath('userData'));
     if (!fs.existsSync(userDataPath)) {
       fs.mkdirSync(userDataPath, { recursive: true });
     }
@@ -50,7 +50,11 @@ if ($ParentPid) {
     } catch {}
 }
 `;
-    fs.writeFileSync(path.join(userDataPath, 'timer_resolution.ps1'), timerResContent, 'utf8');
+    const scriptPath = path.normalize(path.join(userDataPath, 'timer_resolution.ps1'));
+    if (!scriptPath.startsWith(userDataPath)) {
+      throw new Error('Path traversal detected');
+    }
+    fs.writeFileSync(scriptPath, timerResContent, 'utf8');
   } catch (err) {
     console.error('Failed to write PowerShell helpers:', err);
   }
@@ -141,9 +145,7 @@ ipcMain.handle('get-system-stats', async () => {
   
   let totalIdle = 0, totalTick = 0;
   cpus.forEach(core => {
-    for (let type in core.times) {
-      totalTick += core.times[type];
-    }
+    totalTick += Object.values(core.times).reduce((sum, val) => sum + val, 0);
     totalIdle += core.times.idle;
   });
 
@@ -162,6 +164,13 @@ ipcMain.handle('get-system-stats', async () => {
   // Store the current ticks for the next delta calculation
   lastCpuInfo = { totalTick, totalIdle };
 
+  // Detect if VALORANT-Win64-Shipping.exe is running
+  let valorantRunning = false;
+  try {
+    const output = execSync('tasklist /FI "IMAGENAME eq VALORANT-Win64-Shipping.exe" /NH', { encoding: 'utf8' });
+    valorantRunning = output.toLowerCase().includes('valorant-win64-shipping');
+  } catch (e) {}
+
   // #7: Use cached admin value — never spawn net session on every poll
   return {
     platform: process.platform,
@@ -174,7 +183,8 @@ ipcMain.handle('get-system-stats', async () => {
     freeMemGB: (freeMem / (1024 * 1024 * 1024)).toFixed(2),
     usedMemGB: ((totalMem - freeMem) / (1024 * 1024 * 1024)).toFixed(2),
     memUsagePercent: Math.round(((totalMem - freeMem) / totalMem) * 100),
-    isAdmin: cachedIsAdmin
+    isAdmin: cachedIsAdmin,
+    valorantRunning
   };
 });
 
@@ -209,13 +219,22 @@ function getRegistryValue(keyPath, valueName) {
   }
 }
 
+function getBackupsFilePath() {
+  const userDataPath = path.normalize(app.getPath('userData'));
+  const filePath = path.normalize(path.join(userDataPath, 'registry-backups.json'));
+  if (!filePath.startsWith(userDataPath)) {
+    throw new Error('Path traversal detected');
+  }
+  return filePath;
+}
+
 function backupRegistryValueBeforeChange(keyPath, valueName) {
   const safeKey = sanitizeRegistryKey(keyPath);
   const safeVal = sanitizeRegistryValueName(valueName);
   if (!safeKey || !safeVal) return;
   try {
     const val = getRegistryValue(safeKey, safeVal);
-    const p = path.join(app.getPath('userData'), 'registry-backups.json');
+    const p = getBackupsFilePath();
     let backups = [];
     if (fs.existsSync(p)) {
       try { backups = JSON.parse(fs.readFileSync(p, 'utf8')); } catch(e) {}
@@ -479,14 +498,14 @@ ipcMain.handle('set-dashboard-tweak', async (event, { tweakName, active, extraAr
       const val = active ? '0' : '1';
       execSync(`powercfg /SETACVALUEINDEX SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 ${val}`);
       execSync(`powercfg /SETDCVALUEINDEX SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 ${val}`);
-      execSync('powercfg /reassociate');
+      execSync('powercfg /setactive SCHEME_CURRENT');
     }
     else if (tweakName === 'disableCoreParking') {
       execSync("powercfg -attributes 54533251-82be-4824-96c1-47b60b740d00 0cc5b647-c1df-4637-891a-dec35c318583 -ATTRIB_HIDE");
       const val = active ? '100' : '5';
       execSync(`powercfg -setacvalueindex scheme_current sub_processor CPMinCores ${val}`);
       execSync(`powercfg -setdcvalueindex scheme_current sub_processor CPMinCores ${val}`);
-      execSync('powercfg /reassociate');
+      execSync('powercfg /setactive SCHEME_CURRENT');
     }
     else if (tweakName === 'disableDynamicTick') {
       if (active) {
@@ -659,7 +678,7 @@ ipcMain.handle('launch-admin-utility', async (event, utility) => {
 
 ipcMain.handle('get-registry-backups', async () => {
   try {
-    const p = path.join(app.getPath('userData'), 'registry-backups.json');
+    const p = getBackupsFilePath();
     if (fs.existsSync(p)) {
       const data = fs.readFileSync(p, 'utf8');
       return { success: true, backups: JSON.parse(data) };
@@ -672,11 +691,11 @@ ipcMain.handle('get-registry-backups', async () => {
 
 ipcMain.handle('restore-registry-backup', async (event, backupIndex) => {
   try {
-    const p = path.join(app.getPath('userData'), 'registry-backups.json');
+    const p = getBackupsFilePath();
     if (fs.existsSync(p)) {
       const backups = JSON.parse(fs.readFileSync(p, 'utf8'));
       if (backupIndex >= 0 && backupIndex < backups.length) {
-        const backup = backups[backupIndex];
+        const backup = backups.at(backupIndex);
         const ensurePathCmd = `powershell -Command "if (-not (Test-Path '${backup.keyPath}')) { New-Item -Path '${backup.keyPath}' -Force | Out-Null }"`;
         try { execSync(ensurePathCmd); } catch(e) {}
         
@@ -703,7 +722,7 @@ ipcMain.handle('restore-registry-backup', async (event, backupIndex) => {
 
 ipcMain.handle('delete-registry-backup', async (event, backupIndex) => {
   try {
-    const p = path.join(app.getPath('userData'), 'registry-backups.json');
+    const p = getBackupsFilePath();
     if (fs.existsSync(p)) {
       const backups = JSON.parse(fs.readFileSync(p, 'utf8'));
       if (backupIndex >= 0 && backupIndex < backups.length) {
@@ -720,7 +739,7 @@ ipcMain.handle('delete-registry-backup', async (event, backupIndex) => {
 
 ipcMain.handle('clear-all-registry-backups', async () => {
   try {
-    const p = path.join(app.getPath('userData'), 'registry-backups.json');
+    const p = getBackupsFilePath();
     if (fs.existsSync(p)) {
       fs.writeFileSync(p, JSON.stringify([], null, 2), 'utf8');
     }
@@ -748,12 +767,14 @@ ipcMain.handle('kill-process', async (event, processName) => {
 // Helper: Recursively search for GameUserSettings.ini
 function findGameUserSettingsFiles(dir, depth = 0) {
   if (depth > 3) return [];
+  const normalizedDir = path.normalize(dir);
   let results = [];
   try {
-    if (!fs.existsSync(dir)) return [];
-    const list = fs.readdirSync(dir);
+    if (!fs.existsSync(normalizedDir)) return [];
+    const list = fs.readdirSync(normalizedDir);
     for (const file of list) {
-      const filePath = path.join(dir, file);
+      const filePath = path.normalize(path.join(normalizedDir, file));
+      if (!filePath.startsWith(normalizedDir)) continue;
       const stat = fs.statSync(filePath);
       if (stat && stat.isDirectory()) {
         results = results.concat(findGameUserSettingsFiles(filePath, depth + 1));
@@ -769,16 +790,21 @@ function findGameUserSettingsFiles(dir, depth = 0) {
 
 // Helper: Parse VALORANT GameUserSettings.ini parameters
 function parseGameUserSettings(filePath) {
-  const content = fs.readFileSync(filePath, 'utf8');
+  const normalizedPath = path.normalize(filePath);
+  const localAppData = path.normalize(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'));
+  if (!normalizedPath.startsWith(localAppData)) {
+    throw new Error('Unsafe file path rejected');
+  }
+  const content = fs.readFileSync(normalizedPath, 'utf8');
   const lines = content.split(/\r?\n/);
   
-  let accountId = path.basename(path.dirname(path.dirname(filePath)));
+  let accountId = path.basename(path.dirname(path.dirname(normalizedPath)));
   if (accountId === 'Config' || !accountId) {
     accountId = 'DefaultAccount';
   }
 
   const settings = {
-    filePath,
+    filePath: normalizedPath,
     accountId,
     resolutionQuality: 100,
     textureQuality: 3,
@@ -803,7 +829,7 @@ function parseGameUserSettings(filePath) {
     if (!trimmed || trimmed.startsWith(';')) continue;
     const parts = trimmed.split('=');
     if (parts.length < 2) continue;
-    const key = parts[0].trim();
+    const key = parts.at(0).trim();
     const value = parts.slice(1).join('=').trim();
 
     if (currentSection === 'ScalabilityGroups') {
@@ -828,36 +854,28 @@ function parseGameUserSettings(filePath) {
 
 // Helper: Modify VALORANT GameUserSettings.ini file content in-place
 function saveGameUserSettings(filePath, newSettings) {
-  if (!fs.existsSync(filePath)) {
-    throw new Error('Config file does not exist: ' + filePath);
+  const normalizedPath = path.normalize(filePath);
+  const localAppData = path.normalize(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'));
+  if (!normalizedPath.startsWith(localAppData)) {
+    throw new Error('Unsafe file path rejected');
   }
-  const stats = fs.statSync(filePath);
+  if (!fs.existsSync(normalizedPath)) {
+    throw new Error('Config file does not exist: ' + normalizedPath);
+  }
+  const stats = fs.statSync(normalizedPath);
   const isReadOnly = (stats.mode & 0o222) === 0;
   if (isReadOnly) {
-    fs.chmodSync(filePath, 0o666); // make writeable
+    fs.chmodSync(normalizedPath, 0o666); // make writeable
   }
-  const content = fs.readFileSync(filePath, 'utf8');
+  const content = fs.readFileSync(normalizedPath, 'utf8');
   const lines = content.split(/\r?\n/);
   const updatedLines = [];
   let currentSection = '';
   
-  const updatedKeys = {
-    'sg.ResolutionQuality': false,
-    'sg.TextureQuality': false,
-    'sg.ShadowQuality': false,
-    'sg.EffectsQuality': false,
-    'sg.AntiAliasingQuality': false,
-    'sg.PostProcessQuality': false,
-    'sg.ViewDistanceQuality': false,
-    'sg.ShadingQuality': false,
-    'sg.TexturePoolSizeLimit': false,
-    'bUseVSync': false,
-    'FrameRateLimit': false,
-    'bUseRawInputBuffer': false
-  };
+  const updatedKeys = new Set();
 
   for (let i = 0; i < lines.length; i++) {
-    let line = lines[i];
+    let line = lines.at(i);
     const trimmed = line.trim();
     
     if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
@@ -872,49 +890,49 @@ function saveGameUserSettings(filePath, newSettings) {
     }
 
     const parts = trimmed.split('=');
-    const key = parts[0].trim();
+    const key = parts.at(0).trim();
 
     if (currentSection === 'ScalabilityGroups') {
       if (key === 'sg.ResolutionQuality' && newSettings.resolutionQuality !== undefined) {
         line = `sg.ResolutionQuality=${parseFloat(newSettings.resolutionQuality).toFixed(6)}`;
-        updatedKeys[key] = true;
+        updatedKeys.add(key);
       } else if (key === 'sg.TextureQuality' && newSettings.textureQuality !== undefined) {
         line = `sg.TextureQuality=${parseInt(newSettings.textureQuality, 10)}`;
-        updatedKeys[key] = true;
+        updatedKeys.add(key);
       } else if (key === 'sg.ShadowQuality' && newSettings.shadowQuality !== undefined) {
         line = `sg.ShadowQuality=${parseInt(newSettings.shadowQuality, 10)}`;
-        updatedKeys[key] = true;
+        updatedKeys.add(key);
       } else if (key === 'sg.EffectsQuality' && newSettings.effectsQuality !== undefined) {
         line = `sg.EffectsQuality=${parseInt(newSettings.effectsQuality, 10)}`;
-        updatedKeys[key] = true;
+        updatedKeys.add(key);
       } else if (key === 'sg.AntiAliasingQuality' && newSettings.antiAliasingQuality !== undefined) {
         line = `sg.AntiAliasingQuality=${parseInt(newSettings.antiAliasingQuality, 10)}`;
-        updatedKeys[key] = true;
+        updatedKeys.add(key);
       } else if (key === 'sg.PostProcessQuality' && newSettings.postProcessQuality !== undefined) {
         line = `sg.PostProcessQuality=${parseInt(newSettings.postProcessQuality, 10)}`;
-        updatedKeys[key] = true;
+        updatedKeys.add(key);
       } else if (key === 'sg.ViewDistanceQuality' && newSettings.viewDistanceQuality !== undefined) {
         line = `sg.ViewDistanceQuality=${parseInt(newSettings.viewDistanceQuality, 10)}`;
-        updatedKeys[key] = true;
+        updatedKeys.add(key);
       } else if (key === 'sg.ShadingQuality' && newSettings.shadingQuality !== undefined) {
         line = `sg.ShadingQuality=${parseInt(newSettings.shadingQuality, 10)}`;
-        updatedKeys[key] = true;
+        updatedKeys.add(key);
       } else if (key === 'sg.TexturePoolSizeLimit' && newSettings.texturePoolSizeLimit !== undefined) {
         line = `sg.TexturePoolSizeLimit=${parseInt(newSettings.texturePoolSizeLimit, 10)}`;
-        updatedKeys[key] = true;
+        updatedKeys.add(key);
       }
     } else if (currentSection === '/Script/Engine.GameUserSettings') {
       if (key === 'bUseVSync' && newSettings.vsync !== undefined) {
         line = `bUseVSync=${newSettings.vsync ? 'True' : 'False'}`;
-        updatedKeys['bUseVSync'] = true;
+        updatedKeys.add('bUseVSync');
       } else if (key === 'FrameRateLimit' && newSettings.frameRateLimit !== undefined) {
         line = `FrameRateLimit=${parseFloat(newSettings.frameRateLimit).toFixed(6)}`;
-        updatedKeys['FrameRateLimit'] = true;
+        updatedKeys.add('FrameRateLimit');
       }
     } else if (currentSection === '/Script/Engine.InputSettings') {
       if (key === 'bUseRawInputBuffer' && newSettings.rawInputBuffer !== undefined) {
         line = `bUseRawInputBuffer=${newSettings.rawInputBuffer ? 'True' : 'False'}`;
-        updatedKeys['bUseRawInputBuffer'] = true;
+        updatedKeys.add('bUseRawInputBuffer');
       }
     }
     
@@ -925,42 +943,42 @@ function saveGameUserSettings(filePath, newSettings) {
   let gameSettingsIdx = -1;
   let inputSettingsIdx = -1;
   for (let i = 0; i < updatedLines.length; i++) {
-    if (updatedLines[i].trim() === '[ScalabilityGroups]') {
+    if (updatedLines.at(i).trim() === '[ScalabilityGroups]') {
       scalabilityIdx = i;
-    } else if (updatedLines[i].trim() === '[/Script/Engine.GameUserSettings]') {
+    } else if (updatedLines.at(i).trim() === '[/Script/Engine.GameUserSettings]') {
       gameSettingsIdx = i;
-    } else if (updatedLines[i].trim() === '[/Script/Engine.InputSettings]') {
+    } else if (updatedLines.at(i).trim() === '[/Script/Engine.InputSettings]') {
       inputSettingsIdx = i;
     }
   }
 
   if (scalabilityIdx !== -1) {
     const keysToInsert = [];
-    if (!updatedKeys['sg.ResolutionQuality'] && newSettings.resolutionQuality !== undefined) {
+    if (!updatedKeys.has('sg.ResolutionQuality') && newSettings.resolutionQuality !== undefined) {
       keysToInsert.push(`sg.ResolutionQuality=${parseFloat(newSettings.resolutionQuality).toFixed(6)}`);
     }
-    if (!updatedKeys['sg.TextureQuality'] && newSettings.textureQuality !== undefined) {
+    if (!updatedKeys.has('sg.TextureQuality') && newSettings.textureQuality !== undefined) {
       keysToInsert.push(`sg.TextureQuality=${parseInt(newSettings.textureQuality, 10)}`);
     }
-    if (!updatedKeys['sg.ShadowQuality'] && newSettings.shadowQuality !== undefined) {
+    if (!updatedKeys.has('sg.ShadowQuality') && newSettings.shadowQuality !== undefined) {
       keysToInsert.push(`sg.ShadowQuality=${parseInt(newSettings.shadowQuality, 10)}`);
     }
-    if (!updatedKeys['sg.EffectsQuality'] && newSettings.effectsQuality !== undefined) {
+    if (!updatedKeys.has('sg.EffectsQuality') && newSettings.effectsQuality !== undefined) {
       keysToInsert.push(`sg.EffectsQuality=${parseInt(newSettings.effectsQuality, 10)}`);
     }
-    if (!updatedKeys['sg.AntiAliasingQuality'] && newSettings.antiAliasingQuality !== undefined) {
+    if (!updatedKeys.has('sg.AntiAliasingQuality') && newSettings.antiAliasingQuality !== undefined) {
       keysToInsert.push(`sg.AntiAliasingQuality=${parseInt(newSettings.antiAliasingQuality, 10)}`);
     }
-    if (!updatedKeys['sg.PostProcessQuality'] && newSettings.postProcessQuality !== undefined) {
+    if (!updatedKeys.has('sg.PostProcessQuality') && newSettings.postProcessQuality !== undefined) {
       keysToInsert.push(`sg.PostProcessQuality=${parseInt(newSettings.postProcessQuality, 10)}`);
     }
-    if (!updatedKeys['sg.ViewDistanceQuality'] && newSettings.viewDistanceQuality !== undefined) {
+    if (!updatedKeys.has('sg.ViewDistanceQuality') && newSettings.viewDistanceQuality !== undefined) {
       keysToInsert.push(`sg.ViewDistanceQuality=${parseInt(newSettings.viewDistanceQuality, 10)}`);
     }
-    if (!updatedKeys['sg.ShadingQuality'] && newSettings.shadingQuality !== undefined) {
+    if (!updatedKeys.has('sg.ShadingQuality') && newSettings.shadingQuality !== undefined) {
       keysToInsert.push(`sg.ShadingQuality=${parseInt(newSettings.shadingQuality, 10)}`);
     }
-    if (!updatedKeys['sg.TexturePoolSizeLimit'] && newSettings.texturePoolSizeLimit !== undefined) {
+    if (!updatedKeys.has('sg.TexturePoolSizeLimit') && newSettings.texturePoolSizeLimit !== undefined) {
       keysToInsert.push(`sg.TexturePoolSizeLimit=${parseInt(newSettings.texturePoolSizeLimit, 10)}`);
     }
     if (keysToInsert.length > 0) {
@@ -989,10 +1007,10 @@ function saveGameUserSettings(filePath, newSettings) {
 
   if (gameSettingsIdx !== -1) {
     const extraKeys = [];
-    if (!updatedKeys['bUseVSync'] && newSettings.vsync !== undefined) {
+    if (!updatedKeys.has('bUseVSync') && newSettings.vsync !== undefined) {
       extraKeys.push(`bUseVSync=${newSettings.vsync ? 'True' : 'False'}`);
     }
-    if (!updatedKeys['FrameRateLimit'] && newSettings.frameRateLimit !== undefined) {
+    if (!updatedKeys.has('FrameRateLimit') && newSettings.frameRateLimit !== undefined) {
       extraKeys.push(`FrameRateLimit=${parseFloat(newSettings.frameRateLimit).toFixed(6)}`);
     }
     if (extraKeys.length > 0) {
@@ -1014,7 +1032,7 @@ function saveGameUserSettings(filePath, newSettings) {
   }
 
   if (inputSettingsIdx !== -1) {
-    if (!updatedKeys['bUseRawInputBuffer'] && newSettings.rawInputBuffer !== undefined) {
+    if (!updatedKeys.has('bUseRawInputBuffer') && newSettings.rawInputBuffer !== undefined) {
       updatedLines.splice(inputSettingsIdx + 1, 0, `bUseRawInputBuffer=${newSettings.rawInputBuffer ? 'True' : 'False'}`);
     }
   } else if (newSettings.rawInputBuffer !== undefined) {
@@ -1022,17 +1040,20 @@ function saveGameUserSettings(filePath, newSettings) {
     updatedLines.push(`bUseRawInputBuffer=${newSettings.rawInputBuffer ? 'True' : 'False'}`);
   }
 
-  fs.writeFileSync(filePath, updatedLines.join('\r\n'), 'utf8');
+  fs.writeFileSync(normalizedPath, updatedLines.join('\r\n'), 'utf8');
   if (isReadOnly) {
-    fs.chmodSync(filePath, 0o444); // restore read-only attribute
+    fs.chmodSync(normalizedPath, 0o444); // restore read-only attribute
   }
 }
 
 // IPC Handler: Fetch all VALORANT account graphics configs on the system
 ipcMain.handle('get-valorant-configs', async () => {
   try {
-    const localAppData = process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local');
-    const configDir = path.join(localAppData, 'VALORANT', 'Saved', 'Config');
+    const localAppData = path.normalize(process.env.LOCALAPPDATA || path.join(os.homedir(), 'AppData', 'Local'));
+    const configDir = path.normalize(path.join(localAppData, 'VALORANT', 'Saved', 'Config'));
+    if (!configDir.startsWith(localAppData)) {
+      throw new Error('Path traversal detected');
+    }
     
     const filePaths = findGameUserSettingsFiles(configDir);
     const configs = filePaths.map(filePath => {
@@ -1064,8 +1085,11 @@ ipcMain.handle('save-valorant-config', async (event, { filePath, settings }) => 
 ipcMain.handle('detect-valorant-path', async () => {
   const defaultPath = 'C:\\Riot Games\\VALORANT\\live\\ShooterGame\\Binaries\\Win64\\VALORANT-Win64-Shipping.exe';
   try {
-    const programData = process.env.ProgramData || 'C:\\ProgramData';
-    const metadataPath = path.join(programData, 'Riot Games', 'Metadata', 'valorant.live', 'valorant.live.installs.json');
+    const programData = path.normalize(process.env.ProgramData || 'C:\\ProgramData');
+    const metadataPath = path.normalize(path.join(programData, 'Riot Games', 'Metadata', 'valorant.live', 'valorant.live.installs.json'));
+    if (!metadataPath.startsWith(programData)) {
+      throw new Error('Path traversal detected');
+    }
     
     let detectedPath = defaultPath;
     let exists = false;
@@ -1076,8 +1100,9 @@ ipcMain.handle('detect-valorant-path', async () => {
         const data = JSON.parse(content);
         if (data && data.product_install_full_path) {
           const gameDir = data.product_install_full_path.replace(/\//g, '\\');
-          const exePath = path.join(gameDir, 'ShooterGame', 'Binaries', 'Win64', 'VALORANT-Win64-Shipping.exe');
-          if (fs.existsSync(exePath)) {
+          const cleanGameDir = path.normalize(gameDir);
+          const exePath = path.normalize(path.join(cleanGameDir, 'ShooterGame', 'Binaries', 'Win64', 'VALORANT-Win64-Shipping.exe'));
+          if (exePath.startsWith(cleanGameDir) && fs.existsSync(exePath)) {
             detectedPath = exePath;
             exists = true;
           }
@@ -1094,6 +1119,41 @@ ipcMain.handle('detect-valorant-path', async () => {
     return { success: true, exists, path: detectedPath };
   } catch (err) {
     return { success: false, exists: false, error: err.message };
+  }
+});
+
+// IPC Handler: Launch VALORANT
+ipcMain.handle('launch-valorant', async (event, gamePath) => {
+  try {
+    // 1. Try launching using the riotclient custom protocol first (highly reliable on standard installations)
+    const { shell } = require('electron');
+    await shell.openExternal('riotclient://launch-product=valorant&patchline=live');
+    return { success: true };
+  } catch (err) {
+    // 2. Fallback to finding Riot Client path from installs json
+    try {
+      let rcPath = 'C:\\Riot Games\\Riot Client\\RiotClientServices.exe';
+      const installsPath = 'C:\\ProgramData\\Riot Games\\RiotClientInstalls.json';
+      if (fs.existsSync(installsPath)) {
+        const content = fs.readFileSync(installsPath, 'utf8');
+        const data = JSON.parse(content);
+        if (data && data.rc_live) {
+          rcPath = data.rc_live;
+        }
+      }
+      if (fs.existsSync(rcPath)) {
+        const { spawn } = require('child_process');
+        const child = spawn(rcPath, ['--launch-product=valorant', '--launch-patchline=live'], {
+          detached: true,
+          stdio: 'ignore'
+        });
+        child.unref();
+        return { success: true };
+      }
+    } catch (innerErr) {
+      console.error('Riot Client fallback failed:', innerErr);
+    }
+    return { success: false, error: err.message };
   }
 });
 
@@ -1192,10 +1252,19 @@ ipcMain.handle('detect-gpu', async () => {
   });
 });
 
+function getAppSettingsFilePath() {
+  const userDataPath = path.normalize(app.getPath('userData'));
+  const filePath = path.normalize(path.join(userDataPath, 'neuroptimize-settings.json'));
+  if (!filePath.startsWith(userDataPath)) {
+    throw new Error('Path traversal detected');
+  }
+  return filePath;
+}
+
 // IPC Handler: Settings Persistence
 ipcMain.handle('save-app-settings', async (event, settings) => {
   try {
-    const p = path.join(app.getPath('userData'), 'neuroptimize-settings.json');
+    const p = getAppSettingsFilePath();
     fs.writeFileSync(p, JSON.stringify(settings, null, 2), 'utf8');
     return { success: true };
   } catch (err) {
@@ -1205,7 +1274,7 @@ ipcMain.handle('save-app-settings', async (event, settings) => {
 
 ipcMain.handle('load-app-settings', async () => {
   try {
-    const p = path.join(app.getPath('userData'), 'neuroptimize-settings.json');
+    const p = getAppSettingsFilePath();
     if (fs.existsSync(p)) {
       const data = fs.readFileSync(p, 'utf8');
       return { success: true, settings: JSON.parse(data) };

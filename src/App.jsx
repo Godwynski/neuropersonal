@@ -2,6 +2,7 @@ import React from 'react';
 import Toast from './components/Toast';
 import Sidebar from './components/Sidebar';
 import ValorantOptimizer from './components/ValorantOptimizer';
+import BottomConsole from './components/BottomConsole';
 import { AppProvider } from './context/AppContext';
 import { useAppContext } from './hooks/useAppContext';
 
@@ -10,7 +11,9 @@ function DashboardContent() {
     isElectron,
     isInitializing,
     toasts,
-    removeToast
+    removeToast,
+    systemLogs,
+    setSystemLogs
   } = useAppContext();
 
   return (
@@ -47,8 +50,20 @@ function DashboardContent() {
         <Sidebar />
 
         {/* Right Optimization Columns (Game Booster) */}
-        <main className="flex-1 p-6 overflow-y-auto bg-white">
-          <ValorantOptimizer />
+        <main className="flex-1 flex flex-col overflow-hidden bg-white">
+          <div className="flex-1 p-6 overflow-y-auto">
+            <ValorantOptimizer />
+          </div>
+          <BottomConsole 
+            logs={systemLogs} 
+            onClear={() => setSystemLogs([])} 
+            theme={{
+              panelBg: 'bg-slate-950',
+              border: 'border-slate-800',
+              textAccent: 'text-indigo-400',
+              textPrimary: 'text-slate-100'
+            }} 
+          />
         </main>
       </div>
     </div>
