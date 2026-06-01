@@ -65,63 +65,57 @@ export default function RegistryRollback() {
   const isAnyLoading = isProcessing || headerLoading !== null || Object.values(rowLoading).some(v => v !== null);
 
   return (
-    <div className="border border-slate-200 bg-white p-4 rounded shadow-sm space-y-3 text-xs">
-      <div className="flex justify-between items-center border-b pb-1.5 font-bold">
-        <h3 className="text-xs text-slate-500 uppercase tracking-wider">Registry Rollback</h3>
+    <div className="border-[3px] border-pencil-black bg-white p-4 wobbly hand-shadow space-y-3 text-xs relative">
+      {/* Tape decoration at top */}
+      <div className="absolute -top-3 left-10 w-14 h-4.5 bg-pencil-black/10 border border-pencil-black/20 -rotate-1 pointer-events-none" />
+
+      <div className="flex justify-between items-center border-b-2 border-pencil-black pb-2">
+        <h3 className="text-sm font-bold text-pencil-black font-kalam uppercase tracking-wider">📋 Registry Rollback</h3>
         <div className="flex items-center gap-2">
           {/* Refresh */}
           <button
             onClick={handleRefresh}
             disabled={isAnyLoading}
-            className="flex items-center gap-1 text-[10px] text-slate-555 hover:text-slate-800 font-bold cursor-pointer disabled:opacity-40 transition-opacity"
+            className="flex items-center gap-1 text-[11px] text-pencil-black/70 hover:text-pencil-black font-bold cursor-pointer disabled:opacity-40 transition-opacity"
           >
             {headerLoading === 'refresh' ? (
-              <><Spinner className="w-2.5 h-2.5" /> Refreshing...</>
-            ) : (
-              <><svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path strokeLinecap="round" strokeLinejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg> Refresh</>
-            )}
+              <><Spinner className="w-2.5 h-2.5" /> ...</>
+            ) : 'Refresh'}
           </button>
-
-          {registryBackups.length > 0 && (
-            <>
-              {/* Restore All */}
-              <button
-                onClick={handleRestoreAll}
-                disabled={isAnyLoading}
-                className="flex items-center gap-1 text-[10px] text-green-600 hover:text-green-800 font-bold cursor-pointer disabled:opacity-40 transition-opacity"
-                title="Restores all original registry values from this list"
-              >
-                {headerLoading === 'restoreAll' ? (
-                  <><Spinner className="w-2.5 h-2.5" /> Restoring...</>
-                ) : 'Restore All'}
-              </button>
-
-              {/* Clear History */}
-              <button
-                onClick={handleClearHistory}
-                disabled={isAnyLoading}
-                className="flex items-center gap-1 text-[10px] text-rose-650 hover:text-rose-800 font-bold cursor-pointer disabled:opacity-40 transition-opacity"
-                title="Deletes backup references from history tracker (does not restore registry)"
-              >
-                {headerLoading === 'clearHistory' ? (
-                  <><Spinner className="w-2.5 h-2.5" /> Clearing...</>
-                ) : 'Clear History'}
-              </button>
-            </>
-          )}
         </div>
       </div>
 
-      <div className="max-h-40 overflow-y-auto space-y-2 pr-1">
+      <div className="max-h-40 overflow-y-auto space-y-2.5 pr-1">
         {registryBackups.length === 0 ? (
-          <div className="text-[10px] text-slate-400 text-center py-2 italic">
-            No active registry backup references stored. Modifications will back up original values here.
+          <div className="text-[11px] text-pencil-black/55 text-center py-2 italic font-semibold">
+            No active backup references stored. Redo tweaks to log values here.
           </div>
         ) : (
-          <div className="space-y-2">
-            <div className="p-2 border border-blue-150 bg-blue-50/30 rounded text-[9px] text-blue-800 leading-normal">
-              ℹ️ Click <strong>Restore</strong> to revert a value to its original Windows setting. Click <strong>Forget</strong> to remove it from the tracking list without reverting.
+          <div className="space-y-2.5">
+            <div className="p-2 border-2 border-dashed border-accent-blue bg-paper-muted/30 wobbly-md text-[10px] text-pencil-black font-semibold leading-normal">
+              ℹ️ Click <strong>Restore</strong> to revert settings. Click <strong>Forget</strong> to remove from logs.
             </div>
+            
+            {/* Header Actions when backups exist */}
+            <div className="flex justify-end gap-2 pb-1">
+              <button
+                onClick={handleRestoreAll}
+                disabled={isAnyLoading}
+                className="text-[10px] text-accent-blue font-bold cursor-pointer disabled:opacity-40 underline"
+                title="Restores all original registry values from this list"
+              >
+                {headerLoading === 'restoreAll' ? 'Restoring All...' : 'Restore All'}
+              </button>
+              <button
+                onClick={handleClearHistory}
+                disabled={isAnyLoading}
+                className="text-[10px] text-accent-red font-bold cursor-pointer disabled:opacity-40 underline"
+                title="Deletes backup references from history tracker (does not restore registry)"
+              >
+                {headerLoading === 'clearHistory' ? 'Clearing...' : 'Clear Logs'}
+              </button>
+            </div>
+
             {registryBackups.map((b, idx) => {
               const rowState = rowLoading[idx];
               const isRowBusy = rowState !== null && rowState !== undefined;
@@ -130,19 +124,19 @@ export default function RegistryRollback() {
               return (
                 <div
                   key={idx}
-                  className={`border border-slate-150 p-2 rounded bg-slate-50 flex justify-between items-center gap-2 transition-opacity ${isRowDisabled && !isRowBusy ? 'opacity-50' : ''}`}
+                  className={`border-2 border-pencil-black p-2 bg-paper-bg flex justify-between items-center gap-2 transition-opacity wobbly-md ${isRowDisabled && !isRowBusy ? 'opacity-50' : ''}`}
                 >
                   <div className="flex-1 min-w-0">
-                    <div className="font-bold text-[10px] text-slate-700 truncate" title={`${b.keyPath}\\${b.valueName}`}>
+                    <div className="font-bold text-[11px] text-pencil-black truncate font-kalam" title={`${b.keyPath}\\${b.valueName}`}>
                       {b.valueName}
                     </div>
-                    <div className="text-[9px] text-slate-400 truncate">
-                      Original: <span className="font-mono">{b.value}</span>
+                    <div className="text-[10px] text-pencil-black/60 truncate font-mono">
+                      Orig: <span className="font-bold">{b.value}</span>
                     </div>
                     {isRowBusy && (
-                      <div className="text-[9px] text-indigo-500 font-semibold mt-0.5 flex items-center gap-1">
+                      <div className="text-[9px] text-accent-blue font-bold mt-0.5 flex items-center gap-1">
                         <Spinner className="w-2 h-2" />
-                        {rowState === 'restore' ? 'Restoring registry value...' : 'Removing reference...'}
+                        {rowState === 'restore' ? 'Restoring...' : 'Removing...'}
                       </div>
                     )}
                   </div>
@@ -152,28 +146,28 @@ export default function RegistryRollback() {
                     <button
                       onClick={() => withRowLoading(idx, 'forget', () => deleteBackup(idx))}
                       disabled={isRowDisabled}
-                      className={`flex items-center gap-1 py-1 px-1.5 border border-slate-205 text-slate-600 rounded text-[9px] font-bold cursor-pointer disabled:cursor-not-allowed font-sans transition-all ${
+                      className={`flex items-center gap-1 py-1 px-1.5 border border-pencil-black text-pencil-black rounded-none text-[9px] font-bold cursor-pointer disabled:cursor-not-allowed transition-all wobbly-md ${
                         rowState === 'forget'
-                          ? 'bg-slate-100 border-slate-300 text-slate-500'
-                          : 'hover:bg-slate-100'
+                          ? 'bg-paper-muted text-pencil-black/40 shadow-none'
+                          : 'bg-white hover:bg-paper-muted shadow-none active:translate-x-[1px] active:translate-y-[1px]'
                       }`}
                       title="Deletes this reference only (does not revert value)"
                     >
-                      {rowState === 'forget' ? <><Spinner className="w-2.5 h-2.5" /> Removing</> : 'Forget'}
+                      {rowState === 'forget' ? 'Removing' : 'Forget'}
                     </button>
 
                     {/* Restore */}
                     <button
                       onClick={() => withRowLoading(idx, 'restore', () => restoreBackup(idx))}
                       disabled={isRowDisabled}
-                      className={`flex items-center gap-1 py-1 px-2.5 rounded text-[9px] font-bold cursor-pointer disabled:cursor-not-allowed font-sans transition-all ${
+                      className={`flex items-center gap-1 py-1 px-2 border-2 border-pencil-black text-[9px] font-bold cursor-pointer disabled:cursor-not-allowed transition-all wobbly-md ${
                         rowState === 'restore'
-                          ? 'bg-slate-600 text-white'
-                          : 'bg-slate-800 hover:bg-slate-700 text-white'
+                          ? 'bg-pencil-black text-white shadow-none'
+                          : 'bg-pencil-black hover:bg-pencil-black/90 text-white hand-shadow-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none'
                       }`}
                       title="Restores the original value back to Windows registry"
                     >
-                      {rowState === 'restore' ? <><Spinner className="w-2.5 h-2.5" /> Restoring</> : 'Restore'}
+                      {rowState === 'restore' ? 'Restoring' : 'Restore'}
                     </button>
                   </div>
                 </div>

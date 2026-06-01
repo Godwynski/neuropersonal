@@ -24,18 +24,23 @@ export default function SystemCleaners() {
   const isAnyBusy = runningFix !== null || scanningTemp || purgingTemp;
 
   return (
-    <div className="border border-slate-200 bg-white p-4 rounded shadow-sm space-y-3 text-xs">
-      <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider border-b pb-1.5">System Cleaners</h3>
+    <div className="border-[3px] border-pencil-black bg-white p-4 wobbly-md hand-shadow space-y-4 relative">
+      {/* Tape decoration at top */}
+      <div className="absolute -top-3 left-16 w-14 h-4.5 bg-pencil-black/10 border border-pencil-black/20 rotate-1 pointer-events-none" />
+
+      <h3 className="text-sm font-bold text-pencil-black font-kalam uppercase tracking-wider border-b-2 border-pencil-black pb-1.5">
+        🧹 System Cleaners
+      </h3>
 
       <div className="flex gap-2">
         {/* Clear RAM */}
         <button
           onClick={() => runDiagnosticFix('ramRejuvenation')}
           disabled={isAnyBusy}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 border rounded text-center font-bold cursor-pointer disabled:cursor-not-allowed transition-all ${
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 border-2 border-pencil-black wobbly font-bold cursor-pointer disabled:cursor-not-allowed transition-all ${
             runningFix === 'ramRejuvenation'
-              ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
-              : 'border-slate-200 hover:bg-slate-50 bg-white text-slate-700 disabled:opacity-50'
+              ? 'bg-accent-blue text-white translate-x-[2px] translate-y-[2px] shadow-none'
+              : 'bg-[#fff9c4] hover:bg-[#fff7b1] text-pencil-black hand-shadow-sm hover:hand-shadow-sm/50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none'
           }`}
         >
           {runningFix === 'ramRejuvenation' ? (
@@ -47,10 +52,10 @@ export default function SystemCleaners() {
         <button
           onClick={() => runDiagnosticFix('chronosReset')}
           disabled={isAnyBusy}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 border rounded text-center font-bold cursor-pointer disabled:cursor-not-allowed transition-all ${
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 border-2 border-pencil-black wobbly font-bold cursor-pointer disabled:cursor-not-allowed transition-all ${
             runningFix === 'chronosReset'
-              ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
-              : 'border-slate-200 hover:bg-slate-50 bg-white text-slate-700 disabled:opacity-50'
+              ? 'bg-accent-blue text-white translate-x-[2px] translate-y-[2px] shadow-none'
+              : 'bg-white hover:bg-paper-muted text-pencil-black hand-shadow-sm hover:hand-shadow-sm/50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none'
           }`}
         >
           {runningFix === 'chronosReset' ? (
@@ -60,31 +65,28 @@ export default function SystemCleaners() {
       </div>
 
       {/* Temp Folder Scrubber */}
-      <div className="pt-2 border-t border-slate-100 flex flex-col gap-1.5">
-        <div className="flex justify-between items-center text-[11px] text-slate-600">
+      <div className="pt-3 border-t-2 border-dashed border-pencil-black flex flex-col gap-2">
+        <div className="flex justify-between items-center text-xs text-pencil-black/90 font-bold">
           <span>OS Temp Directory:</span>
-          <span className={`font-mono font-bold ${
-            scanningTemp ? 'text-indigo-500' : purgingTemp ? 'text-rose-500' : 'text-slate-750'
+          <span className={`font-mono text-xs font-bold ${
+            scanningTemp ? 'text-accent-blue animate-pulse' : purgingTemp ? 'text-accent-red animate-pulse' : 'text-pencil-black'
           }`}>
             {scanningTemp ? 'Scanning...' : purgingTemp ? 'Purging...' : tempFolderSize}
           </span>
         </div>
-        <div className="flex gap-1.5">
+        
+        <div className="flex gap-2">
           {/* Scan Temp */}
           <button
             onClick={scanTempFolder}
             disabled={isAnyBusy}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1 px-2 border rounded text-[10px] font-bold cursor-pointer disabled:cursor-not-allowed transition-all ${
-              scanningTemp
-                ? 'border-indigo-300 bg-indigo-50 text-indigo-600'
-                : 'border-slate-200 bg-white hover:bg-slate-50 text-slate-700 disabled:opacity-50'
-            }`}
+            className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 border-2 border-pencil-black wobbly-md text-[11px] font-bold cursor-pointer disabled:cursor-not-allowed transition-all bg-white hover:bg-paper-muted text-pencil-black hand-shadow-sm hover:hand-shadow-sm/50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none`}
           >
             {scanningTemp ? (
               <><Spinner className="w-2.5 h-2.5" /> Scanning...</>
             ) : (
               <>
-                <svg className="w-2.5 h-2.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
                   <circle cx="11" cy="11" r="8"/><path strokeLinecap="round" d="M21 21l-4.35-4.35"/>
                 </svg>
                 Scan Temp
@@ -100,11 +102,7 @@ export default function SystemCleaners() {
               }
             }}
             disabled={isAnyBusy}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1 px-2 rounded text-[10px] font-bold cursor-pointer disabled:cursor-not-allowed transition-all ${
-              purgingTemp
-                ? 'bg-rose-400 text-white'
-                : 'bg-slate-800 hover:bg-slate-700 text-white disabled:opacity-50'
-            }`}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 border-2 border-pencil-black wobbly-md text-[11px] font-bold cursor-pointer disabled:cursor-not-allowed transition-all bg-accent-red hover:bg-accent-red/90 text-white hand-shadow-sm hover:hand-shadow-sm/50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none`}
           >
             {purgingTemp ? (
               <><Spinner className="w-2.5 h-2.5" /> Purging...</>
@@ -114,8 +112,8 @@ export default function SystemCleaners() {
 
         {/* Status hint */}
         {isAnyBusy && (
-          <div className="text-[9px] text-indigo-500 font-semibold flex items-center gap-1">
-            <Spinner className="w-2 h-2" />
+          <div className="text-[10px] text-accent-blue font-bold flex items-center gap-1">
+            <Spinner className="w-2.5 h-2.5" />
             {runningFix === 'ramRejuvenation' && 'Flushing memory heap...'}
             {runningFix === 'chronosReset' && 'Restarting Windows Explorer...'}
             {scanningTemp && 'Calculating temp folder size...'}

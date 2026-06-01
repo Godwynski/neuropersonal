@@ -1,12 +1,57 @@
 @import "tailwindcss";
 
+@theme {
+  --font-kalam: "Kalam", cursive;
+  --font-patrick: "Patrick Hand", cursive;
+  --color-paper-bg: #fdfbf7;
+  --color-pencil-black: #2d2d2d;
+  --color-paper-muted: #e5e0d8;
+  --color-accent-red: #ff4d4d;
+  --color-accent-blue: #2d5da1;
+}
+
+@utility wobbly {
+  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+}
+
+@utility wobbly-md {
+  border-radius: 15px 225px 15px 255px / 255px 15px 225px 15px;
+}
+
+@utility wobbly-lg {
+  border-radius: 320px 20px 280px 20px / 20px 280px 20px 320px;
+}
+
+@utility hand-shadow-sm {
+  box-shadow: 2px 2px 0px 0px #2d2d2d;
+}
+
+@utility hand-shadow {
+  box-shadow: 4px 4px 0px 0px #2d2d2d;
+}
+
+@utility hand-shadow-lg {
+  box-shadow: 8px 8px 0px 0px #2d2d2d;
+}
+
+@utility paper-texture {
+  background-color: #fdfbf7;
+  background-image: radial-gradient(#e5e0d8 1.2px, transparent 1.2px);
+  background-size: 24px 24px;
+}
+
 @layer base {
   body {
-    background-color: #ffffff;
-    color: #1a1a1a;
-    font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+    background-color: #fdfbf7;
+    color: #2d2d2d;
+    font-family: "Patrick Hand", cursive;
     margin: 0;
     padding: 0;
+  }
+  
+  h1, h2, h3, h4, h5, h6 {
+    font-family: "Kalam", cursive;
+    font-weight: 700;
   }
 }
 
@@ -36,3 +81,4 @@
 .skeleton-loading {
   animation: skeleton-shimmer 1.5s infinite ease-in-out;
 }
+

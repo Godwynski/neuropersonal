@@ -68,11 +68,6 @@ function createWindow() {
     icon: path.join(__dirname, '../public/logo.png'),
     minHeight: 600,
     titleBarStyle: 'hidden',
-    titleBarOverlay: {
-      color: '#0f172a',
-      symbolColor: '#94a3b8',
-      height: 35
-    },
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       contextIsolation: true,
@@ -107,6 +102,28 @@ ipcMain.handle('set-titlebar-overlay', async (event, { color, symbolColor }) => 
   } catch (err) {
     return { success: false, error: err.message };
   }
+});
+
+// IPC Handlers: Window custom controls
+ipcMain.handle('minimize-window', () => {
+  if (mainWindow) mainWindow.minimize();
+  return { success: true };
+});
+
+ipcMain.handle('maximize-window', () => {
+  if (mainWindow) {
+    if (mainWindow.isMaximized()) {
+      mainWindow.unmaximize();
+    } else {
+      mainWindow.maximize();
+    }
+  }
+  return { success: true };
+});
+
+ipcMain.handle('close-window', () => {
+  if (mainWindow) mainWindow.close();
+  return { success: true };
 });
 
 app.whenReady().then(() => {

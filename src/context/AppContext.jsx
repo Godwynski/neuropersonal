@@ -187,6 +187,7 @@ export function AppProvider({ children }) {
   // Toast Notifications
   const [toasts, setToasts] = useState([]);
   const [isInitializing, setIsInitializing] = useState(true);
+  const [initMessage, setInitMessage] = useState('Booting system optimizer...');
 
   // Registry Rollback State & Actions
   const [registryBackups, setRegistryBackups] = useState([]);
@@ -1010,6 +1011,7 @@ export function AppProvider({ children }) {
   // Check Administrator role, load registry and configs on load
   useEffect(() => {
     const initializeApp = async () => {
+      setInitMessage("Loading saved app preferences...");
       // Load persisted settings first
       if (window.api && window.api.loadAppSettings) {
         try {
@@ -1021,6 +1023,7 @@ export function AppProvider({ children }) {
         } catch (e) { console.error('Failed to load saved settings:', e); }
       }
 
+      setInitMessage("Checking administrator privilege levels...");
       // Eager isAdmin check
       if (window.api && window.api.getSystemStats) {
         try {
@@ -1031,22 +1034,39 @@ export function AppProvider({ children }) {
       }
 
       try {
+        setInitMessage("Scanning for game paths...");
         await detectValorantPath();
+        setInitMessage("Checking Windows Registry settings...");
         await checkRegistryStates();
+        setInitMessage("Reading Valorant configurations...");
         await loadValorantConfigs();
+        setInitMessage("Evaluating graphics & latency registry flags...");
         await checkLatencyRegistryStates();
+        setInitMessage("Inspecting Riot Vanguard health status...");
         await checkVanguardHealth();
+        setInitMessage("Analyzing background services status...");
         await checkBgServices();
+        setInitMessage("Checking graphics hardware controllers...");
         await detectGpu();
+        setInitMessage("Analyzing CPU Priority & process configurations...");
         await checkPersistentPriority();
+        setInitMessage("Querying Network interface settings...");
         await checkNicPower();
+        setInitMessage("Verifying Fullscreen optimizations overrides...");
         await checkGlobalFso();
+        setInitMessage("Checking CPU Power Management throttles...");
         await checkPowerThrottling();
+        setInitMessage("Checking Virtualization-Based Security (VBS)...");
         await checkVbsStatus();
+        setInitMessage("Analyzing High Precision Event Timer (HPET)...");
         await checkHpetStatus();
+        setInitMessage("Querying AMD DXNavi & graphics tweaks...");
         await checkAmdOptimizations();
+        setInitMessage("Scanning GPU Driver Profiles...");
         await checkGpuDriverProfile();
+        setInitMessage("Assessing Hardware Bottlenecks...");
         await checkHardwareBottlenecks();
+        setInitMessage("Loading recovery backup entries...");
         await loadRegistryBackups();
       } catch (err) {
         console.error('Initialization error:', err);
@@ -1491,6 +1511,7 @@ export function AppProvider({ children }) {
       boostProfile, setBoostProfile,
       toasts, setToasts,
       isInitializing, setIsInitializing,
+      initMessage, setInitMessage,
       registryBackups, setRegistryBackups,
       isProcessing, processingMessage,
       addToast, removeToast,

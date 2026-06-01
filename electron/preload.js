@@ -43,6 +43,9 @@ contextBridge.exposeInMainWorld('api', {
   restoreRegistryBackup: (backupIndex) => ipcRenderer.invoke('restore-registry-backup', backupIndex),
   deleteRegistryBackup: (backupIndex) => ipcRenderer.invoke('delete-registry-backup', backupIndex),
   clearAllRegistryBackups: () => ipcRenderer.invoke('clear-all-registry-backups'),
-  restoreAllRegistryBackups: () => ipcRenderer.invoke('restore-all-registry-backups')
+  restoreAllRegistryBackups: () => ipcRenderer.invoke('restore-all-registry-backups'),
+  minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
+  maximizeWindow: () => ipcRenderer.invoke('maximize-window'),
+  closeWindow: () => ipcRenderer.invoke('close-window')
 });
 

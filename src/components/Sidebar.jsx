@@ -6,7 +6,7 @@ import RegistryRollback from './RegistryRollback';
 
 export default function Sidebar() {
   return (
-    <aside className="w-80 border-r border-slate-200 bg-slate-100 p-4 flex flex-col gap-4 overflow-y-auto shrink-0">
+    <aside className="w-80 bg-paper-muted p-4 flex flex-col gap-6 overflow-y-auto shrink-0 relative">
       <TelemetryMonitor />
       <OneClickBooster />
       <SystemCleaners />

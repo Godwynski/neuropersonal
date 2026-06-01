@@ -41,24 +41,27 @@ export default function OneClickBooster() {
   };
 
   return (
-    <div className="border border-slate-200 bg-white p-4 rounded shadow-sm space-y-3">
-      <div className="border-b border-slate-100 pb-2">
-        <h3 className="text-xs font-bold text-slate-500 uppercase tracking-wider">1-Click Booster</h3>
-        <p className="text-[10px] text-slate-400">Instantly toggle game profiles and clean caches.</p>
+    <div className="border-[3px] border-pencil-black bg-white p-4 wobbly hand-shadow space-y-4 relative">
+      {/* Tape decoration */}
+      <div className="absolute -top-3 left-4 w-12 h-4.5 bg-pencil-black/10 border border-pencil-black/20 -rotate-2 pointer-events-none" />
+
+      <div className="border-b-2 border-pencil-black pb-2">
+        <h3 className="text-sm font-bold text-pencil-black font-kalam uppercase tracking-wider">🚀 1-Click Booster</h3>
+        <p className="text-[11px] text-pencil-black/75">Instantly toggle game profiles and clean caches.</p>
       </div>
 
       {/* Profile Selection — only shown when idle */}
       {maxBoostStatus === 'idle' && (
-        <div className="space-y-2">
-          <div className="grid grid-cols-2 gap-1.5 border border-slate-200 p-1 bg-slate-50 rounded text-[11px]">
+        <div className="space-y-3">
+          <div className="grid grid-cols-2 gap-2 border-[3px] border-pencil-black p-1 bg-paper-muted wobbly-md text-xs">
             <button
               type="button"
               disabled={isBusy}
               onClick={() => setBoostProfile('safe')}
-              className={`py-1 px-2 font-bold rounded cursor-pointer transition-colors text-center disabled:opacity-50 ${
+              className={`py-1.5 px-2 font-bold wobbly cursor-pointer transition-all text-center disabled:opacity-50 ${
                 boostProfile === 'safe'
-                  ? 'bg-green-50 border border-green-200 text-green-700'
-                  : 'bg-white hover:bg-slate-50 border border-transparent text-slate-500'
+                  ? 'bg-white border-2 border-pencil-black text-pencil-black hand-shadow-sm font-kalam'
+                  : 'bg-transparent border-2 border-transparent text-pencil-black/60'
               }`}
             >
               Safe Boost
@@ -67,10 +70,10 @@ export default function OneClickBooster() {
               type="button"
               disabled={isBusy}
               onClick={() => setBoostProfile('aggressive')}
-              className={`py-1 px-2 font-bold rounded cursor-pointer transition-colors text-center disabled:opacity-50 ${
+              className={`py-1.5 px-2 font-bold wobbly cursor-pointer transition-all text-center disabled:opacity-50 ${
                 boostProfile === 'aggressive'
-                  ? 'bg-amber-50 border border-amber-250 text-amber-800'
-                  : 'bg-white hover:bg-slate-50 border border-transparent text-slate-500'
+                  ? 'bg-white border-2 border-pencil-black text-pencil-black hand-shadow-sm font-kalam'
+                  : 'bg-transparent border-2 border-transparent text-pencil-black/60'
               }`}
             >
               Max Boost
@@ -78,22 +81,22 @@ export default function OneClickBooster() {
           </div>
 
           {/* Profile Explanations */}
-          <div className="p-2.5 rounded text-[10px] leading-relaxed border bg-slate-50/50 border-slate-200">
+          <div className="p-3 wobbly-md text-xs leading-relaxed border-2 border-pencil-black bg-paper-muted/30">
             {boostProfile === 'safe' ? (
               <div className="space-y-1">
-                <span className="font-bold text-green-700 block">🟢 Safe Boost Mode</span>
-                <p className="text-slate-650">
+                <span className="font-bold text-accent-blue block font-kalam">🟢 Safe Boost Mode</span>
+                <p className="text-pencil-black/85">
                   Applies low-risk optimization policies (e.g. GameDVR disables, raw mouse acceleration bypass, USB suspend, Game Mode, High-Performance power plan, shader cache cleaning).
                 </p>
-                <span className="font-semibold text-slate-500 block mt-1">✓ No reboots required. 100% stable.</span>
+                <span className="font-bold text-pencil-black/60 block mt-1">✓ No reboots. 100% stable.</span>
               </div>
             ) : (
               <div className="space-y-1">
-                <span className="font-bold text-amber-850 block">🔥 Max Boost (Aggressive Mode)</span>
-                <p className="text-slate-650">
+                <span className="font-bold text-accent-red block font-kalam">🔥 Max Boost (Aggressive)</span>
+                <p className="text-pencil-black/85">
                   Applies all Safe Boost tweaks PLUS aggressive registry modifications, network card latency tuning, CPU throttling disabling, platform clock (HPET) override, GPU driver performance profile injections, and virtualization safety (VBS/Core Isolation) disabling.
                 </p>
-                <span className="font-semibold text-amber-700 block mt-1">⚠️ Requires system reboot. Disables some security features.</span>
+                <span className="font-bold text-accent-red block mt-1">⚠️ Requires system reboot. Disables some security features.</span>
               </div>
             )}
           </div>
@@ -107,14 +110,14 @@ export default function OneClickBooster() {
           () => maxBoostActive ? toggleMaxBoost(false) : toggleMaxBoost(true, boostProfile)
         )}
         disabled={isBusy}
-        className={`w-full flex items-center justify-center gap-2 py-2 px-3 font-bold text-xs rounded text-center cursor-pointer transition-all disabled:cursor-not-allowed ${
+        className={`w-full flex items-center justify-center gap-2 py-2 px-3 font-bold text-sm border-[3px] border-pencil-black wobbly font-kalam cursor-pointer transition-all ${
           isBoosting
-            ? 'bg-indigo-600 text-white'
+            ? 'bg-accent-blue text-white translate-x-[2px] translate-y-[2px] hand-shadow-sm'
             : isReverting
-            ? 'bg-amber-600 text-white'
+            ? 'bg-accent-red text-white translate-x-[2px] translate-y-[2px] hand-shadow-sm'
             : maxBoostActive
-            ? 'bg-rose-600 hover:bg-rose-500 text-white'
-            : 'bg-slate-800 hover:bg-slate-700 text-white'
+            ? 'bg-accent-red hover:bg-accent-red/90 text-white hand-shadow hover:hand-shadow-sm hover:translate-x-[2px] hover:translate-y-[2px] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none'
+            : 'bg-[#fff9c4] hover:bg-[#fff7b1] text-pencil-black hand-shadow hover:hand-shadow-sm hover:translate-x-[2px] hover:translate-y-[2px] active:translate-x-[4px] active:translate-y-[4px] active:shadow-none'
         }`}
       >
         {isBoosting ? (
@@ -130,22 +133,22 @@ export default function OneClickBooster() {
 
       {/* Progress and Logger — visible when boosting/active */}
       {(maxBoostActive || isBoosting || isReverting) && (
-        <div className="space-y-2 pt-1">
+        <div className="space-y-3 pt-1">
           {/* Progress bar */}
           <div className="space-y-1">
-            <div className="flex justify-between text-[9px] text-slate-500 font-semibold">
+            <div className="flex justify-between text-[11px] text-pencil-black/70 font-bold">
               <span>{isBoosting ? 'Applying optimizations...' : isReverting ? 'Reverting changes...' : 'Fully boosted'}</span>
-              <span className="font-mono font-bold">{maxBoostProgress}%</span>
+              <span className="font-mono">{maxBoostProgress}%</span>
             </div>
-            <div className="w-full h-1.5 bg-slate-100 border border-slate-200 rounded overflow-hidden">
+            <div className="w-full h-4 bg-paper-muted border-2 border-pencil-black wobbly overflow-hidden">
               <div
-                className={`h-full transition-all duration-300 ${isBoosting ? 'bg-indigo-500' : isReverting ? 'bg-amber-500' : 'bg-green-500'}`}
+                className={`h-full transition-all duration-300 ${isBoosting ? 'bg-accent-blue' : isReverting ? 'bg-accent-red' : 'bg-accent-blue'}`}
                 style={{ width: `${maxBoostProgress}%` }}
               />
             </div>
           </div>
 
-          <div className="border border-slate-200 bg-slate-50 p-2 font-mono text-[9px] text-slate-500 rounded h-24 overflow-y-auto leading-relaxed">
+          <div className="border-2 border-pencil-black bg-paper-muted/30 p-2 font-mono text-[10px] text-pencil-black/80 wobbly-md h-24 overflow-y-auto leading-relaxed">
             {systemLogs.map((log, idx) => (
               <div key={idx} className="truncate">&gt; {log}</div>
             ))}
@@ -155,19 +158,19 @@ export default function OneClickBooster() {
 
       {/* Quick preset shortcuts — only when no boost is active */}
       {!maxBoostActive && maxBoostStatus === 'idle' && (
-        <div className="border-t border-slate-100 pt-2 space-y-1">
-          <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Quick Presets</span>
-          <div className="grid grid-cols-3 gap-1">
+        <div className="border-t-2 border-dashed border-pencil-black pt-3 space-y-2">
+          <span className="text-[10px] font-bold text-pencil-black/50 uppercase tracking-wider block font-kalam">Quick Presets</span>
+          <div className="grid grid-cols-3 gap-2">
             {[
-              { key: 'tournament', label: 'Tournament', color: 'bg-slate-800 text-white hover:bg-slate-700' },
-              { key: 'balanced', label: 'Balanced', color: 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50' },
-              { key: 'revert', label: 'Defaults', color: 'bg-white border border-slate-200 text-slate-700 hover:bg-slate-50' }
+              { key: 'tournament', label: 'Tournament', color: 'bg-pencil-black text-white hover:bg-pencil-black/90' },
+              { key: 'balanced', label: 'Balanced', color: 'bg-white text-pencil-black' },
+              { key: 'revert', label: 'Defaults', color: 'bg-white text-pencil-black' }
             ].map(p => (
               <button
                 key={p.key}
                 onClick={() => runPreset(p.key)}
                 disabled={!!presetLoading || isBusy}
-                className={`flex items-center justify-center gap-1 py-1 px-1.5 text-[9px] font-bold rounded cursor-pointer disabled:cursor-not-allowed disabled:opacity-50 transition-all ${p.color}`}
+                className={`flex items-center justify-center gap-1 py-1.5 px-2 text-[10px] font-bold border-2 border-pencil-black wobbly-md cursor-pointer transition-all disabled:cursor-not-allowed disabled:opacity-50 hand-shadow-sm hover:hand-shadow-sm/50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none ${p.color}`}
               >
                 {presetLoading === p.key ? (
                   <><Spinner className="w-2.5 h-2.5" /> ...</>
