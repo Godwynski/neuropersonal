@@ -985,11 +985,11 @@ ipcMain.handle('launch-valorant', async (event, gamePath) => {
 
 ipcMain.handle('set-timer-resolution', async (event, active) => {
   if (active) {
-    if (timerResolutionProcess) return { success: true };
+    if (globalState.timerResolutionProcess) return { success: true };
     try {
       const userDataPath = app.getPath('userData');
       const scriptPath = path.join(userDataPath, 'timer_resolution.ps1');
-      timerResolutionProcess = spawn('powershell', [
+      globalState.timerResolutionProcess = spawn('powershell', [
         '-NoProfile',
         '-NonInteractive',
         '-ExecutionPolicy', 'Bypass',
@@ -1000,15 +1000,15 @@ ipcMain.handle('set-timer-resolution', async (event, active) => {
         stdio: 'ignore',
         windowsHide: true
       });
-      timerResolutionProcess.unref();
+      globalState.timerResolutionProcess.unref();
       return { success: true };
     } catch (err) {
       return { success: false, error: err.message };
     }
   } else {
-    if (timerResolutionProcess && timerResolutionProcess.pid) {
-      try { process.kill(timerResolutionProcess.pid); } catch (e) { console.error('Silent error caught:', e.message); }
-      timerResolutionProcess = null;
+    if (globalState.timerResolutionProcess && globalState.timerResolutionProcess.pid) {
+      try { process.kill(globalState.timerResolutionProcess.pid); } catch (e) { console.error('Silent error caught:', e.message); }
+      globalState.timerResolutionProcess = null;
     }
     try {
       await execAsync('taskkill /F /FI "WINDOWTITLE eq timer_resolution*" /IM powershell.exe').catch(() => {});

@@ -76,7 +76,9 @@ export default function ValorantOptimizer() {
     hardwareInfo,
     toggleLegacyRebar,
     isProcessing,
-    executeOperation
+    executeOperation,
+    optimizedCount,
+    totalOptimizations
   } = useAppContext();
 
   const [activeTab, setActiveTab] = useState('all');
@@ -136,21 +138,7 @@ export default function ValorantOptimizer() {
     }));
   };
 
-  // Count active optimizations
-  const optimizedCount = [
-    registryStates.gameDvrDisabled === true,
-    latencyTweaks.disableMouseAccel === true,
-    latencyTweaks.disableUsbSuspend === true,
-    persistentPriorityEnabled === true,
-    timerResActive === true,
-    hpetDisabled === true,
-    nicPowerSavingDisabled === true,
-    powerThrottlingDisabled === true,
-    !bgServices.XblAuthManager,
-    !vbsStatus.vbsEnabled,
-    (gpuInfo.vendor === 'nvidia' && gsyncDisabled) || (gpuInfo.vendor === 'amd' && amdOptimizations.mpoDisabled)
-  ].filter(Boolean).length;
-  const totalOptimizations = 11;
+
   const optimizationPercentage = Math.round((optimizedCount / totalOptimizations) * 100);
 
   // Compile all optimization actions into 1 unified list
@@ -595,7 +583,7 @@ export default function ValorantOptimizer() {
     <div className="space-y-6 font-inter text-gray-200 bg-[#0a0a0a] p-2">
       
       {/* Page Header */}
-      <header className="flex justify-between items-center border-b-2 border-[#262626] pb-3">
+      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0 border-b-2 border-[#262626] pb-3">
         <div>
           <h1 className="text-xl font-bold font-outfit">Advanced Engine Tweaks</h1>
           <p className="text-[11.5px] text-gray-400">Low-level system modifications for maximum performance.</p>
@@ -667,9 +655,9 @@ export default function ValorantOptimizer() {
                 const isAnyLoading = processingActionId !== null;
 
                 return (
-                  <div key={action.id} className="p-6 flex items-center justify-between hover:bg-[#141414]/80 transition-colors">
+                  <div key={action.id} className="p-4 md:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0 hover:bg-[#141414]/80 transition-colors">
                     
-                    <div className="flex-1 pr-8">
+                    <div className="flex-1 pr-0 sm:pr-8 w-full">
                       <div className="flex items-center gap-2 mb-1">
                         <span className="font-bold text-gray-200 font-outfit text-sm">{action.name}</span>
                         {action.tier === 'aggressive' && (
@@ -686,7 +674,7 @@ export default function ValorantOptimizer() {
                       <p className="text-xs text-gray-400">{action.descDetailed || action.desc}</p>
                     </div>
 
-                    <div className="flex-shrink-0 flex items-center gap-4">
+                    <div className="flex-shrink-0 flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
                       <span className={`text-[10px] font-bold uppercase tracking-wide ${action.isOptimized ? 'text-[#3b82f6]' : 'text-gray-500'}`}>
                         {isThisLoading ? 'Working...' : action.isOptimized ? 'Active' : 'Disabled'}
                       </span>

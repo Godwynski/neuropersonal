@@ -98,7 +98,7 @@ export default function RegistryRollback() {
         </div>
         
         <div className="space-y-4">
-          <div className="flex justify-between items-center bg-[#141414] border border-[#262626] p-4 rounded-lg">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center items-start gap-4 sm:gap-0 bg-[#141414] border border-[#262626] p-4 rounded-lg">
             <div>
               <div className="font-bold text-gray-200 text-sm">Run on Startup</div>
               <div className="text-xs text-gray-500 mt-1">Automatically launch NeurOptimize in the background when Windows starts.</div>
@@ -111,7 +111,7 @@ export default function RegistryRollback() {
             </button>
           </div>
 
-          <div className="flex justify-between items-center bg-[#141414] border border-[#262626] p-4 rounded-lg">
+          <div className="flex flex-col sm:flex-row justify-between sm:items-center items-start gap-4 sm:gap-0 bg-[#141414] border border-[#262626] p-4 rounded-lg">
             <div>
               <div className="font-bold text-gray-200 text-sm">Auto-Boost on Game Launch</div>
               <div className="text-xs text-gray-500 mt-1">Automatically applies your Max Performance tweaks when VALORANT runs.</div>
@@ -183,7 +183,7 @@ export default function RegistryRollback() {
               return (
                 <div
                   key={idx}
-                  className={`border border-[#262626] rounded-lg p-2.5 bg-[#141414] flex justify-between items-center gap-3 transition-all ${isRowDisabled && !isRowBusy ? 'opacity-50' : ''}`}
+                  className={`border border-[#262626] rounded-lg p-2.5 bg-[#141414] flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${isRowDisabled && !isRowBusy ? 'opacity-50' : ''}`}
                 >
                   <div className="flex-1 min-w-0">
                     <div className="font-medium text-xs text-gray-200 truncate font-outfit" title={`${b.keyPath}\\${b.valueName}`}>

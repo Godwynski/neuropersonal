@@ -825,6 +825,21 @@ export function AppProvider({ children }) {
     }
   };
 
+  const optimizedCount = [
+    registryStates.gameDvrDisabled === true,
+    latencyTweaks.disableMouseAccel === true,
+    latencyTweaks.disableUsbSuspend === true,
+    persistentPriorityEnabled === true,
+    timerResActive === true,
+    hpetDisabled === true,
+    nicPowerSavingDisabled === true,
+    powerThrottlingDisabled === true,
+    !bgServices.XblAuthManager,
+    !vbsStatus.vbsEnabled,
+    (gpuInfo.vendor === 'nvidia' && gsyncDisabled) || (gpuInfo.vendor === 'amd' && amdOptimizations.mpoDisabled)
+  ].filter(Boolean).length;
+  const totalOptimizations = 11;
+
   return (
     <AppContext.Provider value={{
       isElectron, setIsElectron,
@@ -872,7 +887,8 @@ export function AppProvider({ children }) {
       applyOptimizationProfile, toggleMaxBoost, toggleBgService, toggleTimerResolution,
       runDeepPerformanceOptimize, triggerValorantAutoRevert, triggerValorantAutoBoost,
       runDiagnosticFix, runMacro, scanTempFolder, purgeTempFolder, launchAdminPanel, formatBytes, launchValorant,
-      forceValorantPriority // #13: Exported
+      forceValorantPriority, // #13: Exported
+      optimizedCount, totalOptimizations
     }}>
       {children}
     </AppContext.Provider>

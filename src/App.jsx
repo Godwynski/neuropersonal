@@ -1,4 +1,5 @@
 import React from 'react';
+import logoImg from '../public/logo.png';
 import Toast from './components/Toast';
 import Sidebar from './components/Sidebar';
 import ValorantOptimizer from './components/ValorantOptimizer';
@@ -52,7 +53,7 @@ function DashboardContent() {
       {isInitializing && (
         <div className="fixed bottom-6 right-6 z-50 pointer-events-auto">
           <div className="glass-panel p-4 rounded-xl shadow-2xl flex items-center gap-4 max-w-sm border border-[#262626]">
-            <span className="w-5 h-5 shrink-0 rounded-full border-2 border-[#262626] border-t-[#3b82f6] animate-spin" />
+            <img src={logoImg} alt="Loading" className="w-6 h-6 animate-pulse shrink-0 drop-shadow-[0_0_8px_rgba(59,130,246,0.8)]" />
             <div className="flex-1 min-w-0">
               <div className="font-semibold text-xs text-gray-100 uppercase tracking-widest font-outfit">System Diagnostics</div>
               <p className="text-[11px] text-gray-400 truncate mt-0.5">{initMessage}</p>
@@ -64,7 +65,7 @@ function DashboardContent() {
       {/* Window Header */}
       <header className="titlebar-drag h-14 border-b border-[#262626] bg-[#141414]/80 backdrop-blur-md flex items-center px-5 shrink-0 justify-between z-30">
         <div className="flex items-center gap-3">
-          <span className="w-2.5 h-2.5 rounded-full bg-[#ff4655] shadow-[0_0_8px_rgba(255,70,85,0.6)] animate-pulse" />
+          <img src={logoImg} alt="NeurOptimize Logo" className="w-5 h-5 drop-shadow-[0_0_8px_rgba(255,70,85,0.6)]" />
           <span className="text-xs font-semibold font-outfit uppercase tracking-[0.2em] text-gray-200">NeurOptimize</span>
         </div>
         
@@ -107,12 +108,12 @@ function DashboardContent() {
       )}
 
       {/* Main Single Page Dashboard */}
-      <div className="flex-1 flex overflow-hidden relative">
+      <div className="flex-1 flex flex-col md:flex-row overflow-hidden relative">
 
         {isProcessing && (
           <div className="absolute inset-0 bg-[#0a0a0a]/60 backdrop-blur-sm flex items-center justify-center z-50 transition-all duration-300">
             <div className="glass-panel p-8 rounded-2xl neon-shadow flex flex-col items-center gap-4 max-w-sm text-center border border-[#262626]">
-              <span className="w-10 h-10 rounded-full border-[3px] border-[#262626] border-t-[#ff4655] animate-spin" />
+              <img src={logoImg} alt="Processing" className="w-12 h-12 animate-pulse drop-shadow-[0_0_15px_rgba(255,70,85,0.8)]" />
               <div className="font-semibold text-lg font-outfit text-gray-100">Applying Kernel Tweaks</div>
               <p className="text-sm text-gray-400">{processingMessage || 'Please wait while Windows updates parameters...'}</p>
             </div>
@@ -153,15 +154,15 @@ function DashboardContent() {
         <Sidebar />
 
         {/* Right Content Area */}
-        <main className="flex-1 flex flex-col overflow-hidden bg-[#0a0a0a] border-l border-[#262626]">
+        <main className="flex-1 flex flex-col overflow-hidden bg-[#0a0a0a] border-t md:border-t-0 md:border-l border-[#262626]">
           <div className="flex-1 overflow-y-auto custom-scrollbar">
             {activeAppTab === 'dashboard' && <DashboardOverview />}
             {activeAppTab === 'advanced' && <ValorantOptimizer />}
             {activeAppTab === 'cleaners' && (
-              <div className="p-8 max-w-5xl w-full mx-auto"><SystemCleaners /></div>
+              <div className="p-4 md:p-8 max-w-5xl w-full mx-auto"><SystemCleaners /></div>
             )}
             {activeAppTab === 'settings' && (
-              <div className="p-8 max-w-5xl w-full mx-auto"><RegistryRollback /></div>
+              <div className="p-4 md:p-8 max-w-5xl w-full mx-auto"><RegistryRollback /></div>
             )}
           </div>
           <BottomConsole 

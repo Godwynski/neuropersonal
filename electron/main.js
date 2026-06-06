@@ -1,11 +1,27 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
+const { app, BrowserWindow, ipcMain, Tray, Menu } = require('electron');
 const path = require('path');
 const os = require('os');
 const { exec, execSync, spawn } = require('child_process');
 const fs = require('fs');
 
 let mainWindow;
+let tray = null;
 const isDev = !app.isPackaged;
+
+const gotTheLock = app.requestSingleInstanceLock();
+if (!gotTheLock) {
+  app.quit();
+  process.exit(0);
+}
+
+app.on('second-instance', () => {
+  if (mainWindow) {
+    if (!mainWindow.isVisible()) mainWindow.show();
+    if (mainWindow.isMinimized()) mainWindow.restore();
+    mainWindow.focus();
+  }
+});
+
 let timerResolutionProcess = null;
 
 // #7: Cache admin status at startup — avoids spawning `net session` every 2 seconds
@@ -110,9 +126,9 @@ function createWindow() {
   mainWindow = new BrowserWindow({
     width: 1100,
     height: 750,
-    minWidth: 900,
-    icon: path.join(__dirname, '../public/logo.png'),
-    minHeight: 600,
+    minWidth: 400,
+    icon: isDev ? path.join(__dirname, '../public/logo.png') : path.join(__dirname, '../dist/logo.png'),
+    minHeight: 500,
     titleBarStyle: 'hidden',
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
@@ -133,8 +149,12 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
-  mainWindow.once('ready-to-show', () => {
-    mainWindow.show();
+  // Intercept close event to hide to tray instead of quitting
+  mainWindow.on('close', (event) => {
+    if (!app.isQuiting) {
+      event.preventDefault();
+      mainWindow.hide();
+    }
   });
 }
 
@@ -182,6 +202,22 @@ app.whenReady().then(() => {
   writePowerShellHelpers();
   createWindow();
 
+  // Set up System Tray
+  const iconPath = isDev ? path.join(__dirname, '../public/logo.png') : path.join(__dirname, '../dist/logo.png');
+  tray = new Tray(iconPath);
+  const contextMenu = Menu.buildFromTemplate([
+    { label: 'Show App', click: () => mainWindow.show() },
+    { label: 'Quit', click: () => { 
+        app.isQuiting = true; 
+        if (tray) tray.destroy();
+        app.quit(); 
+      } 
+    }
+  ]);
+  tray.setToolTip('Neuroptimize');
+  tray.setContextMenu(contextMenu);
+  tray.on('click', () => mainWindow.show());
+
   // Auto-Boost: Polling for VALORANT
   let isValorantRunning = false;
   setInterval(() => {
@@ -226,6 +262,7 @@ app.on('window-all-closed', function () {
 });
 
 app.on('before-quit', () => {
+  if (tray) tray.destroy();
   // #8: Improved cleanup — use taskkill instead of slow WMI query
   try {
     if (globalState.timerResolutionProcess && globalState.timerResolutionProcess.pid) {

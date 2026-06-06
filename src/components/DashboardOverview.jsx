@@ -37,7 +37,7 @@ export default function DashboardOverview() {
   const optimizationPercentage = Math.round(((optimizedCount || 0) / totalOptimizations) * 100) || 0;
 
   return (
-    <div className="p-8 font-inter text-gray-200 h-full overflow-y-auto custom-scrollbar space-y-8 bg-[#0a0a0a]">
+    <div className="p-4 md:p-8 font-inter text-gray-200 h-full overflow-y-auto custom-scrollbar space-y-6 md:space-y-8 bg-[#0a0a0a]">
       
       {/* Header section */}
       <div className="flex justify-between items-center">
@@ -60,13 +60,13 @@ export default function DashboardOverview() {
           This score represents how many safe optimizations are active on your system. A higher score means better gaming performance and responsiveness.
         </p>
 
-        <div className="flex items-center gap-6">
+        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6">
           {/* Circular Progress (Simplified) */}
           <div className="relative w-24 h-24 flex items-center justify-center rounded-full bg-[#0a0a0a] border-4 border-[#262626]">
             <span className="text-2xl font-bold text-white">{optimizationPercentage}%</span>
           </div>
           
-          <div className="flex-1">
+          <div className="flex-1 w-full text-center md:text-left">
             <div className="flex justify-between text-sm font-semibold mb-2">
               <span className="text-gray-300">Optimization Level</span>
               <span className={optimizationPercentage >= 80 ? 'text-[#3b82f6]' : optimizationPercentage >= 50 ? 'text-yellow-500' : 'text-[#ff4655]'}>
