@@ -48,7 +48,7 @@ export default function ConfirmModal({
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center bg-pencil-black/40 backdrop-blur-[2px]">
       <div
-        className={`bg-white border ${v.border} rounded-lg shadow-lg p-6 max-w-sm w-full mx-4 space-y-4 font-inter`}
+        className={`bg-[#0a0a0a] border ${v.border} rounded-lg shadow-lg p-6 max-w-sm w-full mx-4 space-y-4 font-inter`}
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -66,7 +66,7 @@ export default function ConfirmModal({
         <div className="flex justify-end gap-2 pt-2">
           <button
             onClick={onCancel}
-            className="px-4 py-1.5 border border-[#262626] bg-white hover:bg-[#141414] text-gray-200 text-xs font-bold rounded-lg cursor-pointer transition-all shadow-sm active:scale-95"
+            className="px-4 py-1.5 border border-[#262626] bg-[#0a0a0a] hover:bg-[#141414] text-gray-200 text-xs font-bold rounded-lg cursor-pointer transition-all shadow-sm active:scale-95"
           >
             {cancelLabel}
           </button>

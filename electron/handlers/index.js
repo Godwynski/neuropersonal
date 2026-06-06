@@ -63,7 +63,7 @@ ipcMain.handle('get-system-stats', async () => {
     freeMemGB: (freeMem / (1024 * 1024 * 1024)).toFixed(2),
     usedMemGB: ((totalMem - freeMem) / (1024 * 1024 * 1024)).toFixed(2),
     memUsagePercent: Math.round(((totalMem - freeMem) / totalMem) * 100),
-    isAdmin: cachedIsAdmin,
+    isAdmin: globalState.cachedIsAdmin,
     valorantRunning
   };
 });
@@ -446,20 +446,36 @@ ipcMain.handle('launch-admin-utility', async (event, utility) => {
 // IPC Handler: Kill allowlisted process (#3: case-insensitive allowlist)
 // ─────────────────────────────────────────────────────────────────────────────
 
+const ALLOWED_PROCESSES = new Set([
+  'chrome.exe', 'msedge.exe', 'spotify.exe',
+  'discord.exe', 'steam.exe', 'onedrive.exe',
+  'epicgameslauncher.exe', 'battle.net.exe', 'riotclientservices.exe',
+  'slack.exe', 'telegram.exe', 'whatsapp.exe', 'overwolf.exe', 'obs64.exe'
+]);
+
+ipcMain.handle('get-running-apps', async () => {
+  try {
+    const output = await execAsync('tasklist /NH /FO CSV');
+    const running = {};
+    for (const app of ALLOWED_PROCESSES) {
+      running[app.replace('.exe', '')] = output.toLowerCase().includes(`"${app}"`);
+    }
+    return { success: true, runningApps: running };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
 ipcMain.handle('kill-process', async (event, processName) => {
   if (typeof processName !== 'string') {
     return { success: false, error: 'Invalid process name' };
   }
-  const allowedProcessNamesLower = new Set([
-    'chrome.exe', 'msedge.exe', 'spotify.exe',
-    'discord.exe', 'steam.exe', 'onedrive.exe'
-  ]);
-  if (!allowedProcessNamesLower.has(processName.toLowerCase())) {
+  if (!ALLOWED_PROCESSES.has(processName.toLowerCase())) {
     return { success: false, error: 'Forbidden process' };
   }
   try {
     // Use the exact allowlisted name to prevent injection
-    const canonical = [...allowedProcessNamesLower].find(n => n === processName.toLowerCase());
+    const canonical = [...ALLOWED_PROCESSES].find(n => n === processName.toLowerCase());
     await execAsync(`taskkill /f /im "${canonical}"`);
     return { success: true };
   } catch (err) {
@@ -1138,14 +1154,16 @@ ipcMain.handle('check-vbs-status', async () => {
     
     let vmPlatform = 'unknown';
     let hypervisorPlatform = 'unknown';
-    try {
-      const vmRes = await spawnAsync('powershell.exe', ['-NoProfile', '-Command', "(Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -ErrorAction SilentlyContinue).State"]);
-      vmPlatform = vmRes.toLowerCase() === 'enabled' ? 'enabled' : 'disabled';
-    } catch (e) { console.error('Silent error caught:', e.message); }
-    try {
-      const hvRes = await spawnAsync('powershell.exe', ['-NoProfile', '-Command', "(Get-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -ErrorAction SilentlyContinue).State"]);
-      hypervisorPlatform = hvRes.toLowerCase() === 'enabled' ? 'enabled' : 'disabled';
-    } catch (e) { console.error('Silent error caught:', e.message); }
+    if (globalState.cachedIsAdmin) {
+      try {
+        const vmRes = await spawnAsync('powershell.exe', ['-NoProfile', '-Command', "(Get-WindowsOptionalFeature -Online -FeatureName VirtualMachinePlatform -ErrorAction SilentlyContinue).State"]);
+        vmPlatform = vmRes.toLowerCase() === 'enabled' ? 'enabled' : 'disabled';
+      } catch (e) { console.error('Silent error caught:', e.message); }
+      try {
+        const hvRes = await spawnAsync('powershell.exe', ['-NoProfile', '-Command', "(Get-WindowsOptionalFeature -Online -FeatureName HypervisorPlatform -ErrorAction SilentlyContinue).State"]);
+        hypervisorPlatform = hvRes.toLowerCase() === 'enabled' ? 'enabled' : 'disabled';
+      } catch (e) { console.error('Silent error caught:', e.message); }
+    }
 
     return {
       success: true,

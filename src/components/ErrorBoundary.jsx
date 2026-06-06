@@ -18,7 +18,7 @@ export default class ErrorBoundary extends React.Component {
     if (this.state.hasError) {
       return (
         <div className="flex items-center justify-center h-screen bg-[#0a0a0a] font-inter p-8">
-          <div className="border border-[#262626] bg-white p-8 rounded-lg shadow-lg max-w-md text-center space-y-4">
+          <div className="border border-[#262626] bg-[#0a0a0a] p-8 rounded-lg shadow-lg max-w-md text-center space-y-4">
             <div className="text-4xl">💥</div>
             <h1 className="text-xl font-bold font-outfit text-gray-200">
               Something went wrong

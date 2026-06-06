@@ -29,6 +29,7 @@ export default function ValorantOptimizer() {
     setOptimizationOptions,
     purgeAppsChecklist,
     setPurgeAppsChecklist,
+    runningApps,
     isAdmin,
     valorantConfigs,
     selectedConfig,
@@ -591,7 +592,7 @@ export default function ValorantOptimizer() {
 
   return (
     <>
-    <div className="space-y-6 font-inter text-gray-200 bg-white p-2">
+    <div className="space-y-6 font-inter text-gray-200 bg-[#0a0a0a] p-2">
       
       {/* Page Header */}
       <header className="flex justify-between items-center border-b-2 border-[#262626] pb-3">
@@ -614,13 +615,13 @@ export default function ValorantOptimizer() {
             !isElectron && (
               <button 
                 onClick={() => setValorantRunning(false)} 
-                className="border border-[#262626] px-3 py-1 rounded-lg bg-white hover:bg-[#141414] cursor-pointer text-gray-200 font-bold"
+                className="border border-[#262626] px-3 py-1 rounded-lg bg-[#0a0a0a] hover:bg-[#141414] cursor-pointer text-gray-200 font-bold"
               >
                 Simulate Exit
               </button>
             )
           )}
-          <span className={`px-3 py-1.5 border border-[#262626] font-mono font-bold rounded-lg ${valorantRunning ? 'bg-green-50 text-[#3b82f6]' : 'bg-[#141414] text-gray-400'}`}>
+          <span className={`px-3 py-1.5 border border-[#262626] font-mono font-bold rounded-lg ${valorantRunning ? 'bg-[#3b82f6]/10 text-[#3b82f6]' : 'bg-[#141414] text-gray-400'}`}>
             STATUS: {valorantRunning ? 'VALORANT IS OPEN (BOOST ACTIVE)' : 'VALORANT IS CLOSED'}
           </span>
         </div>
@@ -660,8 +661,8 @@ export default function ValorantOptimizer() {
           </div>
           <div className="grid grid-cols-3 gap-1">
             <button onClick={() => applyOptimizationProfile('tournament')} className="py-1 px-1.5 border border-[#262626] bg-pencil-black text-white hover:bg-pencil-black/90 rounded-lg text-center cursor-pointer font-bold text-[10px] active:translate-x-[1px] active:translate-y-[1px]">TOURNAMENT</button>
-            <button onClick={() => applyOptimizationProfile('balanced')} className="py-1 px-1.5 border border-[#262626] bg-white hover:bg-[#141414] text-gray-200 rounded-lg text-center cursor-pointer font-bold text-[10px] active:translate-x-[1px] active:translate-y-[1px]">BALANCED</button>
-            <button onClick={() => applyOptimizationProfile('revert')} className="py-1 px-1.5 border border-[#262626] bg-white hover:bg-[#141414] text-gray-200 rounded-lg text-center cursor-pointer font-bold text-[10px] active:translate-x-[1px] active:translate-y-[1px]">DEFAULTS</button>
+            <button onClick={() => applyOptimizationProfile('balanced')} className="py-1 px-1.5 border border-[#262626] bg-[#0a0a0a] hover:bg-[#141414] text-gray-200 rounded-lg text-center cursor-pointer font-bold text-[10px] active:translate-x-[1px] active:translate-y-[1px]">BALANCED</button>
+            <button onClick={() => applyOptimizationProfile('revert')} className="py-1 px-1.5 border border-[#262626] bg-[#0a0a0a] hover:bg-[#141414] text-gray-200 rounded-lg text-center cursor-pointer font-bold text-[10px] active:translate-x-[1px] active:translate-y-[1px]">DEFAULTS</button>
           </div>
           <div className="border-t-2 border-dashed border-[#3f3f46] pt-2">
             <div className="flex justify-between items-center text-[10.5px] text-gray-400 font-semibold mb-1">
@@ -679,7 +680,7 @@ export default function ValorantOptimizer() {
                   const cfg = valorantConfigs.find(c => c.filePath === e.target.value);
                   if (cfg) setSelectedConfig(cfg);
                 }}
-                className="w-full p-1.5 border border-[#262626] rounded-lg text-[11px] bg-white cursor-pointer focus:outline-none font-inter"
+                className="w-full p-1.5 border border-[#262626] rounded-lg text-[11px] bg-[#0a0a0a] cursor-pointer focus:outline-none font-inter"
               >
                 {valorantConfigs.map((cfg) => (
                   <option key={cfg.filePath} value={cfg.filePath}>
@@ -720,7 +721,7 @@ export default function ValorantOptimizer() {
                   className={`px-3 py-1.5 border border-[#262626] text-xs font-bold rounded-lg cursor-pointer transition-all ${
                     activeTab === tab.id
                       ? 'bg-pencil-black text-white shadow-none'
-                      : 'bg-white text-gray-200 hover:bg-[#141414] shadow-sm hover:shadow-sm/50 active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
+                      : 'bg-[#0a0a0a] text-gray-200 hover:bg-[#141414] shadow-sm hover:shadow-sm/50 active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
                   }`}
                 >
                   {tab.label}
@@ -729,7 +730,7 @@ export default function ValorantOptimizer() {
             </div>
             
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-              <label className="flex items-center gap-1.5 px-3 py-1.5 border border-[#262626] text-xs font-bold rounded-lg bg-white hover:bg-[#141414] cursor-pointer select-none">
+              <label className="flex items-center gap-1.5 px-3 py-1.5 border border-[#262626] text-xs font-bold rounded-lg bg-[#0a0a0a] hover:bg-[#141414] cursor-pointer select-none">
                 <input 
                   type="checkbox"
                   checked={showAdvanced}
@@ -745,7 +746,7 @@ export default function ValorantOptimizer() {
                   placeholder="Search actions..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full text-xs p-1.5 border border-[#262626] rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue/20 bg-white font-inter"
+                  className="w-full text-xs p-1.5 border border-[#262626] rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue/20 bg-[#0a0a0a] font-inter"
                 />
                 {searchQuery && (
                   <button
@@ -762,7 +763,7 @@ export default function ValorantOptimizer() {
           {/* Master Collapsible Categories List */}
           <div className="space-y-4">
             {activeCategories.length === 0 ? (
-              <div className="p-8 border border-dashed border-[#262626] rounded-lg text-center text-gray-400 italic text-xs bg-white">
+              <div className="p-8 border border-dashed border-[#262626] rounded-lg text-center text-gray-400 italic text-xs bg-[#0a0a0a]">
                 No optimization actions matched your search or tab filter.
               </div>
             ) : (
@@ -772,7 +773,7 @@ export default function ValorantOptimizer() {
                 const activeCount = categoryActions.filter(a => a.isOptimized).length;
 
                 return (
-                  <div key={cat} className="border border-[#262626] rounded-lg bg-white overflow-hidden shadow-md">
+                  <div key={cat} className="border border-[#262626] rounded-lg bg-[#0a0a0a] overflow-hidden shadow-md">
                     {/* Collapsible Accordion Header */}
                     <div 
                       onClick={() => toggleCategoryCollapse(cat)}
@@ -780,7 +781,7 @@ export default function ValorantOptimizer() {
                     >
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-gray-200 font-outfit uppercase tracking-wider">{cat}</span>
-                        <span className="px-1.5 py-0.5 rounded-none font-bold text-[9px] bg-white border border-[#262626] rounded-lg">
+                        <span className="px-1.5 py-0.5 rounded-none font-bold text-[9px] bg-[#0a0a0a] border border-[#262626] rounded-lg">
                           {activeCount} of {categoryActions.length} Active
                         </span>
                       </div>
@@ -805,7 +806,7 @@ export default function ValorantOptimizer() {
                               isThisLoading
                                 ? 'bg-[#3b82f6]/5'
                                 : isThisDone
-                                ? 'bg-green-50/50'
+                                ? 'bg-[#3b82f6]/10/50'
                                 : isAnyLoading
                                 ? 'opacity-50'
                                 : 'hover:bg-[#141414]/10'
@@ -816,7 +817,7 @@ export default function ValorantOptimizer() {
                               <div className="flex items-center flex-wrap gap-1.5">
                                 <span className="font-bold text-gray-200 font-outfit text-xs">{action.name}</span>
                                 <div className="relative group inline-block">
-                                  <span className="text-[9px] text-[#3b82f6] border border-[#3b82f6] px-1 cursor-help rounded-md font-bold font-outfit select-none bg-white">?</span>
+                                  <span className="text-[9px] text-[#3b82f6] border border-[#3b82f6] px-1 cursor-help rounded-md font-bold font-outfit select-none bg-[#0a0a0a]">?</span>
                                   <div className="absolute bottom-6 left-1/2 -translate-x-1/2 hidden group-hover:block z-50 bg-[#262626] text-gray-200 text-[10.5px] p-2.5 border border-[#262626] rounded-lg shadow-md w-56 font-bold leading-snug">
                                     {action.descDetailed || action.desc}
                                   </div>
@@ -885,7 +886,7 @@ export default function ValorantOptimizer() {
                                       : isAnyLoading
                                       ? 'bg-[#141414] text-gray-500 cursor-not-allowed shadow-none'
                                       : action.isOptimized
-                                      ? 'bg-white hover:bg-[#141414] text-gray-200 shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
+                                      ? 'bg-[#0a0a0a] hover:bg-[#141414] text-gray-200 shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
                                       : 'bg-[#262626] hover:bg-[#3f3f46] text-gray-200 shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none font-outfit'
                                   }`}
                                 >
@@ -902,7 +903,7 @@ export default function ValorantOptimizer() {
                                       ? 'bg-[#3b82f6] text-white cursor-not-allowed'
                                       : isThisDone
                                       ? 'bg-green-600 border-green-700 text-white cursor-not-allowed'
-                                      : 'border-[#262626] bg-white hover:bg-[#141414] text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
+                                      : 'border-[#262626] bg-[#0a0a0a] hover:bg-[#141414] text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
                                   }`}
                                 >
                                   {isThisLoading ? '...' : isThisDone ? '✓ Done' : action.actionLabel}
@@ -926,10 +927,10 @@ export default function ValorantOptimizer() {
                                             : isOptDone
                                             ? 'bg-green-600 text-white cursor-not-allowed shadow-none'
                                             : isAnyLoading
-                                            ? 'opacity-50 cursor-not-allowed bg-white text-gray-200 shadow-none'
+                                            ? 'opacity-50 cursor-not-allowed bg-[#0a0a0a] text-gray-200 shadow-none'
                                             : opt.primary
                                             ? 'bg-pencil-black text-white hover:bg-pencil-black/90 cursor-pointer shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'
-                                            : 'bg-white text-gray-200 hover:bg-[#141414] cursor-pointer shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'
+                                            : 'bg-[#0a0a0a] text-gray-200 hover:bg-[#141414] cursor-pointer shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'
                                         }`}
                                       >
                                         {isOptLoading ? '...' : isOptDone ? '✓' : opt.label}
@@ -953,25 +954,81 @@ export default function ValorantOptimizer() {
 
           {/* Checklist sub-options for Background App Purging */}
           {optimizationOptions.purgeApps && (
-            <div className="p-4 border border-[#262626] bg-[#141414]/20 rounded-lg text-xs space-y-2 relative">
+            <div className="p-4 border border-[#262626] bg-[#141414]/20 rounded-lg text-xs space-y-3 relative">
               {/* Tape decoration */}
               <div className="absolute -top-3 left-6 w-16 h-4 bg-pencil-black/10 border border-[#3f3f46] rotate-1 pointer-events-none" />
-              <span className="font-bold text-gray-200 font-outfit block">Configure Background Applications to Close</span>
-              <p className="text-[11px] text-gray-400">Check apps you want closed automatically upon launching VALORANT:</p>
-              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
-                {Object.keys(purgeAppsChecklist).map(appKey => (
-                  <label key={appKey} className="flex items-center gap-2 p-2 border border-[#262626] bg-white rounded-lg cursor-pointer hover:bg-[#141414]/30">
-                    <input 
-                      type="checkbox" 
-                      checked={!!purgeAppsChecklist[appKey]}
-                      onChange={(e) => {
-                        setPurgeAppsChecklist({ ...purgeAppsChecklist, [appKey]: e.target.checked });
-                      }}
-                      className="cursor-pointer w-4 h-4 accent-pencil-black"
-                    />
-                    <span className="capitalize font-bold text-gray-200 font-outfit text-[11px]">{appKey}</span>
-                  </label>
-                ))}
+              <div>
+                <span className="font-bold text-gray-200 font-outfit text-sm block">Background Application Manager</span>
+                <p className="text-[11px] text-gray-400 mt-1">Select applications to automatically close when launching VALORANT. You can also forcefully close currently active applications immediately.</p>
+              </div>
+              
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pt-2">
+                {Object.keys(purgeAppsChecklist).map(appKey => {
+                  const isRunning = runningApps && runningApps[appKey];
+                  const isChecked = !!purgeAppsChecklist[appKey];
+                  
+                  return (
+                    <div 
+                      key={appKey} 
+                      className={`flex flex-col gap-2 p-3 border rounded-lg transition-all ${
+                        isChecked ? 'border-pencil-black/50 bg-[#141414]/80 shadow-sm' : 'border-[#262626] bg-[#0a0a0a]'
+                      }`}
+                    >
+                      <div className="flex justify-between items-start">
+                        <label className="flex items-center gap-2 cursor-pointer group">
+                          <div className={`w-4 h-4 rounded-sm border flex items-center justify-center transition-colors ${
+                            isChecked ? 'bg-pencil-black border-pencil-black' : 'border-[#3f3f46] bg-[#141414] group-hover:border-gray-400'
+                          }`}>
+                            {isChecked && (
+                              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
+                              </svg>
+                            )}
+                          </div>
+                          <input 
+                            type="checkbox" 
+                            className="hidden"
+                            checked={isChecked}
+                            onChange={(e) => {
+                              setPurgeAppsChecklist({ ...purgeAppsChecklist, [appKey]: e.target.checked });
+                            }}
+                          />
+                          <span className="capitalize font-bold text-gray-200 font-outfit text-[12px]">{appKey}</span>
+                        </label>
+                        
+                        {isRunning ? (
+                          <span className="flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-500/10 text-green-500 border border-green-500/20">
+                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                            ACTIVE
+                          </span>
+                        ) : (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold text-gray-500">
+                            IDLE
+                          </span>
+                        )}
+                      </div>
+                      
+                      {isRunning && (
+                        <div className="pt-2 mt-auto border-t border-[#262626]">
+                          <button
+                            onClick={async () => {
+                              if (window.api && window.api.killProcess) {
+                                const exeName = appKey === 'onedrive' ? 'OneDrive.exe' : (appKey === 'battle.net' ? 'battle.net.exe' : `${appKey}.exe`);
+                                await window.api.killProcess(exeName);
+                              }
+                            }}
+                            className="w-full py-1.5 bg-[#ff4655]/10 hover:bg-[#ff4655]/20 text-[#ff4655] border border-[#ff4655]/30 rounded-lg text-[10px] font-bold font-outfit transition-colors flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
+                          >
+                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                            FORCE CLOSE NOW
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -982,7 +1039,7 @@ export default function ValorantOptimizer() {
         <div className="space-y-6">
           
           {/* Quick Telemetry & Scan Size Action */}
-          <div className="border border-[#262626] bg-white p-4 rounded-lg shadow-md space-y-3.5 text-xs relative">
+          <div className="border border-[#262626] bg-[#0a0a0a] p-4 rounded-lg shadow-md space-y-3.5 text-xs relative">
             {/* Post-it pin decoration */}
             <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-[#ff4655] border border-[#262626] shadow-sm" />
             
@@ -1015,10 +1072,10 @@ export default function ValorantOptimizer() {
               <div className="p-2 border border-[#262626] bg-[#141414]/20 rounded-lg space-y-1.5">
                 <span className="font-bold text-gray-200 font-outfit block">Anticheat Diagnostics</span>
                 <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold">
-                  <div className={`p-1.5 border border-[#262626] rounded-lg text-center ${vanguardHealth.secureBoot === 'enabled' ? 'bg-white text-[#3b82f6]' : 'bg-[#ff4655] text-white'}`}>
+                  <div className={`p-1.5 border border-[#262626] rounded-lg text-center ${vanguardHealth.secureBoot === 'enabled' ? 'bg-[#0a0a0a] text-[#3b82f6]' : 'bg-[#ff4655] text-white'}`}>
                     SecureBoot: {vanguardHealth.secureBoot.toUpperCase()}
                   </div>
-                  <div className={`p-1.5 border border-[#262626] rounded-lg text-center ${vanguardHealth.tpm2 === 'active' ? 'bg-white text-[#3b82f6]' : 'bg-[#ff4655] text-white'}`}>
+                  <div className={`p-1.5 border border-[#262626] rounded-lg text-center ${vanguardHealth.tpm2 === 'active' ? 'bg-[#0a0a0a] text-[#3b82f6]' : 'bg-[#ff4655] text-white'}`}>
                     TPM: {vanguardHealth.tpm2.toUpperCase()}
                   </div>
                 </div>
@@ -1027,13 +1084,13 @@ export default function ValorantOptimizer() {
               <div className="p-2 border border-[#262626] bg-[#141414]/20 rounded-lg space-y-1.5">
                 <span className="font-bold text-gray-200 font-outfit block">Hardware Status</span>
                 <div className="space-y-1 text-[10px]">
-                  <div className="flex justify-between p-1 bg-white border border-[#262626] rounded-lg font-bold">
+                  <div className="flex justify-between p-1 bg-[#0a0a0a] border border-[#262626] rounded-lg font-bold">
                     <span>RAM XMP</span>
                     <span className={hardwareInfo.xmpEnabled ? 'text-[#3b82f6] font-bold' : 'text-[#ff4655] font-bold'}>
                       {hardwareInfo.xmpEnabled ? 'ENABLED' : 'DISABLED'}
                     </span>
                   </div>
-                  <div className="flex justify-between p-1 bg-white border border-[#262626] rounded-lg font-bold">
+                  <div className="flex justify-between p-1 bg-[#0a0a0a] border border-[#262626] rounded-lg font-bold">
                     <span>PCIe ReBAR</span>
                     <span className={hardwareInfo.rebarEnabled ? 'text-[#3b82f6] font-bold' : 'text-gray-400 font-bold'}>
                       {hardwareInfo.rebarEnabled ? 'ENABLED' : 'DISABLED'}
@@ -1062,7 +1119,7 @@ export default function ValorantOptimizer() {
                           onMouseLeave={() => setShowResTooltip(false)}
                           onFocus={() => setShowResTooltip(true)}
                           onBlur={() => setShowResTooltip(false)}
-                          className="w-4 h-4 rounded-full border border-[#262626] bg-white text-gray-200 text-[9px] font-bold flex items-center justify-center cursor-default"
+                          className="w-4 h-4 rounded-full border border-[#262626] bg-[#0a0a0a] text-gray-200 text-[9px] font-bold flex items-center justify-center cursor-default"
                           tabIndex={0}
                           aria-label="What is Resolution Quality Scale?"
                         >
@@ -1098,19 +1155,19 @@ export default function ValorantOptimizer() {
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   <div className="flex flex-col gap-0.5">
                     <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px] font-outfit">Texture Quality</span>
-                    <select value={selectedConfig.textureQuality} onChange={(e) => saveValorantConfig({ textureQuality: parseInt(e.target.value, 10) })} className="p-1.5 border border-[#262626] bg-white rounded-lg font-inter">
+                    <select value={selectedConfig.textureQuality} onChange={(e) => saveValorantConfig({ textureQuality: parseInt(e.target.value, 10) })} className="p-1.5 border border-[#262626] bg-[#0a0a0a] rounded-lg font-inter">
                       <option value="0">Low</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option>
                     </select>
                   </div>
                   <div className="flex flex-col gap-0.5">
                     <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px] font-outfit">Shadows</span>
-                    <select value={selectedConfig.shadowQuality} onChange={(e) => saveValorantConfig({ shadowQuality: parseInt(e.target.value, 10) })} className="p-1.5 border border-[#262626] bg-white rounded-lg font-inter">
+                    <select value={selectedConfig.shadowQuality} onChange={(e) => saveValorantConfig({ shadowQuality: parseInt(e.target.value, 10) })} className="p-1.5 border border-[#262626] bg-[#0a0a0a] rounded-lg font-inter">
                       <option value="0">Low (Off)</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option>
                     </select>
                   </div>
                   <div className="flex flex-col gap-0.5 col-span-2">
                     <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px] font-outfit">Raw Input Buffer</span>
-                    <select value={selectedConfig.rawInputBuffer ? 'true' : 'false'} onChange={(e) => saveValorantConfig({ rawInputBuffer: e.target.value === 'true' })} className="p-1.5 border border-[#262626] bg-white rounded-lg font-inter">
+                    <select value={selectedConfig.rawInputBuffer ? 'true' : 'false'} onChange={(e) => saveValorantConfig({ rawInputBuffer: e.target.value === 'true' })} className="p-1.5 border border-[#262626] bg-[#0a0a0a] rounded-lg font-inter">
                       <option value="true">On (Raw Input)</option><option value="false">Off</option>
                     </select>
                   </div>
@@ -1134,7 +1191,7 @@ export default function ValorantOptimizer() {
                             applyFrameLimitSettings(frameLimitMode, parseInt(e.target.value, 10));
                           }
                         }}
-                        className="flex-1 p-1.5 border border-[#262626] bg-white rounded-lg text-[11px] font-inter cursor-pointer"
+                        className="flex-1 p-1.5 border border-[#262626] bg-[#0a0a0a] rounded-lg text-[11px] font-inter cursor-pointer"
                       >
                         <option value="60">60 Hz</option>
                         <option value="144">144 Hz</option>
@@ -1163,7 +1220,7 @@ export default function ValorantOptimizer() {
                               }
                             }}
                             placeholder="e.g. 165"
-                            className="w-16 p-1.5 border border-[#262626] bg-white rounded-lg text-[11px] font-mono focus:outline-none focus:ring-1 focus:ring-accent-blue/30"
+                            className="w-16 p-1.5 border border-[#262626] bg-[#0a0a0a] rounded-lg text-[11px] font-mono focus:outline-none focus:ring-1 focus:ring-accent-blue/30"
                           />
                           <button
                             onClick={() => {
@@ -1193,14 +1250,14 @@ export default function ValorantOptimizer() {
                     <button
                       onClick={() => applyFrameLimitSettings('uncapped', monitorRefreshRate)}
                       title="No frame cap — maximum FPS output"
-                      className={`p-1.5 border border-[#262626] text-center rounded-lg transition-all cursor-pointer ${frameLimitMode === 'uncapped' ? 'bg-pencil-black text-white shadow-none' : 'bg-white text-gray-200 shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'}`}
+                      className={`p-1.5 border border-[#262626] text-center rounded-lg transition-all cursor-pointer ${frameLimitMode === 'uncapped' ? 'bg-pencil-black text-white shadow-none' : 'bg-[#0a0a0a] text-gray-200 shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'}`}
                     >
                       UNCAPPED
                     </button>
                     <button
                       onClick={() => applyFrameLimitSettings('vrr', monitorRefreshRate)}
                       title={`Cap frames just below your ${monitorRefreshRate}Hz refresh rate to stabilize VRR/G-Sync/FreeSync`}
-                      className={`p-1.5 border border-[#262626] text-center rounded-lg transition-all cursor-pointer ${frameLimitMode === 'vrr' ? 'bg-pencil-black text-white shadow-none' : 'bg-white text-gray-200 shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'}`}
+                      className={`p-1.5 border border-[#262626] text-center rounded-lg transition-all cursor-pointer ${frameLimitMode === 'vrr' ? 'bg-pencil-black text-white shadow-none' : 'bg-[#0a0a0a] text-gray-200 shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'}`}
                     >
                       VRR CAP
                     </button>

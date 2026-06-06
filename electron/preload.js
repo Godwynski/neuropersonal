@@ -39,6 +39,7 @@ contextBridge.exposeInMainWorld('api', {
   runCacheCleaner: (type) => ipcRenderer.invoke('run-cache-cleaner', type),
   launchAdminUtility: (utility) => ipcRenderer.invoke('launch-admin-utility', utility),
   killProcess: (processName) => ipcRenderer.invoke('kill-process', processName),
+  getRunningApps: () => ipcRenderer.invoke('get-running-apps'),
   getRegistryBackups: () => ipcRenderer.invoke('get-registry-backups'),
   restoreRegistryBackup: (backupIndex) => ipcRenderer.invoke('restore-registry-backup', backupIndex),
   deleteRegistryBackup: (backupIndex) => ipcRenderer.invoke('delete-registry-backup', backupIndex),

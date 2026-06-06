@@ -106,7 +106,7 @@ export default function OneClickBooster() {
             ? 'bg-[#ff4655] text-white shadow-[0_0_15px_rgba(255,70,85,0.3)]'
             : maxBoostActive
             ? 'bg-[#ff4655] hover:bg-[#ff4655]/90 text-white shadow-[0_0_10px_rgba(255,70,85,0.2)]'
-            : 'bg-white hover:bg-gray-200 text-[#0a0a0a] shadow-[0_0_10px_rgba(255,255,255,0.1)]'
+            : 'bg-[#0a0a0a] hover:bg-gray-200 text-[#0a0a0a] shadow-[0_0_10px_rgba(255,255,255,0.1)]'
         }`}
       >
         {isBoosting ? (

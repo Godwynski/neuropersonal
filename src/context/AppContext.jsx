@@ -67,8 +67,11 @@ export function AppProvider({ children }) {
   const [optimizationOptions, setOptimizationOptions] = useState({ pauseUpdates: true, purgeApps: true });
   const [revertQueue, setRevertQueue] = useState([]);
   const [purgeAppsChecklist, setPurgeAppsChecklist] = useState({
-    chrome: true, msedge: false, spotify: true, discord: false, steam: false, onedrive: true
+    chrome: true, msedge: false, spotify: true, discord: false, steam: false, onedrive: true,
+    epicgameslauncher: true, 'battle.net': false, riotclientservices: false,
+    slack: false, telegram: false, whatsapp: false, overwolf: false, obs64: false
   });
+  const [runningApps, setRunningApps] = useState({});
   const [isAdmin, setIsAdmin] = useState(false);
   const [valorantConfigs, setValorantConfigs] = useState([]);
   const [selectedConfig, setSelectedConfig] = useState(null);
@@ -551,6 +554,14 @@ export function AppProvider({ children }) {
             setGpuInfo(prev => ({ ...prev, temperature: gpuRes.gpu.temperature, utilization: gpuRes.gpu.utilization }));
           }
         }
+
+        // Poll Running Apps
+        if (window.api.getRunningApps) {
+          const appsRes = await window.api.getRunningApps();
+          if (appsRes.success && appsRes.runningApps) {
+            setRunningApps(appsRes.runningApps);
+          }
+        }
       } catch (err) {}
     };
 
@@ -798,7 +809,7 @@ export function AppProvider({ children }) {
       scanningVal, setScanningVal, cleaningLogs, setCleaningLogs,
       cleaningShaders, setCleaningShaders, deepOptimizeActive, setDeepOptimizeActive,
       optimizationOptions, setOptimizationOptions, revertQueue, setRevertQueue,
-      purgeAppsChecklist, setPurgeAppsChecklist, isAdmin, setIsAdmin,
+      purgeAppsChecklist, setPurgeAppsChecklist, runningApps, setRunningApps, isAdmin, setIsAdmin,
       valorantConfigs, setValorantConfigs, selectedConfig, setSelectedConfig,
       registryStates, setRegistryStates, latencyTweaks, setLatencyTweaks,
       monitorRefreshRate, setMonitorRefreshRate, frameLimitMode, setFrameLimitMode,

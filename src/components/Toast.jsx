@@ -20,7 +20,7 @@ function ToastItem({ toast, removeToast }) {
     return () => clearTimeout(timer);
   }, [toast.id, removeToast]);
 
-  let typeStyle = 'border-[#262626] bg-white text-gray-200';
+  let typeStyle = 'border-[#262626] bg-[#0a0a0a] text-gray-200';
   let icon = '✏️';
 
   switch (toast.type) {
@@ -37,7 +37,7 @@ function ToastItem({ toast, removeToast }) {
       icon = '⚠️';
       break;
     case 'info':
-      typeStyle = 'border-[#262626] bg-white text-gray-200';
+      typeStyle = 'border-[#262626] bg-[#0a0a0a] text-gray-200';
       icon = 'ℹ️';
       break;
   }

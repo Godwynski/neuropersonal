@@ -91,7 +91,7 @@ export default function BottomConsole({ logs, onClear, theme }) {
           className="flex-1 overflow-y-auto p-5 font-mono text-[11px] bg-[#0a0a0a] custom-scrollbar"
         >
           {logs.length === 0 ? (
-            <div className="text-gray-600 italic text-xs font-medium flex items-center gap-2">
+            <div className="text-gray-400 italic text-xs font-medium flex items-center gap-2">
               <span className="w-2 h-2 rounded-full bg-gray-600 animate-pulse" />
               Waiting for system output...
             </div>
@@ -109,7 +109,7 @@ export default function BottomConsole({ logs, onClear, theme }) {
               return (
                 <div key={i} className={`group flex items-start justify-between mb-1.5 py-1 border-b border-[#262626]/50 hover:bg-[#141414] transition-colors rounded px-2 -mx-2 ${colorClass}`}>
                   <div className="flex-1 break-all pr-3 leading-relaxed">
-                    <span className="text-gray-600 mr-3 font-mono text-[10px]">[{time.toLocaleTimeString()}]</span>
+                    <span className="text-gray-400 mr-3 font-mono text-[10px]">[{time.toLocaleTimeString()}]</span>
                     <span>{text}</span>
                   </div>
                   {isError && (
