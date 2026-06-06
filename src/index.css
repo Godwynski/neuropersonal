@@ -1,57 +1,48 @@
 @import "tailwindcss";
 
+@import "tailwindcss";
+
 @theme {
-  --font-kalam: "Kalam", cursive;
-  --font-patrick: "Patrick Hand", cursive;
-  --color-paper-bg: #fdfbf7;
-  --color-pencil-black: #2d2d2d;
-  --color-paper-muted: #e5e0d8;
-  --color-accent-red: #ff4d4d;
-  --color-accent-blue: #2d5da1;
+  --font-inter: "Inter", system-ui, sans-serif;
+  --font-outfit: "Outfit", system-ui, sans-serif;
+  --color-surface-bg: #0a0a0a;
+  --color-surface-panel: #141414;
+  --color-surface-border: #262626;
+  --color-accent-primary: #ff4655; /* Valorant Red */
+  --color-accent-blue: #3b82f6;
+  --color-text-main: #f3f4f6;
+  --color-text-muted: #9ca3af;
 }
 
-@utility wobbly {
-  border-radius: 255px 15px 225px 15px / 15px 225px 15px 255px;
+@utility glass-panel {
+  background: rgba(20, 20, 20, 0.6);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-@utility wobbly-md {
-  border-radius: 15px 225px 15px 255px / 255px 15px 225px 15px;
+@utility neon-shadow {
+  box-shadow: 0 0 15px rgba(255, 70, 85, 0.2);
 }
 
-@utility wobbly-lg {
-  border-radius: 320px 20px 280px 20px / 20px 280px 20px 320px;
-}
-
-@utility hand-shadow-sm {
-  box-shadow: 2px 2px 0px 0px #2d2d2d;
-}
-
-@utility hand-shadow {
-  box-shadow: 4px 4px 0px 0px #2d2d2d;
-}
-
-@utility hand-shadow-lg {
-  box-shadow: 8px 8px 0px 0px #2d2d2d;
-}
-
-@utility paper-texture {
-  background-color: #fdfbf7;
-  background-image: radial-gradient(#e5e0d8 1.2px, transparent 1.2px);
-  background-size: 24px 24px;
+@utility neon-shadow-blue {
+  box-shadow: 0 0 15px rgba(59, 130, 246, 0.2);
 }
 
 @layer base {
   body {
-    background-color: #fdfbf7;
-    color: #2d2d2d;
-    font-family: "Patrick Hand", cursive;
+    background-color: #0a0a0a;
+    color: #f3f4f6;
+    font-family: "Inter", system-ui, sans-serif;
     margin: 0;
     padding: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
   
   h1, h2, h3, h4, h5, h6 {
-    font-family: "Kalam", cursive;
-    font-weight: 700;
+    font-family: "Outfit", system-ui, sans-serif;
+    font-weight: 600;
   }
 }
 
@@ -65,16 +56,35 @@
   -webkit-app-region: no-drag;
 }
 
+/* Custom Scrollbar for dark theme */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0a0a0a;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #262626;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #3f3f46;
+}
+
 /* Skeleton Loading Animation placeholder */
 @keyframes skeleton-shimmer {
   0% {
-    background-color: #f3f4f6;
+    background-color: #1a1a1a;
   }
   50% {
-    background-color: #e5e7eb;
+    background-color: #262626;
   }
   100% {
-    background-color: #f3f4f6;
+    background-color: #1a1a1a;
   }
 }
 

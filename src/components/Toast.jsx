@@ -1,9 +1,11 @@
 import React, { useEffect } from 'react';
 
 export default function Toast({ toasts, removeToast }) {
+  // Only render the 3 most recent toasts
+  const visibleToasts = toasts.slice(-3);
   return (
     <div className="fixed top-4 right-4 z-50 flex flex-col gap-3.5 max-w-xs pointer-events-none">
-      {toasts.map((t) => (
+      {visibleToasts.map((t) => (
         <ToastItem key={t.id} toast={t} removeToast={removeToast} />
       ))}
     </div>
@@ -18,37 +20,37 @@ function ToastItem({ toast, removeToast }) {
     return () => clearTimeout(timer);
   }, [toast.id, removeToast]);
 
-  let typeStyle = 'border-pencil-black bg-white text-pencil-black';
+  let typeStyle = 'border-[#262626] bg-white text-gray-200';
   let icon = '✏️';
 
   switch (toast.type) {
     case 'success':
-      typeStyle = 'border-pencil-black bg-[#fff9c4] text-pencil-black'; // post-it yellow for successes!
+      typeStyle = 'border-[#262626] bg-[#262626] text-gray-200'; // post-it yellow for successes!
       icon = '✓';
       break;
     case 'error':
-      typeStyle = 'border-pencil-black bg-accent-red text-white';
+      typeStyle = 'border-[#262626] bg-[#ff4655] text-white';
       icon = '×';
       break;
     case 'warning':
-      typeStyle = 'border-pencil-black bg-[#fff9c4] text-pencil-black';
+      typeStyle = 'border-[#262626] bg-[#262626] text-gray-200';
       icon = '⚠️';
       break;
     case 'info':
-      typeStyle = 'border-pencil-black bg-white text-pencil-black';
+      typeStyle = 'border-[#262626] bg-white text-gray-200';
       icon = 'ℹ️';
       break;
   }
 
   return (
-    <div className={`p-3 border-2 wobbly-md text-xs flex items-center justify-between gap-3 hand-shadow pointer-events-auto font-patrick relative ${typeStyle}`}>
-      <span className="font-bold shrink-0 font-kalam text-sm">{icon}</span>
+    <div className={`p-3 border rounded-lg text-xs flex items-center justify-between gap-3 shadow-md pointer-events-auto font-inter relative ${typeStyle}`}>
+      <span className="font-bold shrink-0 font-outfit text-sm">{icon}</span>
       <div className="flex-1 min-w-0 font-bold">
         {toast.message}
       </div>
       <button 
         onClick={() => removeToast(toast.id)} 
-        className="hover:text-accent-red font-bold shrink-0 cursor-pointer font-kalam text-sm"
+        className="hover:text-[#ff4655] font-bold shrink-0 cursor-pointer font-outfit text-sm"
       >
         ✕
       </button>

@@ -5,6 +5,7 @@ import ValorantOptimizer from './components/ValorantOptimizer';
 import BottomConsole from './components/BottomConsole';
 import { AppProvider } from './context/AppContext';
 import { useAppContext } from './hooks/useAppContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 function DashboardContent() {
   const {
@@ -38,57 +39,63 @@ function DashboardContent() {
   };
 
   return (
-    <div className="flex flex-col h-screen select-none bg-paper-bg paper-texture text-pencil-black font-patrick overflow-hidden relative">
+    <div className="flex flex-col h-screen select-none bg-[#0a0a0a] text-gray-200 font-inter overflow-hidden relative">
       <Toast toasts={toasts} removeToast={removeToast} />
       
-      {/* Floating Wobbly Initialization Toast */}
+      {/* Floating Initialization Toast */}
       {isInitializing && (
-        <div className="fixed bottom-4 right-4 z-50 pointer-events-auto animate-bounce">
-          <div className="bg-[#fff9c4] border-[3px] border-pencil-black p-3.5 wobbly-md hand-shadow flex items-center gap-3 max-w-xs shadow-md">
-            <span className="w-5 h-5 shrink-0 rounded-full border-2 border-pencil-black border-t-accent-blue animate-spin" />
+        <div className="fixed bottom-6 right-6 z-50 pointer-events-auto">
+          <div className="glass-panel p-4 rounded-xl shadow-2xl flex items-center gap-4 max-w-sm border border-[#262626]">
+            <span className="w-5 h-5 shrink-0 rounded-full border-2 border-[#262626] border-t-[#3b82f6] animate-spin" />
             <div className="flex-1 min-w-0">
-              <div className="font-bold text-[11px] font-kalam text-pencil-black uppercase tracking-wide">✍️ Setup Diagnostics</div>
-              <p className="text-[10px] text-pencil-black/90 font-bold truncate mt-0.5">{initMessage}</p>
+              <div className="font-semibold text-xs text-gray-100 uppercase tracking-widest font-outfit">System Diagnostics</div>
+              <p className="text-[11px] text-gray-400 truncate mt-0.5">{initMessage}</p>
             </div>
           </div>
         </div>
       )}
       
       {/* Window Header */}
-      <header className="titlebar-drag h-12 border-b-[3px] border-pencil-black bg-paper-muted flex items-center px-4 shrink-0 justify-between">
-        <div className="flex items-center gap-2">
-          <span className="w-3.5 h-3.5 rounded-full bg-accent-red border border-pencil-black animate-pulse" />
-          <span className="text-sm font-bold font-kalam uppercase tracking-wider text-pencil-black">✍️ NEUROPTIMIZE CONTROL DECK</span>
+      <header className="titlebar-drag h-14 border-b border-[#262626] bg-[#141414]/80 backdrop-blur-md flex items-center px-5 shrink-0 justify-between z-30">
+        <div className="flex items-center gap-3">
+          <span className="w-2.5 h-2.5 rounded-full bg-[#ff4655] shadow-[0_0_8px_rgba(255,70,85,0.6)] animate-pulse" />
+          <span className="text-xs font-semibold font-outfit uppercase tracking-[0.2em] text-gray-200">NeurOptimize</span>
         </div>
         
-        {/* Wobbly Window Controls */}
+        {/* Sleek Window Controls */}
         <div className="flex items-center gap-2">
           <button 
             onClick={handleMinimize}
             title="Minimize"
-            className="titlebar-no-drag w-6 h-6 border-2 border-pencil-black wobbly-sm flex items-center justify-center font-bold text-sm bg-white text-pencil-black hover:bg-[#fff9c4] hover:rotate-6 active:scale-95 transition-all cursor-pointer"
+            className="titlebar-no-drag w-7 h-7 rounded hover:bg-[#262626] flex items-center justify-center text-gray-400 hover:text-white transition-colors cursor-pointer"
           >
-            &minus;
+            <svg width="12" height="2" viewBox="0 0 12 2" fill="currentColor">
+              <rect width="12" height="2" rx="1" />
+            </svg>
           </button>
           <button 
             onClick={handleMaximize}
             title="Maximize"
-            className="titlebar-no-drag w-6 h-6 border-2 border-pencil-black wobbly-sm flex items-center justify-center font-bold text-xs bg-white text-pencil-black hover:bg-blue-100 hover:-rotate-6 active:scale-95 transition-all cursor-pointer"
+            className="titlebar-no-drag w-7 h-7 rounded hover:bg-[#262626] flex items-center justify-center text-gray-400 hover:text-white transition-colors cursor-pointer"
           >
-            &#9633;
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5">
+              <rect x="1" y="1" width="8" height="8" rx="1" />
+            </svg>
           </button>
           <button 
             onClick={handleClose}
             title="Close"
-            className="titlebar-no-drag w-6 h-6 border-2 border-pencil-black wobbly-sm flex items-center justify-center font-bold text-xs bg-white text-pencil-black hover:bg-accent-red hover:text-white hover:rotate-12 active:scale-95 transition-all cursor-pointer"
+            className="titlebar-no-drag w-7 h-7 rounded hover:bg-[#ff4655] flex items-center justify-center text-gray-400 hover:text-white transition-colors cursor-pointer"
           >
-            &#10005;
+            <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round">
+              <path d="M1 1L9 9M9 1L1 9" />
+            </svg>
           </button>
         </div>
       </header>
 
       {!isElectron && (
-        <div className="bg-[#fff9c4] border-b-2 border-dashed border-pencil-black text-pencil-black text-[12px] font-bold px-4 py-2 flex items-center justify-between shrink-0 relative z-20">
+        <div className="bg-[#ff4655]/10 border-b border-[#ff4655]/30 text-[#ff4655] text-xs font-medium px-5 py-2.5 flex items-center justify-between shrink-0 relative z-20 backdrop-blur-sm">
           <span>⚠️ SIMULATION MODE: Settings are mock-saved. To apply actual Windows tweaks and timers, launch the packaged Electron dashboard.</span>
         </div>
       )}
@@ -97,11 +104,11 @@ function DashboardContent() {
       <div className="flex-1 flex overflow-hidden relative">
 
         {isProcessing && (
-          <div className="absolute inset-0 bg-pencil-black/35 backdrop-blur-[2px] flex items-center justify-center z-50 transition-all duration-200">
-            <div className="bg-white border-[3px] border-pencil-black p-6 wobbly hand-shadow-lg flex flex-col items-center gap-3 max-w-xs text-center">
-              <span className="w-8 h-8 rounded-full border-[3px] border-paper-muted border-t-accent-red animate-spin" />
-              <div className="font-bold text-sm font-kalam text-pencil-black">Applying Sketch Tweaks</div>
-              <p className="text-[12px] text-pencil-black/70 font-semibold">{processingMessage || 'Please wait while Windows updates settings...'}</p>
+          <div className="absolute inset-0 bg-[#0a0a0a]/60 backdrop-blur-sm flex items-center justify-center z-50 transition-all duration-300">
+            <div className="glass-panel p-8 rounded-2xl neon-shadow flex flex-col items-center gap-4 max-w-sm text-center border border-[#262626]">
+              <span className="w-10 h-10 rounded-full border-[3px] border-[#262626] border-t-[#ff4655] animate-spin" />
+              <div className="font-semibold text-lg font-outfit text-gray-100">Applying Kernel Tweaks</div>
+              <p className="text-sm text-gray-400">{processingMessage || 'Please wait while Windows updates parameters...'}</p>
             </div>
           </div>
         )}
@@ -110,18 +117,18 @@ function DashboardContent() {
         <Sidebar />
 
         {/* Right Optimization Columns (Game Booster) */}
-        <main className="flex-1 flex flex-col overflow-hidden bg-white border-l-[3px] border-pencil-black">
-          <div className="flex-1 p-6 overflow-y-auto">
+        <main className="flex-1 flex flex-col overflow-hidden bg-[#0a0a0a] border-l border-[#262626]">
+          <div className="flex-1 overflow-y-auto custom-scrollbar">
             <ValorantOptimizer />
           </div>
           <BottomConsole 
             logs={systemLogs} 
             onClear={() => setSystemLogs([])} 
             theme={{
-              panelBg: 'bg-paper-muted border-t-[3px]',
-              border: 'border-pencil-black',
-              textAccent: 'text-accent-blue font-bold',
-              textPrimary: 'text-pencil-black'
+              panelBg: 'bg-[#141414] border-t border-[#262626]',
+              border: 'border-[#262626]',
+              textAccent: 'text-[#3b82f6] font-semibold',
+              textPrimary: 'text-gray-300'
             }} 
           />
         </main>
@@ -132,8 +139,10 @@ function DashboardContent() {
 
 export default function App() {
   return (
-    <AppProvider>
-      <DashboardContent />
-    </AppProvider>
+    <ErrorBoundary>
+      <AppProvider>
+        <DashboardContent />
+      </AppProvider>
+    </ErrorBoundary>
   );
 }

@@ -22,12 +22,12 @@ export default function BottomConsole({ logs, onClear, theme }) {
   };
 
   const errorLogs = logs.filter(
-    (log) => log.toLowerCase().includes('error') || log.toLowerCase().includes('fail')
+    (log) => log.text && (log.text.toLowerCase().includes('error') || log.text.toLowerCase().includes('fail'))
   );
 
   const handleCopyAllErrors = () => {
     if (errorLogs.length === 0) return;
-    navigator.clipboard.writeText(errorLogs.join('\n'));
+    navigator.clipboard.writeText(errorLogs.map(l => l.text).join('\n'));
     setCopiedAll(true);
     setTimeout(() => {
       setCopiedAll(false);
@@ -35,14 +35,14 @@ export default function BottomConsole({ logs, onClear, theme }) {
   };
 
   return (
-    <div className={`flex flex-col transition-all duration-200 ${isCollapsed ? 'h-10' : 'h-52'} ${theme.panelBg} ${theme.border}`}>
-      <div className={`px-4 py-2 border-b-2 flex justify-between items-center bg-[#fff9c4] ${theme.border} h-10 select-none cursor-pointer`} onClick={() => setIsCollapsed(!isCollapsed)}>
-        <div className="flex items-center gap-2">
-          <Terminal size={14} className="text-accent-blue" />
-          <span className="text-xs font-bold font-kalam uppercase tracking-wider text-pencil-black">
+    <div className={`flex flex-col transition-all duration-300 ${isCollapsed ? 'h-11' : 'h-64'} ${theme.panelBg} ${theme.border}`}>
+      <div className={`px-5 py-2.5 flex justify-between items-center bg-[#0a0a0a] ${theme.border} border-b h-11 select-none cursor-pointer hover:bg-[#141414] transition-colors`} onClick={() => setIsCollapsed(!isCollapsed)}>
+        <div className="flex items-center gap-2.5">
+          <Terminal size={16} className="text-[#3b82f6]" />
+          <span className="text-xs font-semibold font-outfit uppercase tracking-widest text-gray-200">
             System Console
           </span>
-          <span className="text-[10px] text-pencil-black/60 font-semibold font-patrick">
+          <span className="text-[11px] text-gray-500 font-medium ml-2">
             ({logs.length} entries — {isCollapsed ? 'Collapsed' : 'Expanded'})
           </span>
         </div>
@@ -50,17 +50,17 @@ export default function BottomConsole({ logs, onClear, theme }) {
           {!isCollapsed && errorLogs.length > 0 && (
             <button
               onClick={handleCopyAllErrors}
-              className="p-1 border border-pencil-black wobbly bg-white text-pencil-black hover:bg-paper-muted transition-all flex items-center gap-1 text-[10px] font-bold"
+              className="p-1.5 rounded bg-[#141414] border border-[#262626] text-gray-400 hover:text-gray-200 hover:bg-[#262626] transition-all flex items-center gap-1.5 text-[11px] font-medium"
               title="Copy All Errors"
             >
               {copiedAll ? (
                 <>
-                  <Check size={12} className="text-accent-blue" />
-                  <span className="text-accent-blue">Copied!</span>
+                  <Check size={14} className="text-[#3b82f6]" />
+                  <span className="text-[#3b82f6]">Copied!</span>
                 </>
               ) : (
                 <>
-                  <Copy size={12} />
+                  <Copy size={14} />
                   <span>Copy Errors</span>
                 </>
               )}
@@ -69,18 +69,18 @@ export default function BottomConsole({ logs, onClear, theme }) {
           {!isCollapsed && (
             <button 
               onClick={onClear}
-              className="p-1 border border-pencil-black wobbly bg-white hover:bg-accent-red hover:text-white text-pencil-black transition-colors"
+              className="p-1.5 rounded bg-[#141414] border border-[#262626] hover:bg-[#ff4655] hover:border-[#ff4655] text-gray-400 hover:text-white transition-colors"
               title="Clear Console"
             >
-              <Trash2 size={12} />
+              <Trash2 size={14} />
             </button>
           )}
           <button 
             onClick={() => setIsCollapsed(!isCollapsed)}
-            className="p-1 border border-pencil-black wobbly bg-white text-pencil-black hover:bg-paper-muted transition-all"
+            className="p-1.5 rounded bg-[#141414] border border-[#262626] text-gray-400 hover:text-gray-200 hover:bg-[#262626] transition-all"
             title={isCollapsed ? "Expand Console" : "Collapse Console"}
           >
-            {isCollapsed ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+            {isCollapsed ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
           </button>
         </div>
       </div>
@@ -88,35 +88,40 @@ export default function BottomConsole({ logs, onClear, theme }) {
       {!isCollapsed && (
         <div 
           ref={scrollRef}
-          className="flex-1 overflow-y-auto p-4 font-mono text-[11px] bg-white border-t border-pencil-black/20"
+          className="flex-1 overflow-y-auto p-5 font-mono text-[11px] bg-[#0a0a0a] custom-scrollbar"
         >
           {logs.length === 0 ? (
-            <div className="text-pencil-black/50 italic font-patrick text-xs">Waiting for system output...</div>
+            <div className="text-gray-600 italic text-xs font-medium flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-gray-600 animate-pulse" />
+              Waiting for system output...
+            </div>
           ) : (
             logs.map((log, i) => {
-              const isError = log.toLowerCase().includes('error') || log.toLowerCase().includes('fail');
-              const isSuccess = log.toLowerCase().includes('success') || log.toLowerCase().includes('enabled') || log.toLowerCase().includes('disabled') || log.toLowerCase().includes('optimized');
+              const text = typeof log === 'string' ? log : log.text || '';
+              const time = typeof log === 'object' && log.time ? new Date(log.time) : new Date();
+              const isError = text.toLowerCase().includes('error') || text.toLowerCase().includes('fail');
+              const isSuccess = text.toLowerCase().includes('success') || text.toLowerCase().includes('enabled') || text.toLowerCase().includes('disabled') || text.toLowerCase().includes('optimized');
               
-              let colorClass = 'text-pencil-black';
-              if (isError) colorClass = 'text-accent-red font-bold';
-              else if (isSuccess) colorClass = 'text-accent-blue font-bold';
+              let colorClass = 'text-gray-400';
+              if (isError) colorClass = 'text-[#ff4655] font-semibold';
+              else if (isSuccess) colorClass = 'text-[#3b82f6] font-semibold';
               
               return (
-                <div key={i} className={`group flex items-start justify-between mb-1 py-0.5 border-b border-dashed border-pencil-black/10 hover:bg-paper-muted/20 transition-colors ${colorClass}`}>
-                  <div className="flex-1 break-all pr-2">
-                    <span className="text-pencil-black/45 mr-2 font-mono text-[10px]">[{new Date().toLocaleTimeString()}]</span>
-                    <span>{log}</span>
+                <div key={i} className={`group flex items-start justify-between mb-1.5 py-1 border-b border-[#262626]/50 hover:bg-[#141414] transition-colors rounded px-2 -mx-2 ${colorClass}`}>
+                  <div className="flex-1 break-all pr-3 leading-relaxed">
+                    <span className="text-gray-600 mr-3 font-mono text-[10px]">[{time.toLocaleTimeString()}]</span>
+                    <span>{text}</span>
                   </div>
                   {isError && (
                     <button
                       onClick={() => handleCopy(log, i)}
-                      className="opacity-0 group-hover:opacity-100 p-0.5 border border-pencil-black wobbly-md bg-white hover:bg-paper-muted text-pencil-black transition-all self-center"
+                      className="opacity-0 group-hover:opacity-100 p-1 rounded bg-[#262626] border border-[#3f3f46] text-gray-300 hover:text-white hover:bg-[#3f3f46] transition-all self-center"
                       title="Copy Error"
                     >
                       {copiedIndex === i ? (
-                        <Check size={10} className="text-accent-blue animate-pulse" />
+                        <Check size={12} className="text-[#3b82f6] animate-pulse" />
                       ) : (
-                        <Copy size={10} />
+                        <Copy size={12} />
                       )}
                     </button>
                   )}

@@ -2,7 +2,7 @@ const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('api', {
   getSystemStats: () => ipcRenderer.invoke('get-system-stats'),
-  listWorkspaceFiles: () => ipcRenderer.invoke('list-workspace-files'),
+
   getValorantConfigs: () => ipcRenderer.invoke('get-valorant-configs'),
   saveValorantConfig: (filePath, settings) => ipcRenderer.invoke('save-valorant-config', { filePath, settings }),
   detectValorantPath: () => ipcRenderer.invoke('detect-valorant-path'),

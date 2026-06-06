@@ -1,15 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { useAppContext } from '../hooks/useAppContext';
-
-// Inline spinner
-function Spinner({ className = 'w-3 h-3' }) {
-  return (
-    <svg className={`${className} animate-spin`} viewBox="0 0 24 24" fill="none">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-    </svg>
-  );
-}
+import Spinner from './Spinner';
+import ConfirmModal from './ConfirmModal';
 
 export default function ValorantOptimizer() {
   const {
@@ -90,8 +82,18 @@ export default function ValorantOptimizer() {
   const [searchQuery, setSearchQuery] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
-  // Scan feedback state
   const [lastScannedAt, setLastScannedAt] = useState(null);
+
+  // Confirm Modal state
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    variant: 'warning',
+    onConfirm: () => {},
+  });
+
+  const closeConfirm = () => setConfirmDialog(prev => ({ ...prev, isOpen: false }));
 
   // Resolution scale tooltip
   const [showResTooltip, setShowResTooltip] = useState(false);
@@ -282,9 +284,16 @@ export default function ValorantOptimizer() {
       actionType: 'toggle',
       onAction: () => {
         const action = hpetDisabled ? 'enable' : 'disable';
-        if (window.confirm(`Warning: This modifies Windows Boot Configuration Data to ${action} HPET. A reboot will be required. Proceed?`)) {
-          toggleHpet(!hpetDisabled);
-        }
+        setConfirmDialog({
+          isOpen: true,
+          title: 'Modify Platform Clock',
+          message: `Warning: This modifies Windows Boot Configuration Data to ${action} HPET. A reboot will be required. Proceed?`,
+          variant: 'warning',
+          onConfirm: () => {
+            toggleHpet(!hpetDisabled);
+            closeConfirm();
+          }
+        });
       },
       actionLabel: hpetDisabled ? 'Restore' : 'Optimize'
     },
@@ -303,9 +312,16 @@ export default function ValorantOptimizer() {
       onAction: () => {
         const targetState = (vbsStatus.vbsEnabled || vbsStatus.memoryIntegrity);
         const actionStr = targetState ? 'disable' : 'enable';
-        if (window.confirm(`Disabling Virtualization-Based Security (VBS) lowers protection to improve game frame rates. Change requires reboot. Proceed?`)) {
-          toggleVbs(!targetState);
-        }
+        setConfirmDialog({
+          isOpen: true,
+          title: 'Virtualization-Based Security',
+          message: `Disabling Virtualization-Based Security (VBS) lowers protection to improve game frame rates. Change requires reboot. Proceed?`,
+          variant: 'danger',
+          onConfirm: () => {
+            toggleVbs(!targetState);
+            closeConfirm();
+          }
+        });
       },
       actionLabel: (!vbsStatus.vbsEnabled && !vbsStatus.memoryIntegrity) ? 'Restore' : 'Optimize'
     },
@@ -390,9 +406,16 @@ export default function ValorantOptimizer() {
       actionType: 'toggle',
       onAction: () => {
         const action = amdOptimizations.legacyDxPath ? 'restoring modern' : 'forcing legacy';
-        if (window.confirm(`Warning: You are ${action} the AMD DX11 driver path. This affects all DX11 games on your system. Proceed?`)) {
-          toggleAmdLegacyDx(!amdOptimizations.legacyDxPath);
-        }
+        setConfirmDialog({
+          isOpen: true,
+          title: 'Legacy AMD DX11 Pipeline',
+          message: `Warning: You are ${action} the AMD DX11 driver path. This affects all DX11 games on your system. Proceed?`,
+          variant: 'warning',
+          onConfirm: () => {
+            toggleAmdLegacyDx(!amdOptimizations.legacyDxPath);
+            closeConfirm();
+          }
+        });
       },
       actionLabel: amdOptimizations.legacyDxPath ? 'Restore' : 'Optimize'
     },
@@ -567,19 +590,20 @@ export default function ValorantOptimizer() {
   );
 
   return (
-    <div className="space-y-6 font-patrick text-pencil-black bg-white p-2">
+    <>
+    <div className="space-y-6 font-inter text-gray-200 bg-white p-2">
       
       {/* Page Header */}
-      <header className="flex justify-between items-center border-b-2 border-pencil-black pb-3">
+      <header className="flex justify-between items-center border-b-2 border-[#262626] pb-3">
         <div>
-          <h1 className="text-xl font-bold font-kalam">Valorant Engine Booster</h1>
-          <p className="text-[11.5px] text-pencil-black/70">System tweaks and caches for tactile gaming performance.</p>
+          <h1 className="text-xl font-bold font-outfit">Valorant Engine Booster</h1>
+          <p className="text-[11.5px] text-gray-400">System tweaks and caches for tactile gaming performance.</p>
         </div>
         <div className="flex items-center gap-3 text-xs">
           {!valorantRunning ? (
             <button 
               onClick={launchValorant}
-              className="px-4 py-2 bg-accent-red hover:bg-accent-red/90 text-white border-2 border-pencil-black font-kalam wobbly flex items-center gap-1.5 font-bold transition-all cursor-pointer hand-shadow hover:hand-shadow-sm active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
+              className="px-4 py-2 bg-[#ff4655] hover:bg-[#ff4655]/90 text-white border border-[#262626] font-outfit rounded-lg flex items-center gap-1.5 font-bold transition-all cursor-pointer shadow-md hover:shadow-sm active:scale-95"
             >
               <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
                 <path d="M8 5v14l11-7z"/>
@@ -590,13 +614,13 @@ export default function ValorantOptimizer() {
             !isElectron && (
               <button 
                 onClick={() => setValorantRunning(false)} 
-                className="border-2 border-pencil-black px-3 py-1 wobbly-md bg-white hover:bg-paper-muted cursor-pointer text-pencil-black font-bold"
+                className="border border-[#262626] px-3 py-1 rounded-lg bg-white hover:bg-[#141414] cursor-pointer text-gray-200 font-bold"
               >
                 Simulate Exit
               </button>
             )
           )}
-          <span className={`px-3 py-1.5 border-2 border-pencil-black font-mono font-bold wobbly-md ${valorantRunning ? 'bg-green-50 text-accent-blue' : 'bg-paper-muted text-pencil-black/60'}`}>
+          <span className={`px-3 py-1.5 border border-[#262626] font-mono font-bold rounded-lg ${valorantRunning ? 'bg-green-50 text-[#3b82f6]' : 'bg-[#141414] text-gray-400'}`}>
             STATUS: {valorantRunning ? 'VALORANT IS OPEN (BOOST ACTIVE)' : 'VALORANT IS CLOSED'}
           </span>
         </div>
@@ -606,48 +630,48 @@ export default function ValorantOptimizer() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         
         {/* Tracker Score Card */}
-        <div className="p-4 border-2 border-pencil-black bg-paper-muted/30 wobbly-md flex flex-col justify-between text-xs col-span-1 md:col-span-2 relative">
+        <div className="p-4 border border-[#262626] bg-[#141414]/30 rounded-lg flex flex-col justify-between text-xs col-span-1 md:col-span-2 relative">
           {/* Post-it pin decoration */}
-          <div className="absolute -top-1.5 left-4 w-3.5 h-3.5 rounded-full bg-accent-red border border-pencil-black shadow-sm" />
+          <div className="absolute -top-1.5 left-4 w-3.5 h-3.5 rounded-full bg-[#ff4655] border border-[#262626] shadow-sm" />
           <div className="space-y-1">
-            <span className="font-bold text-pencil-black font-kalam block">Overall Performance Optimization Score</span>
-            <p className="text-[11px] text-pencil-black/75">This score measures how many system tweaks are currently configured to maximize gaming FPS.</p>
+            <span className="font-bold text-gray-200 font-outfit block">Overall Performance Optimization Score</span>
+            <p className="text-[11px] text-gray-300">This score measures how many system tweaks are currently configured to maximize gaming FPS.</p>
           </div>
           <div className="w-full mt-4 space-y-2">
-            <div className="flex justify-between font-bold text-pencil-black text-[11px] font-kalam">
+            <div className="flex justify-between font-bold text-gray-200 text-[11px] font-outfit">
               <span>{optimizedCount} of {totalOptimizations} Tweaks Active</span>
-              <span className="text-accent-blue">{optimizationPercentage}% OPTIMIZED</span>
+              <span className="text-[#3b82f6]">{optimizationPercentage}% OPTIMIZED</span>
             </div>
-            <div className="w-full h-4 bg-paper-muted border-2 border-pencil-black wobbly overflow-hidden">
+            <div className="w-full h-4 bg-[#141414] border border-[#262626] rounded-lg overflow-hidden">
               <div className={`h-full transition-all duration-500 ${
-                optimizationPercentage >= 80 ? 'bg-accent-blue' : optimizationPercentage >= 50 ? 'bg-[#fff9c4]' : 'bg-accent-red'
+                optimizationPercentage >= 80 ? 'bg-[#3b82f6]' : optimizationPercentage >= 50 ? 'bg-[#262626]' : 'bg-[#ff4655]'
               }`} style={{ width: `${optimizationPercentage}%` }} />
             </div>
           </div>
         </div>
 
         {/* Path Setup and Profile Presets (Compact Column) */}
-        <div className="p-4 border-2 border-pencil-black bg-paper-muted/20 wobbly-md space-y-3 text-xs relative">
+        <div className="p-4 border border-[#262626] bg-[#141414]/20 rounded-lg space-y-3 text-xs relative">
           {/* Post-it pin decoration */}
-          <div className="absolute -top-1.5 right-4 w-3.5 h-3.5 rounded-full bg-accent-blue border border-pencil-black shadow-sm" />
+          <div className="absolute -top-1.5 right-4 w-3.5 h-3.5 rounded-full bg-[#3b82f6] border border-[#262626] shadow-sm" />
           <div className="flex justify-between items-center">
-            <span className="font-bold text-pencil-black font-kalam">Optimization Profiles</span>
-            <span className="text-[10px] text-pencil-black/50 font-mono">Fast Presets</span>
+            <span className="font-bold text-gray-200 font-outfit">Optimization Profiles</span>
+            <span className="text-[10px] text-gray-400 font-mono">Fast Presets</span>
           </div>
           <div className="grid grid-cols-3 gap-1">
-            <button onClick={() => applyOptimizationProfile('tournament')} className="py-1 px-1.5 border-2 border-pencil-black bg-pencil-black text-white hover:bg-pencil-black/90 wobbly-md text-center cursor-pointer font-bold text-[10px] active:translate-x-[1px] active:translate-y-[1px]">TOURNAMENT</button>
-            <button onClick={() => applyOptimizationProfile('balanced')} className="py-1 px-1.5 border-2 border-pencil-black bg-white hover:bg-paper-muted text-pencil-black wobbly-md text-center cursor-pointer font-bold text-[10px] active:translate-x-[1px] active:translate-y-[1px]">BALANCED</button>
-            <button onClick={() => applyOptimizationProfile('revert')} className="py-1 px-1.5 border-2 border-pencil-black bg-white hover:bg-paper-muted text-pencil-black wobbly-md text-center cursor-pointer font-bold text-[10px] active:translate-x-[1px] active:translate-y-[1px]">DEFAULTS</button>
+            <button onClick={() => applyOptimizationProfile('tournament')} className="py-1 px-1.5 border border-[#262626] bg-pencil-black text-white hover:bg-pencil-black/90 rounded-lg text-center cursor-pointer font-bold text-[10px] active:translate-x-[1px] active:translate-y-[1px]">TOURNAMENT</button>
+            <button onClick={() => applyOptimizationProfile('balanced')} className="py-1 px-1.5 border border-[#262626] bg-white hover:bg-[#141414] text-gray-200 rounded-lg text-center cursor-pointer font-bold text-[10px] active:translate-x-[1px] active:translate-y-[1px]">BALANCED</button>
+            <button onClick={() => applyOptimizationProfile('revert')} className="py-1 px-1.5 border border-[#262626] bg-white hover:bg-[#141414] text-gray-200 rounded-lg text-center cursor-pointer font-bold text-[10px] active:translate-x-[1px] active:translate-y-[1px]">DEFAULTS</button>
           </div>
-          <div className="border-t-2 border-dashed border-pencil-black/50 pt-2">
-            <div className="flex justify-between items-center text-[10.5px] text-pencil-black/60 font-semibold mb-1">
+          <div className="border-t-2 border-dashed border-[#3f3f46] pt-2">
+            <div className="flex justify-between items-center text-[10.5px] text-gray-400 font-semibold mb-1">
               <span>Client settings profile</span>
               {isElectron && (
-                <button onClick={browseValorantPath} className="text-accent-blue hover:underline font-bold">Browse exe</button>
+                <button onClick={browseValorantPath} className="text-[#3b82f6] hover:underline font-bold">Browse exe</button>
               )}
             </div>
             {valorantConfigs.length === 0 ? (
-              <div className="text-pencil-black/50 italic text-[11px]">No client configs found.</div>
+              <div className="text-gray-400 italic text-[11px]">No client configs found.</div>
             ) : (
               <select
                 value={selectedConfig ? selectedConfig.filePath : ''}
@@ -655,7 +679,7 @@ export default function ValorantOptimizer() {
                   const cfg = valorantConfigs.find(c => c.filePath === e.target.value);
                   if (cfg) setSelectedConfig(cfg);
                 }}
-                className="w-full p-1.5 border-2 border-pencil-black wobbly-md text-[11px] bg-white cursor-pointer focus:outline-none font-patrick"
+                className="w-full p-1.5 border border-[#262626] rounded-lg text-[11px] bg-white cursor-pointer focus:outline-none font-inter"
               >
                 {valorantConfigs.map((cfg) => (
                   <option key={cfg.filePath} value={cfg.filePath}>
@@ -669,7 +693,7 @@ export default function ValorantOptimizer() {
       </div>
 
       {!isAdmin && (
-        <div className="p-3 border-2 border-dashed border-accent-red bg-accent-red/5 text-pencil-black text-xs rounded-none wobbly font-bold">
+        <div className="p-3 border border-dashed border-[#ff4655] bg-[#ff4655]/5 text-gray-200 text-xs rounded-none rounded-lg font-bold">
           <strong>Notice:</strong> Windows is running in standard user mode. Some core registry tweaks will be skipped.
         </div>
       )}
@@ -681,7 +705,7 @@ export default function ValorantOptimizer() {
         <div className="lg:col-span-3 space-y-4">
           
           {/* Controls Bar: Tabs and Search */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b-2 border-pencil-black pb-3">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b-2 border-[#262626] pb-3">
             <div className="flex flex-wrap gap-1.5">
               {[
                 { id: 'all', label: 'All Tweaks' },
@@ -693,10 +717,10 @@ export default function ValorantOptimizer() {
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-3 py-1.5 border-2 border-pencil-black text-xs font-bold wobbly-md cursor-pointer transition-all ${
+                  className={`px-3 py-1.5 border border-[#262626] text-xs font-bold rounded-lg cursor-pointer transition-all ${
                     activeTab === tab.id
                       ? 'bg-pencil-black text-white shadow-none'
-                      : 'bg-white text-pencil-black hover:bg-paper-muted hand-shadow-sm hover:hand-shadow-sm/50 active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
+                      : 'bg-white text-gray-200 hover:bg-[#141414] shadow-sm hover:shadow-sm/50 active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
                   }`}
                 >
                   {tab.label}
@@ -705,7 +729,7 @@ export default function ValorantOptimizer() {
             </div>
             
             <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-              <label className="flex items-center gap-1.5 px-3 py-1.5 border-2 border-pencil-black text-xs font-bold wobbly-md bg-white hover:bg-paper-muted cursor-pointer select-none">
+              <label className="flex items-center gap-1.5 px-3 py-1.5 border border-[#262626] text-xs font-bold rounded-lg bg-white hover:bg-[#141414] cursor-pointer select-none">
                 <input 
                   type="checkbox"
                   checked={showAdvanced}
@@ -721,12 +745,12 @@ export default function ValorantOptimizer() {
                   placeholder="Search actions..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full text-xs p-1.5 border-2 border-pencil-black wobbly-md focus:outline-none focus:ring-2 focus:ring-accent-blue/20 bg-white font-patrick"
+                  className="w-full text-xs p-1.5 border border-[#262626] rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue/20 bg-white font-inter"
                 />
                 {searchQuery && (
                   <button
                     onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-2.5 text-pencil-black/50 hover:text-pencil-black font-bold text-xs"
+                    className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-200 font-bold text-xs"
                   >
                     ✕
                   </button>
@@ -738,7 +762,7 @@ export default function ValorantOptimizer() {
           {/* Master Collapsible Categories List */}
           <div className="space-y-4">
             {activeCategories.length === 0 ? (
-              <div className="p-8 border-2 border-dashed border-pencil-black wobbly-md text-center text-pencil-black/50 italic text-xs bg-white">
+              <div className="p-8 border border-dashed border-[#262626] rounded-lg text-center text-gray-400 italic text-xs bg-white">
                 No optimization actions matched your search or tab filter.
               </div>
             ) : (
@@ -748,19 +772,19 @@ export default function ValorantOptimizer() {
                 const activeCount = categoryActions.filter(a => a.isOptimized).length;
 
                 return (
-                  <div key={cat} className="border-[3px] border-pencil-black wobbly-md bg-white overflow-hidden hand-shadow">
+                  <div key={cat} className="border border-[#262626] rounded-lg bg-white overflow-hidden shadow-md">
                     {/* Collapsible Accordion Header */}
                     <div 
                       onClick={() => toggleCategoryCollapse(cat)}
-                      className="bg-paper-muted border-b-[3px] border-pencil-black px-4 py-2.5 flex justify-between items-center cursor-pointer select-none hover:bg-paper-muted/80 transition-colors"
+                      className="bg-[#141414] border-b-[3px] border-[#262626] px-4 py-2.5 flex justify-between items-center cursor-pointer select-none hover:bg-[#141414]/80 transition-colors"
                     >
                       <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-pencil-black font-kalam uppercase tracking-wider">{cat}</span>
-                        <span className="px-1.5 py-0.5 rounded-none font-bold text-[9px] bg-white border border-pencil-black wobbly-md">
+                        <span className="text-xs font-bold text-gray-200 font-outfit uppercase tracking-wider">{cat}</span>
+                        <span className="px-1.5 py-0.5 rounded-none font-bold text-[9px] bg-white border border-[#262626] rounded-lg">
                           {activeCount} of {categoryActions.length} Active
                         </span>
                       </div>
-                      <div className="flex items-center gap-1 text-[10px] text-pencil-black/60 font-bold">
+                      <div className="flex items-center gap-1 text-[10px] text-gray-400 font-bold">
                         <span>{isCollapsed ? 'EXPAND' : 'COLLAPSE'}</span>
                         <span className="text-xs">{isCollapsed ? '＋' : '－'}</span>
                       </div>
@@ -779,40 +803,40 @@ export default function ValorantOptimizer() {
                             key={action.id}
                             className={`px-4 py-3.5 transition-all grid grid-cols-12 gap-4 items-center ${
                               isThisLoading
-                                ? 'bg-accent-blue/5'
+                                ? 'bg-[#3b82f6]/5'
                                 : isThisDone
                                 ? 'bg-green-50/50'
                                 : isAnyLoading
                                 ? 'opacity-50'
-                                : 'hover:bg-paper-muted/10'
+                                : 'hover:bg-[#141414]/10'
                             }`}
                           >
                             {/* Name, Details & Performance Impact */}
                             <div className="col-span-6 sm:col-span-7 space-y-1 pr-2">
                               <div className="flex items-center flex-wrap gap-1.5">
-                                <span className="font-bold text-pencil-black font-kalam text-xs">{action.name}</span>
+                                <span className="font-bold text-gray-200 font-outfit text-xs">{action.name}</span>
                                 <div className="relative group inline-block">
-                                  <span className="text-[9px] text-accent-blue border border-accent-blue px-1 cursor-help wobbly-sm font-bold font-kalam select-none bg-white">?</span>
-                                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 hidden group-hover:block z-50 bg-[#fff9c4] text-pencil-black text-[10.5px] p-2.5 border-2 border-pencil-black wobbly-md hand-shadow w-56 font-bold leading-snug">
+                                  <span className="text-[9px] text-[#3b82f6] border border-[#3b82f6] px-1 cursor-help rounded-md font-bold font-outfit select-none bg-white">?</span>
+                                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 hidden group-hover:block z-50 bg-[#262626] text-gray-200 text-[10.5px] p-2.5 border border-[#262626] rounded-lg shadow-md w-56 font-bold leading-snug">
                                     {action.descDetailed || action.desc}
                                   </div>
                                 </div>
-                                <span className={`px-1.5 py-0.5 rounded-none text-[8px] font-bold uppercase tracking-wide border border-pencil-black wobbly-md ${
+                                <span className={`px-1.5 py-0.5 rounded-none text-[8px] font-bold uppercase tracking-wide border border-[#262626] rounded-lg ${
                                   action.tier === 'safe'
-                                    ? 'bg-[#fff9c4] text-pencil-black'
+                                    ? 'bg-[#262626] text-gray-200'
                                     : action.tier === 'aggressive'
-                                    ? 'bg-accent-red text-white'
-                                    : 'bg-accent-blue text-white'
+                                    ? 'bg-[#ff4655] text-white'
+                                    : 'bg-[#3b82f6] text-white'
                                 }`}>
                                   {action.tier}
                                 </span>
                                 {action.impact && (
-                                  <span className="px-1.5 py-0.5 rounded-none text-[8px] font-bold uppercase tracking-wide border-2 border-pencil-black wobbly bg-paper-bg text-pencil-black">
+                                  <span className="px-1.5 py-0.5 rounded-none text-[8px] font-bold uppercase tracking-wide border border-[#262626] rounded-lg bg-[#0a0a0a] text-gray-200">
                                     {action.impact} impact
                                   </span>
                                 )}
                                 {isThisLoading && (
-                                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-none text-[8px] font-bold bg-accent-blue/10 border border-accent-blue text-accent-blue">
+                                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-none text-[8px] font-bold bg-[#3b82f6]/10 border border-[#3b82f6] text-[#3b82f6]">
                                     <Spinner className="w-2 h-2" /> Applying...
                                   </span>
                                 )}
@@ -822,25 +846,25 @@ export default function ValorantOptimizer() {
                                   </span>
                                 )}
                               </div>
-                              <p className="text-[11px] text-pencil-black/75 leading-normal">{action.desc}</p>
+                              <p className="text-[11px] text-gray-300 leading-normal">{action.desc}</p>
                             </div>
 
                             {/* Telemetry/Status Column */}
                             <div className="col-span-3 sm:col-span-2 text-xs">
                               <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold">
                                 {isThisLoading ? (
-                                  <Spinner className="w-2.5 h-2.5 text-accent-blue" />
+                                  <Spinner className="w-2.5 h-2.5 text-[#3b82f6]" />
                                 ) : (
-                                  <span className={`w-2.5 h-2.5 border border-pencil-black ${
-                                    action.isOptimized ? 'bg-accent-blue' : 'bg-accent-red'
+                                  <span className={`w-2.5 h-2.5 border border-[#262626] ${
+                                    action.isOptimized ? 'bg-[#3b82f6]' : 'bg-[#ff4655]'
                                   }`} style={{ borderRadius: '4px 8px 3px 6px / 7px 4px 6px 3px' }} />
                                 )}
                                 <span className={
                                   isThisLoading
-                                    ? 'text-accent-blue'
+                                    ? 'text-[#3b82f6]'
                                     : action.isOptimized
-                                    ? 'text-accent-blue font-bold'
-                                    : 'text-accent-red font-bold'
+                                    ? 'text-[#3b82f6] font-bold'
+                                    : 'text-[#ff4655] font-bold'
                                 }>
                                   {isThisLoading ? 'Working...' : action.status}
                                 </span>
@@ -853,16 +877,16 @@ export default function ValorantOptimizer() {
                                 <button
                                   onClick={() => runAction(action.id, action.name, action.onAction)}
                                   disabled={isAnyLoading}
-                                  className={`flex items-center justify-center gap-1 px-3 py-1.5 text-[10.5px] font-bold border-2 border-pencil-black wobbly-md transition-all cursor-pointer ${
+                                  className={`flex items-center justify-center gap-1 px-3 py-1.5 text-[10.5px] font-bold border border-[#262626] rounded-lg transition-all cursor-pointer ${
                                     isThisLoading
-                                      ? 'bg-accent-blue text-white cursor-not-allowed'
+                                      ? 'bg-[#3b82f6] text-white cursor-not-allowed'
                                       : isThisDone
                                       ? 'bg-green-600 border-green-700 text-white cursor-not-allowed'
                                       : isAnyLoading
-                                      ? 'bg-paper-muted text-pencil-black/40 cursor-not-allowed shadow-none'
+                                      ? 'bg-[#141414] text-gray-500 cursor-not-allowed shadow-none'
                                       : action.isOptimized
-                                      ? 'bg-white hover:bg-paper-muted text-pencil-black hand-shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
-                                      : 'bg-[#fff9c4] hover:bg-[#fff7b1] text-pencil-black hand-shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none font-kalam'
+                                      ? 'bg-white hover:bg-[#141414] text-gray-200 shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
+                                      : 'bg-[#262626] hover:bg-[#3f3f46] text-gray-200 shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none font-outfit'
                                   }`}
                                 >
                                   {isThisLoading ? '...' : isThisDone ? '✓ Done' : action.actionLabel}
@@ -873,12 +897,12 @@ export default function ValorantOptimizer() {
                                 <button
                                   onClick={() => runAction(action.id, action.name, action.onAction)}
                                   disabled={action.disabled || isAnyLoading}
-                                  className={`flex items-center justify-center gap-1 px-3 py-1.5 text-[10.5px] font-bold border-2 border-pencil-black wobbly-md transition-all cursor-pointer ${
+                                  className={`flex items-center justify-center gap-1 px-3 py-1.5 text-[10.5px] font-bold border border-[#262626] rounded-lg transition-all cursor-pointer ${
                                     isThisLoading
-                                      ? 'bg-accent-blue text-white cursor-not-allowed'
+                                      ? 'bg-[#3b82f6] text-white cursor-not-allowed'
                                       : isThisDone
                                       ? 'bg-green-600 border-green-700 text-white cursor-not-allowed'
-                                      : 'border-pencil-black bg-white hover:bg-paper-muted text-pencil-black disabled:opacity-40 disabled:cursor-not-allowed hand-shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
+                                      : 'border-[#262626] bg-white hover:bg-[#141414] text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
                                   }`}
                                 >
                                   {isThisLoading ? '...' : isThisDone ? '✓ Done' : action.actionLabel}
@@ -896,16 +920,16 @@ export default function ValorantOptimizer() {
                                         key={oIdx}
                                         onClick={() => runAction(optId, action.name + ' - ' + opt.label, opt.onClick)}
                                         disabled={isAnyLoading}
-                                        className={`flex items-center justify-center gap-1 px-2 py-1 text-[9.5px] font-bold rounded-none border-2 border-pencil-black wobbly-md transition-all ${
+                                        className={`flex items-center justify-center gap-1 px-2 py-1 text-[9.5px] font-bold rounded-none border border-[#262626] rounded-lg transition-all ${
                                           isOptLoading
-                                            ? 'bg-accent-blue text-white cursor-not-allowed shadow-none'
+                                            ? 'bg-[#3b82f6] text-white cursor-not-allowed shadow-none'
                                             : isOptDone
                                             ? 'bg-green-600 text-white cursor-not-allowed shadow-none'
                                             : isAnyLoading
-                                            ? 'opacity-50 cursor-not-allowed bg-white text-pencil-black shadow-none'
+                                            ? 'opacity-50 cursor-not-allowed bg-white text-gray-200 shadow-none'
                                             : opt.primary
-                                            ? 'bg-pencil-black text-white hover:bg-pencil-black/90 cursor-pointer hand-shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'
-                                            : 'bg-white text-pencil-black hover:bg-paper-muted cursor-pointer hand-shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'
+                                            ? 'bg-pencil-black text-white hover:bg-pencil-black/90 cursor-pointer shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'
+                                            : 'bg-white text-gray-200 hover:bg-[#141414] cursor-pointer shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'
                                         }`}
                                       >
                                         {isOptLoading ? '...' : isOptDone ? '✓' : opt.label}
@@ -929,25 +953,23 @@ export default function ValorantOptimizer() {
 
           {/* Checklist sub-options for Background App Purging */}
           {optimizationOptions.purgeApps && (
-            <div className="p-4 border-2 border-pencil-black bg-paper-muted/20 wobbly-md text-xs space-y-2 relative">
+            <div className="p-4 border border-[#262626] bg-[#141414]/20 rounded-lg text-xs space-y-2 relative">
               {/* Tape decoration */}
-              <div className="absolute -top-3 left-6 w-16 h-4 bg-pencil-black/10 border border-pencil-black/20 rotate-1 pointer-events-none" />
-              <span className="font-bold text-pencil-black font-kalam block">Configure Background Applications to Close</span>
-              <p className="text-[11px] text-pencil-black/70">Check apps you want closed automatically upon launching VALORANT:</p>
+              <div className="absolute -top-3 left-6 w-16 h-4 bg-pencil-black/10 border border-[#3f3f46] rotate-1 pointer-events-none" />
+              <span className="font-bold text-gray-200 font-outfit block">Configure Background Applications to Close</span>
+              <p className="text-[11px] text-gray-400">Check apps you want closed automatically upon launching VALORANT:</p>
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
                 {Object.keys(purgeAppsChecklist).map(appKey => (
-                  <label key={appKey} className="flex items-center gap-2 p-2 border-2 border-pencil-black bg-white wobbly-md cursor-pointer hover:bg-paper-muted/30">
+                  <label key={appKey} className="flex items-center gap-2 p-2 border border-[#262626] bg-white rounded-lg cursor-pointer hover:bg-[#141414]/30">
                     <input 
                       type="checkbox" 
-                      checked={!!Reflect.get(purgeAppsChecklist, appKey)}
+                      checked={!!purgeAppsChecklist[appKey]}
                       onChange={(e) => {
-                        const nextList = { ...purgeAppsChecklist };
-                        Reflect.set(nextList, appKey, e.target.checked);
-                        setPurgeAppsChecklist(nextList);
+                        setPurgeAppsChecklist({ ...purgeAppsChecklist, [appKey]: e.target.checked });
                       }}
                       className="cursor-pointer w-4 h-4 accent-pencil-black"
                     />
-                    <span className="capitalize font-bold text-pencil-black font-kalam text-[11px]">{appKey}</span>
+                    <span className="capitalize font-bold text-gray-200 font-outfit text-[11px]">{appKey}</span>
                   </label>
                 ))}
               </div>
@@ -960,15 +982,15 @@ export default function ValorantOptimizer() {
         <div className="space-y-6">
           
           {/* Quick Telemetry & Scan Size Action */}
-          <div className="border-[3px] border-pencil-black bg-white p-4 wobbly-md hand-shadow space-y-3.5 text-xs relative">
+          <div className="border border-[#262626] bg-white p-4 rounded-lg shadow-md space-y-3.5 text-xs relative">
             {/* Post-it pin decoration */}
-            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-accent-red border border-pencil-black shadow-sm" />
+            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-[#ff4655] border border-[#262626] shadow-sm" />
             
-            <div className="flex justify-between items-center border-b-2 border-pencil-black pb-2">
+            <div className="flex justify-between items-center border-b-2 border-[#262626] pb-2">
               <div>
-                <span className="font-bold text-pencil-black font-kalam">Diagnostics</span>
+                <span className="font-bold text-gray-200 font-outfit">Diagnostics</span>
                 {lastScannedAt && !scanningVal && (
-                  <div className="text-[10px] text-pencil-black/55 font-mono mt-0.5">
+                  <div className="text-[10px] text-gray-400 font-mono mt-0.5">
                     Last: {lastScannedAt}
                   </div>
                 )}
@@ -979,10 +1001,10 @@ export default function ValorantOptimizer() {
                   setLastScannedAt(new Date().toLocaleTimeString());
                 }}
                 disabled={scanningVal}
-                className={`flex items-center gap-1.5 text-[10.5px] font-bold px-2 py-1 border-2 border-pencil-black wobbly-md transition-all ${
+                className={`flex items-center gap-1.5 text-[10.5px] font-bold px-2 py-1 border border-[#262626] rounded-lg transition-all ${
                   scanningVal
-                    ? 'bg-paper-muted text-pencil-black/50 cursor-not-allowed shadow-none'
-                    : 'bg-[#fff9c4] text-pencil-black hover:bg-[#fff7b1] cursor-pointer hand-shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
+                    ? 'bg-[#141414] text-gray-400 cursor-not-allowed shadow-none'
+                    : 'bg-[#262626] text-gray-200 hover:bg-[#3f3f46] cursor-pointer shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
                 }`}
               >
                 {scanningVal ? 'Scanning...' : 'Scan Now'}
@@ -990,30 +1012,30 @@ export default function ValorantOptimizer() {
             </div>
             
             <div className="space-y-3">
-              <div className="p-2 border-2 border-pencil-black bg-paper-muted/20 wobbly-md space-y-1.5">
-                <span className="font-bold text-pencil-black font-kalam block">Anticheat Diagnostics</span>
+              <div className="p-2 border border-[#262626] bg-[#141414]/20 rounded-lg space-y-1.5">
+                <span className="font-bold text-gray-200 font-outfit block">Anticheat Diagnostics</span>
                 <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold">
-                  <div className={`p-1.5 border border-pencil-black wobbly text-center ${vanguardHealth.secureBoot === 'enabled' ? 'bg-white text-accent-blue' : 'bg-accent-red text-white'}`}>
+                  <div className={`p-1.5 border border-[#262626] rounded-lg text-center ${vanguardHealth.secureBoot === 'enabled' ? 'bg-white text-[#3b82f6]' : 'bg-[#ff4655] text-white'}`}>
                     SecureBoot: {vanguardHealth.secureBoot.toUpperCase()}
                   </div>
-                  <div className={`p-1.5 border border-pencil-black wobbly text-center ${vanguardHealth.tpm2 === 'active' ? 'bg-white text-accent-blue' : 'bg-accent-red text-white'}`}>
+                  <div className={`p-1.5 border border-[#262626] rounded-lg text-center ${vanguardHealth.tpm2 === 'active' ? 'bg-white text-[#3b82f6]' : 'bg-[#ff4655] text-white'}`}>
                     TPM: {vanguardHealth.tpm2.toUpperCase()}
                   </div>
                 </div>
               </div>
 
-              <div className="p-2 border-2 border-pencil-black bg-paper-muted/20 wobbly-md space-y-1.5">
-                <span className="font-bold text-pencil-black font-kalam block">Hardware Status</span>
+              <div className="p-2 border border-[#262626] bg-[#141414]/20 rounded-lg space-y-1.5">
+                <span className="font-bold text-gray-200 font-outfit block">Hardware Status</span>
                 <div className="space-y-1 text-[10px]">
-                  <div className="flex justify-between p-1 bg-white border border-pencil-black wobbly-md font-bold">
+                  <div className="flex justify-between p-1 bg-white border border-[#262626] rounded-lg font-bold">
                     <span>RAM XMP</span>
-                    <span className={hardwareInfo.xmpEnabled ? 'text-accent-blue font-bold' : 'text-accent-red font-bold'}>
+                    <span className={hardwareInfo.xmpEnabled ? 'text-[#3b82f6] font-bold' : 'text-[#ff4655] font-bold'}>
                       {hardwareInfo.xmpEnabled ? 'ENABLED' : 'DISABLED'}
                     </span>
                   </div>
-                  <div className="flex justify-between p-1 bg-white border border-pencil-black wobbly-md font-bold">
+                  <div className="flex justify-between p-1 bg-white border border-[#262626] rounded-lg font-bold">
                     <span>PCIe ReBAR</span>
-                    <span className={hardwareInfo.rebarEnabled ? 'text-accent-blue font-bold' : 'text-pencil-black/50 font-bold'}>
+                    <span className={hardwareInfo.rebarEnabled ? 'text-[#3b82f6] font-bold' : 'text-gray-400 font-bold'}>
                       {hardwareInfo.rebarEnabled ? 'ENABLED' : 'DISABLED'}
                     </span>
                   </div>
@@ -1023,15 +1045,15 @@ export default function ValorantOptimizer() {
           </div>
 
           {/* Graphics Settings Tuner (Standalone card) */}
-          <div className="border-[3px] border-pencil-black bg-[#fff9c4] p-4 wobbly hand-shadow space-y-4 text-xs relative">
+          <div className="border border-[#262626] bg-[#262626] p-4 rounded-lg shadow-md space-y-4 text-xs relative">
             {/* Post-it pin decoration */}
-            <div className="absolute -top-1.5 right-6 w-4 h-4 rounded-full bg-accent-blue border border-pencil-black shadow-sm" />
-            <h2 className="font-bold text-pencil-black font-kalam border-b-2 border-pencil-black pb-1.5 text-sm">Game Graphics Config</h2>
+            <div className="absolute -top-1.5 right-6 w-4 h-4 rounded-full bg-[#3b82f6] border border-[#262626] shadow-sm" />
+            <h2 className="font-bold text-gray-200 font-outfit border-b-2 border-[#262626] pb-1.5 text-sm">Game Graphics Config</h2>
             
             {selectedConfig ? (
               <div className="space-y-4">
                 <div>
-                  <div className="flex justify-between font-bold text-pencil-black mb-1 text-[11px] font-kalam">
+                  <div className="flex justify-between font-bold text-gray-200 mb-1 text-[11px] font-outfit">
                     <div className="flex items-center gap-1">
                       <span>Resolution Quality Scale</span>
                       <div className="relative inline-block">
@@ -1040,15 +1062,15 @@ export default function ValorantOptimizer() {
                           onMouseLeave={() => setShowResTooltip(false)}
                           onFocus={() => setShowResTooltip(true)}
                           onBlur={() => setShowResTooltip(false)}
-                          className="w-4 h-4 rounded-full border border-pencil-black bg-white text-pencil-black text-[9px] font-bold flex items-center justify-center cursor-default"
+                          className="w-4 h-4 rounded-full border border-[#262626] bg-white text-gray-200 text-[9px] font-bold flex items-center justify-center cursor-default"
                           tabIndex={0}
                           aria-label="What is Resolution Quality Scale?"
                         >
                           ?
                         </button>
                         {showResTooltip && (
-                          <div className="absolute left-6 top-0 z-50 w-52 p-3 bg-pencil-black text-white text-[10px] leading-relaxed wobbly border-2 border-white shadow-xl">
-                            <div className="font-bold text-[11px] mb-1 font-kalam text-[#fff9c4]">What is Resolution Scale?</div>
+                          <div className="absolute left-6 top-0 z-50 w-52 p-3 bg-pencil-black text-white text-[10px] leading-relaxed rounded-lg border border-white shadow-xl">
+                            <div className="font-bold text-[11px] mb-1 font-outfit text-[#fff9c4]">What is Resolution Scale?</div>
                             <p>Renders the game at a percentage of native resolution and upscales it. Lower values boost FPS.</p>
                             <div className="mt-1.5 font-bold font-mono text-[9px]">
                               75–85% = Max Boost | 100% = Native
@@ -1057,7 +1079,7 @@ export default function ValorantOptimizer() {
                         )}
                       </div>
                     </div>
-                    <span className="font-mono text-accent-blue font-bold">{Math.round(selectedConfig.resolutionQuality)}%</span>
+                    <span className="font-mono text-[#3b82f6] font-bold">{Math.round(selectedConfig.resolutionQuality)}%</span>
                   </div>
                   <input
                     type="range"
@@ -1067,7 +1089,7 @@ export default function ValorantOptimizer() {
                     onChange={(e) => saveValorantConfig({ resolutionQuality: parseFloat(e.target.value) })}
                     className="w-full cursor-pointer accent-pencil-black"
                   />
-                  <div className="flex justify-between text-[9px] text-pencil-black/50 font-bold mt-0.5">
+                  <div className="flex justify-between text-[9px] text-gray-400 font-bold mt-0.5">
                     <span>50% (Max FPS)</span>
                     <span>100% (Native)</span>
                   </div>
@@ -1075,29 +1097,29 @@ export default function ValorantOptimizer() {
 
                 <div className="grid grid-cols-2 gap-2 text-[11px]">
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-pencil-black/60 font-bold uppercase tracking-wider text-[9px] font-kalam">Texture Quality</span>
-                    <select value={selectedConfig.textureQuality} onChange={(e) => saveValorantConfig({ textureQuality: parseInt(e.target.value, 10) })} className="p-1.5 border-2 border-pencil-black bg-white wobbly-md font-patrick">
+                    <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px] font-outfit">Texture Quality</span>
+                    <select value={selectedConfig.textureQuality} onChange={(e) => saveValorantConfig({ textureQuality: parseInt(e.target.value, 10) })} className="p-1.5 border border-[#262626] bg-white rounded-lg font-inter">
                       <option value="0">Low</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option>
                     </select>
                   </div>
                   <div className="flex flex-col gap-0.5">
-                    <span className="text-pencil-black/60 font-bold uppercase tracking-wider text-[9px] font-kalam">Shadows</span>
-                    <select value={selectedConfig.shadowQuality} onChange={(e) => saveValorantConfig({ shadowQuality: parseInt(e.target.value, 10) })} className="p-1.5 border-2 border-pencil-black bg-white wobbly-md font-patrick">
+                    <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px] font-outfit">Shadows</span>
+                    <select value={selectedConfig.shadowQuality} onChange={(e) => saveValorantConfig({ shadowQuality: parseInt(e.target.value, 10) })} className="p-1.5 border border-[#262626] bg-white rounded-lg font-inter">
                       <option value="0">Low (Off)</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option>
                     </select>
                   </div>
                   <div className="flex flex-col gap-0.5 col-span-2">
-                    <span className="text-pencil-black/60 font-bold uppercase tracking-wider text-[9px] font-kalam">Raw Input Buffer</span>
-                    <select value={selectedConfig.rawInputBuffer ? 'true' : 'false'} onChange={(e) => saveValorantConfig({ rawInputBuffer: e.target.value === 'true' })} className="p-1.5 border-2 border-pencil-black bg-white wobbly-md font-patrick">
+                    <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px] font-outfit">Raw Input Buffer</span>
+                    <select value={selectedConfig.rawInputBuffer ? 'true' : 'false'} onChange={(e) => saveValorantConfig({ rawInputBuffer: e.target.value === 'true' })} className="p-1.5 border border-[#262626] bg-white rounded-lg font-inter">
                       <option value="true">On (Raw Input)</option><option value="false">Off</option>
                     </select>
                   </div>
                 </div>
 
-                <div className="border-t-2 border-dashed border-pencil-black pt-3 space-y-2">
+                <div className="border-t-2 border-dashed border-[#262626] pt-3 space-y-2">
                   <div className="space-y-1">
                     <div className="flex justify-between items-center text-[11px] font-bold">
-                      <span className="text-pencil-black font-kalam">Monitor Refresh Rate</span>
+                      <span className="text-gray-200 font-outfit">Monitor Refresh Rate</span>
                     </div>
                     <div className="flex items-center gap-1">
                       <select
@@ -1112,7 +1134,7 @@ export default function ValorantOptimizer() {
                             applyFrameLimitSettings(frameLimitMode, parseInt(e.target.value, 10));
                           }
                         }}
-                        className="flex-1 p-1.5 border-2 border-pencil-black bg-white wobbly-md text-[11px] font-patrick cursor-pointer"
+                        className="flex-1 p-1.5 border border-[#262626] bg-white rounded-lg text-[11px] font-inter cursor-pointer"
                       >
                         <option value="60">60 Hz</option>
                         <option value="144">144 Hz</option>
@@ -1141,7 +1163,7 @@ export default function ValorantOptimizer() {
                               }
                             }}
                             placeholder="e.g. 165"
-                            className="w-16 p-1.5 border-2 border-pencil-black bg-white wobbly-md text-[11px] font-mono focus:outline-none focus:ring-1 focus:ring-accent-blue/30"
+                            className="w-16 p-1.5 border border-[#262626] bg-white rounded-lg text-[11px] font-mono focus:outline-none focus:ring-1 focus:ring-accent-blue/30"
                           />
                           <button
                             onClick={() => {
@@ -1151,7 +1173,7 @@ export default function ValorantOptimizer() {
                                 setShowCustomRateInput(false);
                               }
                             }}
-                            className="text-[10px] font-bold px-2 py-1 bg-pencil-black text-white wobbly-md cursor-pointer border-2 border-pencil-black"
+                            className="text-[10px] font-bold px-2 py-1 bg-pencil-black text-white rounded-lg cursor-pointer border border-[#262626]"
                           >
                             Set
                           </button>
@@ -1159,10 +1181,10 @@ export default function ValorantOptimizer() {
                       )}
                     </div>
                     {!showCustomRateInput && (
-                      <div className="text-[10px] text-pencil-black/55 font-bold">
-                        Active target: <span className="text-pencil-black">{monitorRefreshRate} Hz</span>
+                      <div className="text-[10px] text-gray-400 font-bold">
+                        Active target: <span className="text-gray-200">{monitorRefreshRate} Hz</span>
                         {![60,144,240,360].includes(monitorRefreshRate) && (
-                          <span className="ml-1 text-accent-blue font-kalam">(custom)</span>
+                          <span className="ml-1 text-[#3b82f6] font-outfit">(custom)</span>
                         )}
                       </div>
                     )}
@@ -1171,19 +1193,19 @@ export default function ValorantOptimizer() {
                     <button
                       onClick={() => applyFrameLimitSettings('uncapped', monitorRefreshRate)}
                       title="No frame cap — maximum FPS output"
-                      className={`p-1.5 border-2 border-pencil-black text-center wobbly-md transition-all cursor-pointer ${frameLimitMode === 'uncapped' ? 'bg-pencil-black text-white shadow-none' : 'bg-white text-pencil-black hand-shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'}`}
+                      className={`p-1.5 border border-[#262626] text-center rounded-lg transition-all cursor-pointer ${frameLimitMode === 'uncapped' ? 'bg-pencil-black text-white shadow-none' : 'bg-white text-gray-200 shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'}`}
                     >
                       UNCAPPED
                     </button>
                     <button
                       onClick={() => applyFrameLimitSettings('vrr', monitorRefreshRate)}
                       title={`Cap frames just below your ${monitorRefreshRate}Hz refresh rate to stabilize VRR/G-Sync/FreeSync`}
-                      className={`p-1.5 border-2 border-pencil-black text-center wobbly-md transition-all cursor-pointer ${frameLimitMode === 'vrr' ? 'bg-pencil-black text-white shadow-none' : 'bg-white text-pencil-black hand-shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'}`}
+                      className={`p-1.5 border border-[#262626] text-center rounded-lg transition-all cursor-pointer ${frameLimitMode === 'vrr' ? 'bg-pencil-black text-white shadow-none' : 'bg-white text-gray-200 shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'}`}
                     >
                       VRR CAP
                     </button>
                   </div>
-                  <div className="text-[9.5px] text-pencil-black/60 font-bold">
+                  <div className="text-[9.5px] text-gray-400 font-bold">
                     {frameLimitMode === 'vrr'
                       ? `VRR target = ${Math.max(30, monitorRefreshRate - 3)} FPS (3 below refresh)`
                       : 'Uncapped = no limit config'}
@@ -1191,7 +1213,7 @@ export default function ValorantOptimizer() {
                 </div>
               </div>
             ) : (
-              <div className="text-pencil-black/50 italic text-[11px]">Profile not selected.</div>
+              <div className="text-gray-400 italic text-[11px]">Profile not selected.</div>
             )}
           </div>
 
@@ -1200,5 +1222,15 @@ export default function ValorantOptimizer() {
       </div>
 
     </div>
+    
+    <ConfirmModal
+      isOpen={confirmDialog.isOpen}
+      title={confirmDialog.title}
+      message={confirmDialog.message}
+      variant={confirmDialog.variant}
+      onConfirm={confirmDialog.onConfirm}
+      onCancel={closeConfirm}
+    />
+    </>
   );
 }

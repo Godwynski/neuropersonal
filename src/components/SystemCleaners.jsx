@@ -1,14 +1,7 @@
 import React, { useState } from 'react';
 import { useAppContext } from '../hooks/useAppContext';
-
-function Spinner({ className = 'w-3 h-3' }) {
-  return (
-    <svg className={`${className} animate-spin`} viewBox="0 0 24 24" fill="none">
-      <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3"/>
-      <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"/>
-    </svg>
-  );
-}
+import Spinner from './Spinner';
+import ConfirmModal from './ConfirmModal';
 
 export default function SystemCleaners() {
   const {
@@ -21,14 +14,21 @@ export default function SystemCleaners() {
     purgeTempFolder
   } = useAppContext();
 
+  const [confirmDialog, setConfirmDialog] = useState({
+    isOpen: false,
+    title: '',
+    message: '',
+    variant: 'danger',
+    onConfirm: () => {}
+  });
+
+  const closeConfirm = () => setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+
   const isAnyBusy = runningFix !== null || scanningTemp || purgingTemp;
 
   return (
-    <div className="border-[3px] border-pencil-black bg-white p-4 wobbly-md hand-shadow space-y-4 relative">
-      {/* Tape decoration at top */}
-      <div className="absolute -top-3 left-16 w-14 h-4.5 bg-pencil-black/10 border border-pencil-black/20 rotate-1 pointer-events-none" />
-
-      <h3 className="text-sm font-bold text-pencil-black font-kalam uppercase tracking-wider border-b-2 border-pencil-black pb-1.5">
+    <div className="glass-panel p-5 rounded-xl border border-[#262626] space-y-4 relative">
+      <h3 className="text-sm font-semibold text-gray-100 font-outfit uppercase tracking-widest border-b border-[#262626] pb-3">
         🧹 System Cleaners
       </h3>
 
@@ -37,14 +37,14 @@ export default function SystemCleaners() {
         <button
           onClick={() => runDiagnosticFix('ramRejuvenation')}
           disabled={isAnyBusy}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 border-2 border-pencil-black wobbly font-bold cursor-pointer disabled:cursor-not-allowed transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-medium text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
             runningFix === 'ramRejuvenation'
-              ? 'bg-accent-blue text-white translate-x-[2px] translate-y-[2px] shadow-none'
-              : 'bg-[#fff9c4] hover:bg-[#fff7b1] text-pencil-black hand-shadow-sm hover:hand-shadow-sm/50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none'
+              ? 'bg-[#3b82f6] text-white shadow-[0_0_15px_rgba(59,130,246,0.3)]'
+              : 'bg-[#141414] border border-[#262626] text-gray-300 hover:bg-[#262626]'
           }`}
         >
           {runningFix === 'ramRejuvenation' ? (
-            <><Spinner className="w-3 h-3" /> Clearing...</>
+            <><Spinner className="w-3.5 h-3.5" /> Clearing...</>
           ) : 'Clear RAM'}
         </button>
 
@@ -52,24 +52,24 @@ export default function SystemCleaners() {
         <button
           onClick={() => runDiagnosticFix('chronosReset')}
           disabled={isAnyBusy}
-          className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 border-2 border-pencil-black wobbly font-bold cursor-pointer disabled:cursor-not-allowed transition-all ${
+          className={`flex-1 flex items-center justify-center gap-2 py-2.5 px-3 rounded-lg font-medium text-xs transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
             runningFix === 'chronosReset'
-              ? 'bg-accent-blue text-white translate-x-[2px] translate-y-[2px] shadow-none'
-              : 'bg-white hover:bg-paper-muted text-pencil-black hand-shadow-sm hover:hand-shadow-sm/50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none'
+              ? 'bg-[#3b82f6] text-white shadow-[0_0_15px_rgba(59,130,246,0.3)]'
+              : 'bg-[#141414] border border-[#262626] text-gray-300 hover:bg-[#262626]'
           }`}
         >
           {runningFix === 'chronosReset' ? (
-            <><Spinner className="w-3 h-3" /> Restarting UI...</>
+            <><Spinner className="w-3.5 h-3.5" /> Restarting UI...</>
           ) : 'Restart UI'}
         </button>
       </div>
 
       {/* Temp Folder Scrubber */}
-      <div className="pt-3 border-t-2 border-dashed border-pencil-black flex flex-col gap-2">
-        <div className="flex justify-between items-center text-xs text-pencil-black/90 font-bold">
+      <div className="pt-4 border-t border-[#262626] flex flex-col gap-3">
+        <div className="flex justify-between items-center text-xs font-medium text-gray-400">
           <span>OS Temp Directory:</span>
-          <span className={`font-mono text-xs font-bold ${
-            scanningTemp ? 'text-accent-blue animate-pulse' : purgingTemp ? 'text-accent-red animate-pulse' : 'text-pencil-black'
+          <span className={`font-mono font-semibold ${
+            scanningTemp ? 'text-[#3b82f6] animate-pulse' : purgingTemp ? 'text-[#ff4655] animate-pulse' : 'text-gray-200'
           }`}>
             {scanningTemp ? 'Scanning...' : purgingTemp ? 'Purging...' : tempFolderSize}
           </span>
@@ -80,13 +80,13 @@ export default function SystemCleaners() {
           <button
             onClick={scanTempFolder}
             disabled={isAnyBusy}
-            className={`flex-1 flex items-center justify-center gap-1 py-1.5 px-2 border-2 border-pencil-black wobbly-md text-[11px] font-bold cursor-pointer disabled:cursor-not-allowed transition-all bg-white hover:bg-paper-muted text-pencil-black hand-shadow-sm hover:hand-shadow-sm/50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none`}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg border border-[#262626] bg-[#141414] hover:bg-[#262626] text-gray-300 text-xs font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {scanningTemp ? (
-              <><Spinner className="w-2.5 h-2.5" /> Scanning...</>
+              <><Spinner className="w-3 h-3" /> Scanning...</>
             ) : (
               <>
-                <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                   <circle cx="11" cy="11" r="8"/><path strokeLinecap="round" d="M21 21l-4.35-4.35"/>
                 </svg>
                 Scan Temp
@@ -97,23 +97,30 @@ export default function SystemCleaners() {
           {/* Purge Temp */}
           <button
             onClick={() => {
-              if (window.confirm("Are you sure you want to purge all files in your temporary directories? This cannot be undone.")) {
-                purgeTempFolder();
-              }
+              setConfirmDialog({
+                isOpen: true,
+                title: 'Purge Temporary Files',
+                message: 'Are you sure you want to purge all files in your temporary directories? This cannot be undone.',
+                variant: 'danger',
+                onConfirm: () => {
+                  purgeTempFolder();
+                  closeConfirm();
+                }
+              });
             }}
             disabled={isAnyBusy}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-1.5 px-2 border-2 border-pencil-black wobbly-md text-[11px] font-bold cursor-pointer disabled:cursor-not-allowed transition-all bg-accent-red hover:bg-accent-red/90 text-white hand-shadow-sm hover:hand-shadow-sm/50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none`}
+            className={`flex-1 flex items-center justify-center gap-1.5 py-2 px-2 rounded-lg text-white bg-[#ff4655] hover:bg-[#ff4655]/90 text-xs font-medium transition-all shadow-[0_0_10px_rgba(255,70,85,0.2)] disabled:opacity-50 disabled:cursor-not-allowed`}
           >
             {purgingTemp ? (
-              <><Spinner className="w-2.5 h-2.5" /> Purging...</>
+              <><Spinner className="w-3 h-3" /> Purging...</>
             ) : 'Purge Temp'}
           </button>
         </div>
 
         {/* Status hint */}
         {isAnyBusy && (
-          <div className="text-[10px] text-accent-blue font-bold flex items-center gap-1">
-            <Spinner className="w-2.5 h-2.5" />
+          <div className="text-[10px] text-[#3b82f6] font-medium flex items-center gap-1.5 mt-1">
+            <Spinner className="w-3 h-3" />
             {runningFix === 'ramRejuvenation' && 'Flushing memory heap...'}
             {runningFix === 'chronosReset' && 'Restarting Windows Explorer...'}
             {scanningTemp && 'Calculating temp folder size...'}
@@ -121,6 +128,15 @@ export default function SystemCleaners() {
           </div>
         )}
       </div>
+
+      <ConfirmModal
+        isOpen={confirmDialog.isOpen}
+        title={confirmDialog.title}
+        message={confirmDialog.message}
+        variant={confirmDialog.variant}
+        onConfirm={confirmDialog.onConfirm}
+        onCancel={closeConfirm}
+      />
     </div>
   );
 }
