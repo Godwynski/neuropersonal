@@ -47,6 +47,13 @@ contextBridge.exposeInMainWorld('api', {
   restoreAllRegistryBackups: () => ipcRenderer.invoke('restore-all-registry-backups'),
   minimizeWindow: () => ipcRenderer.invoke('minimize-window'),
   maximizeWindow: () => ipcRenderer.invoke('maximize-window'),
-  closeWindow: () => ipcRenderer.invoke('close-window')
+  closeWindow: () => ipcRenderer.invoke('close-window'),
+  
+  // System Automation API
+  getLoginItem: () => ipcRenderer.invoke('get-login-item'),
+  setLoginItem: (enable) => ipcRenderer.invoke('set-login-item', enable),
+  restartPc: () => ipcRenderer.invoke('restart-pc'),
+  onValorantStatusChange: (callback) => {
+    ipcRenderer.on('valorant-status-change', (event, isRunning) => callback(isRunning));
+  }
 });
-

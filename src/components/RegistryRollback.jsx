@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAppContext } from '../hooks/useAppContext';
 import Spinner from './Spinner';
 import ConfirmModal from './ConfirmModal';
@@ -7,6 +7,8 @@ export default function RegistryRollback() {
   const {
     registryBackups,
     loadRegistryBackups,
+    autoBoostActive,
+    setAutoBoostActive,
     clearAllBackups,
     restoreAllBackups,
     deleteBackup,
@@ -71,7 +73,59 @@ export default function RegistryRollback() {
 
   const isAnyLoading = isProcessing || headerLoading !== null || Object.values(rowLoading).some(v => v !== null);
 
+  const [runOnStartup, setRunOnStartup] = useState(false);
+
+  useEffect(() => {
+    if (window.api && window.api.getLoginItem) {
+      window.api.getLoginItem().then(enabled => setRunOnStartup(enabled));
+    }
+  }, []);
+
+  const toggleStartup = async () => {
+    const nextVal = !runOnStartup;
+    setRunOnStartup(nextVal);
+    if (window.api && window.api.setLoginItem) {
+      await window.api.setLoginItem(nextVal);
+    }
+  };
+
   return (
+    <div className="space-y-8">
+      {/* System Automation Settings */}
+      <div className="glass-panel p-5 rounded-xl border border-[#262626] space-y-4">
+        <div className="border-b border-[#262626] pb-3">
+          <h3 className="text-sm font-semibold text-gray-100 font-outfit uppercase tracking-widest">⚙️ System Automation</h3>
+        </div>
+        
+        <div className="space-y-4">
+          <div className="flex justify-between items-center bg-[#141414] border border-[#262626] p-4 rounded-lg">
+            <div>
+              <div className="font-bold text-gray-200 text-sm">Run on Startup</div>
+              <div className="text-xs text-gray-500 mt-1">Automatically launch NeurOptimize in the background when Windows starts.</div>
+            </div>
+            <button 
+              onClick={toggleStartup}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${runOnStartup ? 'bg-[#3b82f6]' : 'bg-[#262626]'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${runOnStartup ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+
+          <div className="flex justify-between items-center bg-[#141414] border border-[#262626] p-4 rounded-lg">
+            <div>
+              <div className="font-bold text-gray-200 text-sm">Auto-Boost on Game Launch</div>
+              <div className="text-xs text-gray-500 mt-1">Automatically applies your Max Performance tweaks when VALORANT runs.</div>
+            </div>
+            <button 
+              onClick={() => setAutoBoostActive(!autoBoostActive)}
+              className={`relative inline-flex h-6 w-11 shrink-0 items-center rounded-full transition-colors ${autoBoostActive ? 'bg-[#3b82f6]' : 'bg-[#262626]'}`}
+            >
+              <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${autoBoostActive ? 'translate-x-6' : 'translate-x-1'}`} />
+            </button>
+          </div>
+        </div>
+      </div>
+
     <div className="glass-panel p-5 rounded-xl border border-[#262626] space-y-4 relative">
       <div className="flex justify-between items-center border-b border-[#262626] pb-3">
         <h3 className="text-sm font-semibold text-gray-100 font-outfit uppercase tracking-widest">📋 Registry Rollback</h3>
@@ -190,6 +244,7 @@ export default function RegistryRollback() {
         onConfirm={confirmDialog.onConfirm}
         onCancel={closeConfirm}
       />
+    </div>
     </div>
   );
 }

@@ -58,6 +58,8 @@ export function AppProvider({ children }) {
   const [autoBoostActive, setAutoBoostActive] = useState(true);
   const [gameModeActive, setGameModeActive] = useState(false);
   const [powerPlanMode, setPowerPlanMode] = useState('balanced');
+  const [showRebootPrompt, setShowRebootPrompt] = useState(false);
+  const triggerRebootPrompt = useCallback(() => setShowRebootPrompt(true), []);
   const [originalPowerPlan, setOriginalPowerPlan] = useState(null); // #35: Store original power plan
 
   const [valorantLogsSize, setValorantLogsSize] = useState('Click Scan');
@@ -391,14 +393,14 @@ export function AppProvider({ children }) {
     addLog(`[VBS] ${enable ? 'Enabling' : 'Disabling'} VBS...`);
     if (window.api && window.api.toggleVbs) {
       const res = await window.api.toggleVbs(enable);
-      if (res.success) { setVbsStatus(p => ({ ...p, vbsEnabled: enable, memoryIntegrity: enable })); setVbsRebootRequired(true); addToast(`VBS toggled — reboot required`, 'warning'); }
+      if (res.success) { setVbsStatus(p => ({ ...p, vbsEnabled: enable, memoryIntegrity: enable })); setVbsRebootRequired(true); triggerRebootPrompt(); }
     }
   };
 
   const toggleHpet = async (disable) => {
     if (window.api && window.api.toggleHpet) {
       const res = await window.api.toggleHpet(disable);
-      if (res.success) { setHpetDisabled(disable); setHpetRebootRequired(true); addToast(`HPET toggled — reboot required`, 'warning'); }
+      if (res.success) { setHpetDisabled(disable); setHpetRebootRequired(true); triggerRebootPrompt(); }
     }
   };
 
@@ -538,6 +540,20 @@ export function AppProvider({ children }) {
       window.removeEventListener('blur', handleBlur);
     };
   }, []);
+
+  // System Automation: Valorant Process Listener
+  useEffect(() => {
+    if (window.api && window.api.onValorantStatusChange) {
+      window.api.onValorantStatusChange((isRunning) => {
+        setValorantRunning(isRunning);
+        if (isRunning && autoBoostActive && !maxBoostActive) {
+          executeOperation("Auto-Boosting for VALORANT...", () => toggleMaxBoost(true, boostProfile));
+        } else if (!isRunning && maxBoostActive) {
+          executeOperation("Auto-Reverting System...", () => toggleMaxBoost(false));
+        }
+      });
+    }
+  }, [autoBoostActive, maxBoostActive, boostProfile]);
 
   const previousValorantRunning = useRef(false);
 
@@ -821,6 +837,7 @@ export function AppProvider({ children }) {
       runningFix, setRunningFix, fixStatusText, setFixStatusText,
       valorantRunning, setValorantRunning, autoBoostActive, setAutoBoostActive,
       gameModeActive, setGameModeActive, powerPlanMode, setPowerPlanMode,
+      showRebootPrompt, setShowRebootPrompt, triggerRebootPrompt,
       valorantLogsSize, setValorantLogsSize, shaderCacheSize, setShaderCacheSize,
       scanningVal, setScanningVal, cleaningLogs, setCleaningLogs,
       cleaningShaders, setCleaningShaders, deepOptimizeActive, setDeepOptimizeActive,

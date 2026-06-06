@@ -182,6 +182,40 @@ app.whenReady().then(() => {
   writePowerShellHelpers();
   createWindow();
 
+  // Auto-Boost: Polling for VALORANT
+  let isValorantRunning = false;
+  setInterval(() => {
+    exec('tasklist /FI "IMAGENAME eq VALORANT-Win64-Shipping.exe" /FO CSV /NH', (err, stdout) => {
+      const running = stdout && stdout.includes('VALORANT-Win64-Shipping.exe');
+      if (running !== isValorantRunning) {
+        isValorantRunning = running;
+        if (mainWindow && !mainWindow.isDestroyed()) {
+          mainWindow.webContents.send('valorant-status-change', running);
+        }
+      }
+    });
+  }, 5000);
+
+  // System Automation IPC Handlers
+  ipcMain.handle('get-login-item', () => {
+    return app.getLoginItemSettings().openAtLogin;
+  });
+
+  ipcMain.handle('set-login-item', (event, enable) => {
+    app.setLoginItemSettings({
+      openAtLogin: enable,
+      openAsHidden: false
+    });
+    return { success: true };
+  });
+
+  ipcMain.handle('restart-pc', () => {
+    exec('shutdown /r /t 0', (err) => {
+      if (err) console.error('Restart failed:', err);
+    });
+    return { success: true };
+  });
+
   app.on('activate', function () {
     if (BrowserWindow.getAllWindows().length === 0) createWindow();
   });

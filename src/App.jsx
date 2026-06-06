@@ -17,6 +17,8 @@ function DashboardContent() {
     initMessage,
     isProcessing,
     processingMessage,
+    showRebootPrompt,
+    setShowRebootPrompt,
     toasts,
     removeToast,
     systemLogs,
@@ -113,6 +115,36 @@ function DashboardContent() {
               <span className="w-10 h-10 rounded-full border-[3px] border-[#262626] border-t-[#ff4655] animate-spin" />
               <div className="font-semibold text-lg font-outfit text-gray-100">Applying Kernel Tweaks</div>
               <p className="text-sm text-gray-400">{processingMessage || 'Please wait while Windows updates parameters...'}</p>
+            </div>
+          </div>
+        )}
+
+        {showRebootPrompt && (
+          <div className="absolute inset-0 bg-[#0a0a0a]/80 backdrop-blur-md flex items-center justify-center z-50">
+            <div className="bg-[#141414] p-8 rounded-2xl flex flex-col items-center gap-6 max-w-md text-center border border-[#ff4655] shadow-[0_0_30px_rgba(255,70,85,0.2)]">
+              <div className="w-16 h-16 rounded-full bg-[#ff4655]/20 flex items-center justify-center text-3xl">
+                ⚠️
+              </div>
+              <div>
+                <h3 className="text-xl font-bold font-outfit text-white mb-2">System Restart Required</h3>
+                <p className="text-sm text-gray-400">
+                  Some advanced kernel tweaks have been modified. You need to restart your PC for these changes to take full effect and avoid system instability.
+                </p>
+              </div>
+              <div className="flex w-full gap-4 mt-2">
+                <button 
+                  onClick={() => setShowRebootPrompt(false)}
+                  className="flex-1 py-3 px-4 rounded-xl border border-[#262626] text-gray-400 hover:text-white hover:bg-[#262626] font-bold transition-all"
+                >
+                  Restart Later
+                </button>
+                <button 
+                  onClick={() => { if (window.api && window.api.restartPc) window.api.restartPc(); }}
+                  className="flex-1 py-3 px-4 rounded-xl bg-[#ff4655] hover:bg-[#ff4655]/80 text-white font-bold transition-all"
+                >
+                  Restart Now
+                </button>
+              </div>
             </div>
           </div>
         )}
