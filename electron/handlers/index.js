@@ -449,7 +449,7 @@ ipcMain.handle('launch-admin-utility', async (event, utility) => {
 const ALLOWED_PROCESSES = new Set([
   'chrome.exe', 'msedge.exe', 'spotify.exe',
   'discord.exe', 'steam.exe', 'onedrive.exe',
-  'epicgameslauncher.exe', 'battle.net.exe', 'riotclientservices.exe',
+  'epicgameslauncher.exe', 'battle.net.exe',
   'slack.exe', 'telegram.exe', 'whatsapp.exe', 'overwolf.exe', 'obs64.exe'
 ]);
 

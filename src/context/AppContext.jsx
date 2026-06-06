@@ -21,6 +21,10 @@ export const premadeMacros = [
 export function AppProvider({ children }) {
   const [isElectron, setIsElectron] = useState(!!window.api);
 
+  // UI Reorganization State
+  const [uiMode, setUiMode] = useState('simple'); // 'simple' | 'advanced'
+  const [activeAppTab, setActiveAppTab] = useState('dashboard'); // 'dashboard' | 'advanced' | 'cleaners' | 'settings'
+
   // #11: Logs use objects with timestamps instead of strings
   const [systemLogs, setSystemLogs] = useState([
     { text: 'NeurOptimize Engine Active...', time: Date.now() },
@@ -68,7 +72,7 @@ export function AppProvider({ children }) {
   const [revertQueue, setRevertQueue] = useState([]);
   const [purgeAppsChecklist, setPurgeAppsChecklist] = useState({
     chrome: true, msedge: false, spotify: true, discord: false, steam: false, onedrive: true,
-    epicgameslauncher: true, 'battle.net': false, riotclientservices: false,
+    epicgameslauncher: true, 'battle.net': false,
     slack: false, telegram: false, whatsapp: false, overwolf: false, obs64: false
   });
   const [runningApps, setRunningApps] = useState({});
@@ -286,19 +290,30 @@ export function AppProvider({ children }) {
   const saveTimeoutRef = useRef(null);
   
   const saveValorantConfig = async (updatedSettings) => {
-    if (!selectedConfig) return;
-    const newConfig = { ...selectedConfig, ...updatedSettings };
-    setValorantConfigs(prev => prev.map(c => c.filePath === selectedConfig.filePath ? newConfig : c));
-    setSelectedConfig(newConfig);
+    if (!valorantConfigs || valorantConfigs.length === 0) return;
+    
+    setValorantConfigs(prev => prev.map(c => ({ ...c, ...updatedSettings })));
+    if (selectedConfig) {
+      setSelectedConfig(prev => ({ ...prev, ...updatedSettings }));
+    }
 
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     
+    // Capture paths from the current scope
+    const pathsToSave = valorantConfigs.map(c => ({ path: c.filePath, accountId: c.accountId }));
+    
     saveTimeoutRef.current = setTimeout(async () => {
       if (window.api) {
-        try {
-          const res = await window.api.saveValorantConfig(selectedConfig.filePath, updatedSettings);
-          if (res.success) addLog(`[Config] Saved settings for client ${selectedConfig.accountId}`);
-        } catch (e) { console.error(e); }
+        let successCount = 0;
+        for (const config of pathsToSave) {
+          try {
+            const res = await window.api.saveValorantConfig(config.path, updatedSettings);
+            if (res.success) successCount++;
+          } catch (e) { console.error(e); }
+        }
+        if (successCount > 0) {
+          addLog(`[Config] Successfully applied graphics to ${successCount} account(s)`);
+        }
       }
     }, 500); // 500ms debounce
   };
@@ -797,6 +812,7 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider value={{
       isElectron, setIsElectron,
+      uiMode, setUiMode, activeAppTab, setActiveAppTab,
       systemLogs, setSystemLogs, valorantLogs: systemLogs, addLog,
       stats, setStats, tempFolderSize, setTempFolderSize,
       scanningTemp, setScanningTemp, purgingTemp, setPurgingTemp,

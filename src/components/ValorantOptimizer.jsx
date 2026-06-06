@@ -597,8 +597,8 @@ export default function ValorantOptimizer() {
       {/* Page Header */}
       <header className="flex justify-between items-center border-b-2 border-[#262626] pb-3">
         <div>
-          <h1 className="text-xl font-bold font-outfit">Valorant Engine Booster</h1>
-          <p className="text-[11.5px] text-gray-400">System tweaks and caches for tactile gaming performance.</p>
+          <h1 className="text-xl font-bold font-outfit">Advanced Engine Tweaks</h1>
+          <p className="text-[11.5px] text-gray-400">Low-level system modifications for maximum performance.</p>
         </div>
         <div className="flex items-center gap-3 text-xs">
           {!valorantRunning ? (
@@ -627,333 +627,122 @@ export default function ValorantOptimizer() {
         </div>
       </header>
 
-      {/* Optimization Score & Core Settings Top Panels */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      {/* Main Layout: Top Nav + Content */}
+      <div className="flex flex-col gap-6">
         
-        {/* Tracker Score Card */}
-        <div className="p-4 border border-[#262626] bg-[#141414]/30 rounded-lg flex flex-col justify-between text-xs col-span-1 md:col-span-2 relative">
-          {/* Post-it pin decoration */}
-          <div className="absolute -top-1.5 left-4 w-3.5 h-3.5 rounded-full bg-[#ff4655] border border-[#262626] shadow-sm" />
-          <div className="space-y-1">
-            <span className="font-bold text-gray-200 font-outfit block">Overall Performance Optimization Score</span>
-            <p className="text-[11px] text-gray-300">This score measures how many system tweaks are currently configured to maximize gaming FPS.</p>
-          </div>
-          <div className="w-full mt-4 space-y-2">
-            <div className="flex justify-between font-bold text-gray-200 text-[11px] font-outfit">
-              <span>{optimizedCount} of {totalOptimizations} Tweaks Active</span>
-              <span className="text-[#3b82f6]">{optimizationPercentage}% OPTIMIZED</span>
-            </div>
-            <div className="w-full h-4 bg-[#141414] border border-[#262626] rounded-lg overflow-hidden">
-              <div className={`h-full transition-all duration-500 ${
-                optimizationPercentage >= 80 ? 'bg-[#3b82f6]' : optimizationPercentage >= 50 ? 'bg-[#262626]' : 'bg-[#ff4655]'
-              }`} style={{ width: `${optimizationPercentage}%` }} />
-            </div>
-          </div>
+        {/* Horizontal Navigation Categories */}
+        <div className="w-full flex flex-wrap gap-2 border-b-2 border-[#262626] pb-4">
+          {['OS & Registry', 'GPU & Monitor', 'Caches & Cleaners', 'Launch Policies'].map(cat => (
+            <button
+              key={cat}
+              onClick={() => setActiveTab(cat)}
+              className={`px-5 py-2 rounded-full font-bold text-sm transition-all cursor-pointer ${
+                activeTab === cat 
+                  ? 'bg-pencil-black text-white shadow-md border border-[#3f3f46]'
+                  : 'text-gray-400 bg-transparent hover:bg-[#262626] hover:text-white border border-transparent'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
         </div>
 
-        {/* Path Setup and Profile Presets (Compact Column) */}
-        <div className="p-4 border border-[#262626] bg-[#141414]/20 rounded-lg space-y-3 text-xs relative">
-          {/* Post-it pin decoration */}
-          <div className="absolute -top-1.5 right-4 w-3.5 h-3.5 rounded-full bg-[#3b82f6] border border-[#262626] shadow-sm" />
-          <div className="flex justify-between items-center">
-            <span className="font-bold text-gray-200 font-outfit">Optimization Profiles</span>
-            <span className="text-[10px] text-gray-400 font-mono">Fast Presets</span>
-          </div>
-          <div className="grid grid-cols-3 gap-1">
-            <button onClick={() => applyOptimizationProfile('tournament')} className="py-1 px-1.5 border border-[#262626] bg-pencil-black text-white hover:bg-pencil-black/90 rounded-lg text-center cursor-pointer font-bold text-[10px] active:translate-x-[1px] active:translate-y-[1px]">TOURNAMENT</button>
-            <button onClick={() => applyOptimizationProfile('balanced')} className="py-1 px-1.5 border border-[#262626] bg-[#0a0a0a] hover:bg-[#141414] text-gray-200 rounded-lg text-center cursor-pointer font-bold text-[10px] active:translate-x-[1px] active:translate-y-[1px]">BALANCED</button>
-            <button onClick={() => applyOptimizationProfile('revert')} className="py-1 px-1.5 border border-[#262626] bg-[#0a0a0a] hover:bg-[#141414] text-gray-200 rounded-lg text-center cursor-pointer font-bold text-[10px] active:translate-x-[1px] active:translate-y-[1px]">DEFAULTS</button>
-          </div>
-          <div className="border-t-2 border-dashed border-[#3f3f46] pt-2">
-            <div className="flex justify-between items-center text-[10.5px] text-gray-400 font-semibold mb-1">
-              <span>Client settings profile</span>
-              {isElectron && (
-                <button onClick={browseValorantPath} className="text-[#3b82f6] hover:underline font-bold">Browse exe</button>
-              )}
+        {/* Content Area */}
+        <div className="w-full space-y-6">
+          <div className="border border-[#262626] rounded-xl bg-[#141414]/50 overflow-hidden shadow-md">
+            <div className="bg-[#141414] border-b border-[#262626] px-6 py-4 flex justify-between items-center">
+              <h2 className="text-sm font-bold text-gray-200 font-outfit uppercase tracking-wider">{activeTab}</h2>
+              <span className="px-2 py-1 bg-[#0a0a0a] rounded-lg text-[10px] font-bold border border-[#262626] text-gray-400">
+                {allActions.filter(a => a.category === activeTab && a.isOptimized).length} Active
+              </span>
             </div>
-            {valorantConfigs.length === 0 ? (
-              <div className="text-gray-400 italic text-[11px]">No client configs found.</div>
-            ) : (
-              <select
-                value={selectedConfig ? selectedConfig.filePath : ''}
-                onChange={(e) => {
-                  const cfg = valorantConfigs.find(c => c.filePath === e.target.value);
-                  if (cfg) setSelectedConfig(cfg);
-                }}
-                className="w-full p-1.5 border border-[#262626] rounded-lg text-[11px] bg-[#0a0a0a] cursor-pointer focus:outline-none font-inter"
-              >
-                {valorantConfigs.map((cfg) => (
-                  <option key={cfg.filePath} value={cfg.filePath}>
-                    {cfg.accountId.slice(0, 12)}... (Config)
-                  </option>
-                ))}
-              </select>
-            )}
-          </div>
-        </div>
-      </div>
 
-      {!isAdmin && (
-        <div className="p-3 border border-dashed border-[#ff4655] bg-[#ff4655]/5 text-gray-200 text-xs rounded-none rounded-lg font-bold">
-          <strong>Notice:</strong> Windows is running in standard user mode. Some core registry tweaks will be skipped.
-        </div>
-      )}
+            <div className="divide-y divide-[#262626]">
+              {allActions.filter(action => action.category === activeTab).map((action) => {
+                // Ignore showIf condition if false
+                if (action.showIf === false) return null;
 
-      {/* Main Grid View */}
-      <div className="grid grid-cols-1 lg:grid-cols-4 gap-6 items-start">
-        
-        {/* Left Column: Master Optimization List (Takes 3 columns) */}
-        <div className="lg:col-span-3 space-y-4">
-          
-          {/* Controls Bar: Tabs and Search */}
-          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 border-b-2 border-[#262626] pb-3">
-            <div className="flex flex-wrap gap-1.5">
-              {[
-                { id: 'all', label: 'All Tweaks' },
-                { id: 'safe', label: 'Safe' },
-                { id: 'aggressive', label: 'Aggressive' },
-                { id: 'gpu', label: 'GPU & Sync' },
-                { id: 'cleanup', label: 'Caches & Launch' }
-              ].map(tab => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id)}
-                  className={`px-3 py-1.5 border border-[#262626] text-xs font-bold rounded-lg cursor-pointer transition-all ${
-                    activeTab === tab.id
-                      ? 'bg-pencil-black text-white shadow-none'
-                      : 'bg-[#0a0a0a] text-gray-200 hover:bg-[#141414] shadow-sm hover:shadow-sm/50 active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
-                  }`}
-                >
-                  {tab.label}
-                </button>
-              ))}
-            </div>
-            
-            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
-              <label className="flex items-center gap-1.5 px-3 py-1.5 border border-[#262626] text-xs font-bold rounded-lg bg-[#0a0a0a] hover:bg-[#141414] cursor-pointer select-none">
-                <input 
-                  type="checkbox"
-                  checked={showAdvanced}
-                  onChange={(e) => setShowAdvanced(e.target.checked)}
-                  className="w-3.5 h-3.5 accent-pencil-black cursor-pointer"
-                />
-                <span>Show Advanced</span>
-              </label>
-
-              <div className="relative w-full sm:w-48">
-                <input
-                  type="text"
-                  placeholder="Search actions..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="w-full text-xs p-1.5 border border-[#262626] rounded-lg focus:outline-none focus:ring-2 focus:ring-accent-blue/20 bg-[#0a0a0a] font-inter"
-                />
-                {searchQuery && (
-                  <button
-                    onClick={() => setSearchQuery('')}
-                    className="absolute right-2.5 top-2.5 text-gray-400 hover:text-gray-200 font-bold text-xs"
-                  >
-                    ✕
-                  </button>
-                )}
-              </div>
-            </div>
-          </div>
-
-          {/* Master Collapsible Categories List */}
-          <div className="space-y-4">
-            {activeCategories.length === 0 ? (
-              <div className="p-8 border border-dashed border-[#262626] rounded-lg text-center text-gray-400 italic text-xs bg-[#0a0a0a]">
-                No optimization actions matched your search or tab filter.
-              </div>
-            ) : (
-              activeCategories.map(cat => {
-                const categoryActions = filteredActions.filter(action => action.category === cat);
-                const isCollapsed = collapsedCategories[cat];
-                const activeCount = categoryActions.filter(a => a.isOptimized).length;
+                const isThisLoading = processingActionId === action.id;
+                const isThisDone = justDoneActionId === action.id;
+                const isAnyLoading = processingActionId !== null;
 
                 return (
-                  <div key={cat} className="border border-[#262626] rounded-lg bg-[#0a0a0a] overflow-hidden shadow-md">
-                    {/* Collapsible Accordion Header */}
-                    <div 
-                      onClick={() => toggleCategoryCollapse(cat)}
-                      className="bg-[#141414] border-b-[3px] border-[#262626] px-4 py-2.5 flex justify-between items-center cursor-pointer select-none hover:bg-[#141414]/80 transition-colors"
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-gray-200 font-outfit uppercase tracking-wider">{cat}</span>
-                        <span className="px-1.5 py-0.5 rounded-none font-bold text-[9px] bg-[#0a0a0a] border border-[#262626] rounded-lg">
-                          {activeCount} of {categoryActions.length} Active
-                        </span>
+                  <div key={action.id} className="p-6 flex items-center justify-between hover:bg-[#141414]/80 transition-colors">
+                    
+                    <div className="flex-1 pr-8">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="font-bold text-gray-200 font-outfit text-sm">{action.name}</span>
+                        {action.tier === 'aggressive' && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-[#ff4655]/10 text-[#ff4655] border border-[#ff4655]/20">
+                            Aggressive
+                          </span>
+                        )}
+                        {action.tier === 'experimental' && (
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
+                            Experimental
+                          </span>
+                        )}
                       </div>
-                      <div className="flex items-center gap-1 text-[10px] text-gray-400 font-bold">
-                        <span>{isCollapsed ? 'EXPAND' : 'COLLAPSE'}</span>
-                        <span className="text-xs">{isCollapsed ? '＋' : '－'}</span>
-                      </div>
+                      <p className="text-xs text-gray-400">{action.descDetailed || action.desc}</p>
                     </div>
 
-                    {/* Collapsible Content */}
-                    {!isCollapsed && (
-                      <div className="divide-y-2 divide-pencil-black/20">
-                        {categoryActions.map((action) => {
-                          const isThisLoading = processingActionId === action.id;
-                          const isThisDone = justDoneActionId === action.id;
-                          const isAnyLoading = processingActionId !== null;
+                    <div className="flex-shrink-0 flex items-center gap-4">
+                      <span className={`text-[10px] font-bold uppercase tracking-wide ${action.isOptimized ? 'text-[#3b82f6]' : 'text-gray-500'}`}>
+                        {isThisLoading ? 'Working...' : action.isOptimized ? 'Active' : 'Disabled'}
+                      </span>
+                      
+                      {action.actionType === 'toggle' && (
+                        <button
+                          onClick={() => runAction(action.id, action.name, action.onAction)}
+                          disabled={isAnyLoading}
+                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                            action.isOptimized ? 'bg-[#3b82f6]' : 'bg-[#262626]'
+                          } ${isAnyLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                        >
+                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                            action.isOptimized ? 'translate-x-6' : 'translate-x-1'
+                          }`} />
+                        </button>
+                      )}
 
-                          return (
-                          <div
-                            key={action.id}
-                            className={`px-4 py-3.5 transition-all grid grid-cols-12 gap-4 items-center ${
-                              isThisLoading
-                                ? 'bg-[#3b82f6]/5'
-                                : isThisDone
-                                ? 'bg-[#3b82f6]/10/50'
-                                : isAnyLoading
-                                ? 'opacity-50'
-                                : 'hover:bg-[#141414]/10'
-                            }`}
-                          >
-                            {/* Name, Details & Performance Impact */}
-                            <div className="col-span-6 sm:col-span-7 space-y-1 pr-2">
-                              <div className="flex items-center flex-wrap gap-1.5">
-                                <span className="font-bold text-gray-200 font-outfit text-xs">{action.name}</span>
-                                <div className="relative group inline-block">
-                                  <span className="text-[9px] text-[#3b82f6] border border-[#3b82f6] px-1 cursor-help rounded-md font-bold font-outfit select-none bg-[#0a0a0a]">?</span>
-                                  <div className="absolute bottom-6 left-1/2 -translate-x-1/2 hidden group-hover:block z-50 bg-[#262626] text-gray-200 text-[10.5px] p-2.5 border border-[#262626] rounded-lg shadow-md w-56 font-bold leading-snug">
-                                    {action.descDetailed || action.desc}
-                                  </div>
-                                </div>
-                                <span className={`px-1.5 py-0.5 rounded-none text-[8px] font-bold uppercase tracking-wide border border-[#262626] rounded-lg ${
-                                  action.tier === 'safe'
-                                    ? 'bg-[#262626] text-gray-200'
-                                    : action.tier === 'aggressive'
-                                    ? 'bg-[#ff4655] text-white'
-                                    : 'bg-[#3b82f6] text-white'
-                                }`}>
-                                  {action.tier}
-                                </span>
-                                {action.impact && (
-                                  <span className="px-1.5 py-0.5 rounded-none text-[8px] font-bold uppercase tracking-wide border border-[#262626] rounded-lg bg-[#0a0a0a] text-gray-200">
-                                    {action.impact} impact
-                                  </span>
-                                )}
-                                {isThisLoading && (
-                                  <span className="flex items-center gap-1 px-1.5 py-0.5 rounded-none text-[8px] font-bold bg-[#3b82f6]/10 border border-[#3b82f6] text-[#3b82f6]">
-                                    <Spinner className="w-2 h-2" /> Applying...
-                                  </span>
-                                )}
-                                {isThisDone && (
-                                  <span className="px-1.5 py-0.5 rounded-none text-[8px] font-bold bg-green-100 border border-green-500 text-green-700">
-                                    ✓ Done
-                                  </span>
-                                )}
-                              </div>
-                              <p className="text-[11px] text-gray-300 leading-normal">{action.desc}</p>
-                            </div>
+                      {action.actionType === 'action' && (
+                        <button
+                          onClick={() => runAction(action.id, action.name, action.onAction)}
+                          disabled={action.disabled || isAnyLoading}
+                          className="px-4 py-2 bg-[#262626] hover:bg-[#3f3f46] text-white text-xs font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                        >
+                          {isThisLoading ? <Spinner className="w-4 h-4" /> : action.actionLabel}
+                        </button>
+                      )}
 
-                            {/* Telemetry/Status Column */}
-                            <div className="col-span-3 sm:col-span-2 text-xs">
-                              <div className="flex items-center gap-1.5 font-mono text-[10px] font-bold">
-                                {isThisLoading ? (
-                                  <Spinner className="w-2.5 h-2.5 text-[#3b82f6]" />
-                                ) : (
-                                  <span className={`w-2.5 h-2.5 border border-[#262626] ${
-                                    action.isOptimized ? 'bg-[#3b82f6]' : 'bg-[#ff4655]'
-                                  }`} style={{ borderRadius: '4px 8px 3px 6px / 7px 4px 6px 3px' }} />
-                                )}
-                                <span className={
-                                  isThisLoading
-                                    ? 'text-[#3b82f6]'
-                                    : action.isOptimized
-                                    ? 'text-[#3b82f6] font-bold'
-                                    : 'text-[#ff4655] font-bold'
-                                }>
-                                  {isThisLoading ? 'Working...' : action.status}
-                                </span>
-                              </div>
-                            </div>
+                      {action.actionType === 'multiple' && (
+                        <div className="flex gap-2">
+                          {action.options.map((opt, oIdx) => (
+                            <button
+                              key={oIdx}
+                              onClick={() => runAction(`${action.id}-${oIdx}`, opt.label, opt.onClick)}
+                              disabled={isAnyLoading}
+                              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer border ${
+                                opt.primary 
+                                  ? 'bg-[#262626] border-[#3f3f46] text-white hover:bg-[#3f3f46]' 
+                                  : 'bg-transparent border-[#262626] text-gray-400 hover:text-white hover:bg-[#262626]'
+                              } disabled:opacity-50`}
+                            >
+                              {opt.label}
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
 
-                            {/* Action Column */}
-                            <div className="col-span-3 text-right">
-                              {action.actionType === 'toggle' && (
-                                <button
-                                  onClick={() => runAction(action.id, action.name, action.onAction)}
-                                  disabled={isAnyLoading}
-                                  className={`flex items-center justify-center gap-1 px-3 py-1.5 text-[10.5px] font-bold border border-[#262626] rounded-lg transition-all cursor-pointer ${
-                                    isThisLoading
-                                      ? 'bg-[#3b82f6] text-white cursor-not-allowed'
-                                      : isThisDone
-                                      ? 'bg-green-600 border-green-700 text-white cursor-not-allowed'
-                                      : isAnyLoading
-                                      ? 'bg-[#141414] text-gray-500 cursor-not-allowed shadow-none'
-                                      : action.isOptimized
-                                      ? 'bg-[#0a0a0a] hover:bg-[#141414] text-gray-200 shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
-                                      : 'bg-[#262626] hover:bg-[#3f3f46] text-gray-200 shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none font-outfit'
-                                  }`}
-                                >
-                                  {isThisLoading ? '...' : isThisDone ? '✓ Done' : action.actionLabel}
-                                </button>
-                              )}
-
-                              {action.actionType === 'action' && (
-                                <button
-                                  onClick={() => runAction(action.id, action.name, action.onAction)}
-                                  disabled={action.disabled || isAnyLoading}
-                                  className={`flex items-center justify-center gap-1 px-3 py-1.5 text-[10.5px] font-bold border border-[#262626] rounded-lg transition-all cursor-pointer ${
-                                    isThisLoading
-                                      ? 'bg-[#3b82f6] text-white cursor-not-allowed'
-                                      : isThisDone
-                                      ? 'bg-green-600 border-green-700 text-white cursor-not-allowed'
-                                      : 'border-[#262626] bg-[#0a0a0a] hover:bg-[#141414] text-gray-200 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
-                                  }`}
-                                >
-                                  {isThisLoading ? '...' : isThisDone ? '✓ Done' : action.actionLabel}
-                                </button>
-                              )}
-
-                              {action.actionType === 'multiple' && (
-                                <div className="flex flex-col sm:flex-row justify-end gap-1">
-                                  {action.options.map((opt, oIdx) => {
-                                    const optId = `${action.id}-${oIdx}`;
-                                    const isOptLoading = processingActionId === optId;
-                                    const isOptDone = justDoneActionId === optId;
-                                    return (
-                                      <button
-                                        key={oIdx}
-                                        onClick={() => runAction(optId, action.name + ' - ' + opt.label, opt.onClick)}
-                                        disabled={isAnyLoading}
-                                        className={`flex items-center justify-center gap-1 px-2 py-1 text-[9.5px] font-bold rounded-none border border-[#262626] rounded-lg transition-all ${
-                                          isOptLoading
-                                            ? 'bg-[#3b82f6] text-white cursor-not-allowed shadow-none'
-                                            : isOptDone
-                                            ? 'bg-green-600 text-white cursor-not-allowed shadow-none'
-                                            : isAnyLoading
-                                            ? 'opacity-50 cursor-not-allowed bg-[#0a0a0a] text-gray-200 shadow-none'
-                                            : opt.primary
-                                            ? 'bg-pencil-black text-white hover:bg-pencil-black/90 cursor-pointer shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'
-                                            : 'bg-[#0a0a0a] text-gray-200 hover:bg-[#141414] cursor-pointer shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'
-                                        }`}
-                                      >
-                                        {isOptLoading ? '...' : isOptDone ? '✓' : opt.label}
-                                      </button>
-                                    );
-                                  })}
-                                </div>
-                              )}
-                            </div>
-
-                          </div>
-                          );
-                        })}
-                      </div>
-                    )}
                   </div>
                 );
-              })
-            )}
+              })}
+            </div>
           </div>
 
           {/* Checklist sub-options for Background App Purging */}
-          {optimizationOptions.purgeApps && (
+          {optimizationOptions.purgeApps && activeTab === 'Launch Policies' && (
             <div className="p-4 border border-[#262626] bg-[#141414]/20 rounded-lg text-xs space-y-3 relative">
               {/* Tape decoration */}
               <div className="absolute -top-3 left-6 w-16 h-4 bg-pencil-black/10 border border-[#3f3f46] rotate-1 pointer-events-none" />
@@ -963,11 +752,18 @@ export default function ValorantOptimizer() {
               </div>
               
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pt-2">
-                {Object.keys(purgeAppsChecklist).map(appKey => {
-                  const isRunning = runningApps && runningApps[appKey];
-                  const isChecked = !!purgeAppsChecklist[appKey];
-                  
-                  return (
+                {Object.keys(purgeAppsChecklist).filter(appKey => runningApps && runningApps[appKey]).length === 0 ? (
+                  <div className="col-span-full p-4 border border-dashed border-[#262626] rounded-lg text-center text-gray-400 text-xs italic bg-[#0a0a0a]">
+                    No managed applications are currently running.
+                  </div>
+                ) : (
+                  Object.keys(purgeAppsChecklist)
+                    .filter(appKey => runningApps && runningApps[appKey])
+                    .map(appKey => {
+                      const isRunning = true;
+                      const isChecked = !!purgeAppsChecklist[appKey];
+                      
+                      return (
                     <div 
                       key={appKey} 
                       className={`flex flex-col gap-2 p-3 border rounded-lg transition-all ${
@@ -1028,7 +824,7 @@ export default function ValorantOptimizer() {
                       )}
                     </div>
                   );
-                })}
+                }))}
               </div>
             </div>
           )}

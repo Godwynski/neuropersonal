@@ -3,6 +3,9 @@ import Toast from './components/Toast';
 import Sidebar from './components/Sidebar';
 import ValorantOptimizer from './components/ValorantOptimizer';
 import BottomConsole from './components/BottomConsole';
+import DashboardOverview from './components/DashboardOverview';
+import SystemCleaners from './components/SystemCleaners';
+import RegistryRollback from './components/RegistryRollback';
 import { AppProvider } from './context/AppContext';
 import { useAppContext } from './hooks/useAppContext';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -17,7 +20,8 @@ function DashboardContent() {
     toasts,
     removeToast,
     systemLogs,
-    setSystemLogs
+    setSystemLogs,
+    activeAppTab
   } = useAppContext();
 
   const handleMinimize = () => {
@@ -116,10 +120,17 @@ function DashboardContent() {
         {/* Left Control Column (Sidebar) */}
         <Sidebar />
 
-        {/* Right Optimization Columns (Game Booster) */}
+        {/* Right Content Area */}
         <main className="flex-1 flex flex-col overflow-hidden bg-[#0a0a0a] border-l border-[#262626]">
           <div className="flex-1 overflow-y-auto custom-scrollbar">
-            <ValorantOptimizer />
+            {activeAppTab === 'dashboard' && <DashboardOverview />}
+            {activeAppTab === 'advanced' && <ValorantOptimizer />}
+            {activeAppTab === 'cleaners' && (
+              <div className="p-8 max-w-5xl w-full mx-auto"><SystemCleaners /></div>
+            )}
+            {activeAppTab === 'settings' && (
+              <div className="p-8 max-w-5xl w-full mx-auto"><RegistryRollback /></div>
+            )}
           </div>
           <BottomConsole 
             logs={systemLogs} 
