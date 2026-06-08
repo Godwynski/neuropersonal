@@ -238,15 +238,15 @@ ipcMain.handle('set-dashboard-tweak', async (event, { tweakName, active, extraAr
     }
     else if (tweakName === 'disableUsbSuspend') {
       const val = active ? '0' : '1';
-      await spawnAsync('powercfg.exe', ['/SETACVALUEINDEX', 'SCHEME_CURRENT', '2a737441-1930-4402-8d77-b2bebba308a3', '48e6b7a6-50f5-4782-a5d4-53bb8f07e226', '${val}']);
-      await spawnAsync('powercfg.exe', ['/SETDCVALUEINDEX', 'SCHEME_CURRENT', '2a737441-1930-4402-8d77-b2bebba308a3', '48e6b7a6-50f5-4782-a5d4-53bb8f07e226', '${val}']);
+      await spawnAsync('powercfg.exe', ['/SETACVALUEINDEX', 'SCHEME_CURRENT', '2a737441-1930-4402-8d77-b2bebba308a3', '48e6b7a6-50f5-4782-a5d4-53bb8f07e226', val]);
+      await spawnAsync('powercfg.exe', ['/SETDCVALUEINDEX', 'SCHEME_CURRENT', '2a737441-1930-4402-8d77-b2bebba308a3', '48e6b7a6-50f5-4782-a5d4-53bb8f07e226', val]);
       await spawnAsync('powercfg.exe', ['/setactive', 'SCHEME_CURRENT']);
     }
     else if (tweakName === 'disableCoreParking') {
       await spawnAsync('powercfg.exe', ['-attributes', '54533251-82be-4824-96c1-47b60b740d00', '0cc5b647-c1df-4637-891a-dec35c318583', '-ATTRIB_HIDE']);
       const val = active ? '100' : '5';
-      await spawnAsync('powercfg.exe', ['-setacvalueindex', 'scheme_current', 'sub_processor', 'CPMinCores', '${val}']);
-      await spawnAsync('powercfg.exe', ['-setdcvalueindex', 'scheme_current', 'sub_processor', 'CPMinCores', '${val}']);
+      await spawnAsync('powercfg.exe', ['-setacvalueindex', 'scheme_current', 'sub_processor', 'CPMinCores', val]);
+      await spawnAsync('powercfg.exe', ['-setdcvalueindex', 'scheme_current', 'sub_processor', 'CPMinCores', val]);
       await spawnAsync('powercfg.exe', ['/setactive', 'SCHEME_CURRENT']);
     }
     else if (tweakName === 'disableDynamicTick') {
@@ -330,7 +330,7 @@ ipcMain.handle('set-dashboard-tweak', async (event, { tweakName, active, extraAr
     }
     else if (tweakName === 'powerPlan') {
       const guid = active === 'high' ? '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c' : '381b4222-f694-41f0-9685-ff5bb260df2e';
-      await spawnAsync('powercfg.exe', ['/setactive', '${guid}']);
+      await spawnAsync('powercfg.exe', ['/setactive', guid]);
     }
     else if (tweakName === 'forcePriority') {
       const gameName = extraArgs && extraArgs.gameName;

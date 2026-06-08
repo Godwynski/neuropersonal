@@ -288,9 +288,9 @@ export function AppProvider({ children }) {
     }
   };
 
-  // #32: Debounce implementation for slider changes
   const saveTimeoutRef = useRef(null);
-  
+  const pendingSettingsRef = useRef({});
+
   const saveValorantConfig = async (updatedSettings) => {
     if (!valorantConfigs || valorantConfigs.length === 0) return;
     
@@ -299,17 +299,21 @@ export function AppProvider({ children }) {
       setSelectedConfig(prev => ({ ...prev, ...updatedSettings }));
     }
 
+    pendingSettingsRef.current = { ...pendingSettingsRef.current, ...updatedSettings };
+
     if (saveTimeoutRef.current) clearTimeout(saveTimeoutRef.current);
     
-    // Capture paths from the current scope
     const pathsToSave = valorantConfigs.map(c => ({ path: c.filePath, accountId: c.accountId }));
     
     saveTimeoutRef.current = setTimeout(async () => {
       if (window.api) {
         let successCount = 0;
+        const settingsToApply = pendingSettingsRef.current;
+        pendingSettingsRef.current = {}; // reset
+
         for (const config of pathsToSave) {
           try {
-            const res = await window.api.saveValorantConfig(config.path, updatedSettings);
+            const res = await window.api.saveValorantConfig(config.path, settingsToApply);
             if (res.success) successCount++;
           } catch (e) { console.error(e); }
         }
