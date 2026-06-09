@@ -368,8 +368,8 @@ ipcMain.handle('run-macro', async (event, macroKey) => {
       await execAsync('ipconfig /flushdns');
     }
     else if (macroKey === 'm-ram') {
-      // #22: Use EmptyWorkingSet via PowerShell to actually free process working sets
-      await execAsync('powershell -NoProfile -Command "Get-Process | ForEach-Object { try { $_.MinWorkingSet = $_.MinWorkingSet } catch {} }; [System.GC]::Collect(); [System.GC]::WaitForPendingFinalizers()"');
+      // Real standby list purge via NtSetSystemInformation (what ISLC/Razer Cortex do)
+      await execAsync('powershell -NoProfile -Command "Add-Type @\\"\nusing System; using System.Runtime.InteropServices;\npublic class MemPurge {\n    [DllImport(\\\"ntdll.dll\\\")] public static extern int NtSetSystemInformation(int InfoClass, ref int Info, int Length);\n    public static void ClearStandbyList() { int cmd = 4; NtSetSystemInformation(80, ref cmd, sizeof(int)); }\n}\n\\"@; [MemPurge]::ClearStandbyList(); [System.GC]::Collect(); [System.GC]::WaitForPendingFinalizers()"');
     }
     else if (macroKey === 'm-explorer') {
       await execAsync('taskkill /f /im explorer.exe & start explorer.exe');
@@ -1445,6 +1445,449 @@ ipcMain.handle('toggle-legacy-rebar', async (event, enable) => {
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FEATURE 6: TCP/Nagle Optimization + Network Adapter Buffer Tuning
+// ─────────────────────────────────────────────────────────────────────────────
+
+ipcMain.handle('check-network-latency-status', async () => {
+  try {
+    const script = `
+$s = @{}
+$adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up'
+$nagleDisabled = $true
+$interruptModOff = $true
+foreach ($a in $adapters) {
+  $guid = $a.InterfaceGuid
+  $regPath = "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces\\$guid"
+  $ack = (Get-ItemProperty -Path $regPath -Name 'TcpAckFrequency' -ErrorAction SilentlyContinue).TcpAckFrequency
+  $noDelay = (Get-ItemProperty -Path $regPath -Name 'TCPNoDelay' -ErrorAction SilentlyContinue).TCPNoDelay
+  if ($ack -ne 1 -or $noDelay -ne 1) { $nagleDisabled = $false }
+  $intMod = Get-NetAdapterAdvancedProperty -Name $a.Name -DisplayName '*Interrupt Moderation*' -ErrorAction SilentlyContinue
+  if ($intMod -and $intMod.DisplayValue -ne 'Disabled') { $interruptModOff = $false }
+}
+$s.nagleDisabled = $nagleDisabled
+$s.interruptModOff = $interruptModOff
+$s.adapterCount = @($adapters).Count
+$s | ConvertTo-Json -Compress`;
+    const res = await runPsJson(script).catch(() => ({}));
+    return { success: true, ...res };
+  } catch (err) {
+    return { success: false, error: err.message, nagleDisabled: false, interruptModOff: false };
+  }
+});
+
+ipcMain.handle('toggle-network-latency', async (event, enable) => {
+  try {
+    if (enable) {
+      const script = `
+$adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up'
+foreach ($a in $adapters) {
+  $guid = $a.InterfaceGuid
+  $regPath = "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces\\$guid"
+  Set-ItemProperty -Path $regPath -Name 'TcpAckFrequency' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+  Set-ItemProperty -Path $regPath -Name 'TCPNoDelay' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+}`;
+      const encoded = psEncode(script);
+      await spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded]);
+    } else {
+      const script = `
+$adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up'
+foreach ($a in $adapters) {
+  $guid = $a.InterfaceGuid
+  $regPath = "HKLM:\\SYSTEM\\CurrentControlSet\\Services\\Tcpip\\Parameters\\Interfaces\\$guid"
+  Remove-ItemProperty -Path $regPath -Name 'TcpAckFrequency' -Force -ErrorAction SilentlyContinue
+  Remove-ItemProperty -Path $regPath -Name 'TCPNoDelay' -Force -ErrorAction SilentlyContinue
+}`;
+      const encoded = psEncode(script);
+      await spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded]);
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FEATURE 7: NIC Interrupt Moderation Disable
+// ─────────────────────────────────────────────────────────────────────────────
+
+ipcMain.handle('check-nic-interrupt-mod', async () => {
+  try {
+    const script = `
+$adapters = Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up'
+$allDisabled = $true
+foreach ($a in $adapters) {
+  $intMod = Get-NetAdapterAdvancedProperty -Name $a.Name -DisplayName '*Interrupt Moderation*' -ErrorAction SilentlyContinue
+  if ($intMod -and $intMod.DisplayValue -ne 'Disabled') { $allDisabled = $false; break }
+}
+@{ disabled = $allDisabled } | ConvertTo-Json -Compress`;
+    const res = await runPsJson(script).catch(() => ({ disabled: false }));
+    return { success: true, disabled: res.disabled || false };
+  } catch (err) {
+    return { success: false, error: err.message, disabled: false };
+  }
+});
+
+ipcMain.handle('toggle-nic-interrupt-mod', async (event, disable) => {
+  try {
+    const val = disable ? 'Disabled' : 'Enabled';
+    await spawnAsync('powershell.exe', ['-NoProfile', '-Command',
+      `Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Where-Object Status -eq 'Up' | ForEach-Object { Set-NetAdapterAdvancedProperty -Name $_.Name -DisplayName '*Interrupt Moderation*' -DisplayValue '${val}' -ErrorAction SilentlyContinue; Set-NetAdapterAdvancedProperty -Name $_.Name -DisplayName '*Interrupt Moderation Rate*' -DisplayValue '${disable ? 'Off' : 'Adaptive'}' -ErrorAction SilentlyContinue }`
+    ]);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FEATURE 8: CPU Affinity Manager (Intel Hybrid P-core / E-core)
+// ─────────────────────────────────────────────────────────────────────────────
+
+ipcMain.handle('check-cpu-topology', async () => {
+  try {
+    const script = `
+$s = @{}
+$proc = Get-CimInstance Win32_Processor | Select-Object -First 1
+$s.cpuName = $proc.Name
+$s.totalCores = $proc.NumberOfCores
+$s.totalLogical = $proc.NumberOfLogicalProcessors
+$s.isHybrid = $false
+$s.pCoreCount = 0
+$s.eCoreCount = 0
+# Detect Intel hybrid (12th gen+) via EfficiencyClass in Win32_Processor or core topology
+# On hybrid CPUs, efficiency cores have a different EfficiencyClass
+try {
+  $coreInfo = Get-CimInstance -Namespace 'root\\cimv2' -ClassName 'Win32_Processor' -Property 'Name' | Select-Object -First 1
+  if ($coreInfo.Name -match 'Core.*i[3579].*1[2-5]|Core.*Ultra|i[3579]-1[2-9]') {
+    $s.isHybrid = $true
+    # P-cores typically have HT (2 threads), E-cores have 1 thread per core
+    # Heuristic: if logicalProcessors > 2*cores, there are E-cores
+    # Standard: P-cores = (logical - cores) for HT count, remaining = E-cores
+    # Better: use Get-Counter or registry for actual topology
+    $effCores = 0
+    try {
+      $keys = Get-ChildItem 'HKLM:\\HARDWARE\\DESCRIPTION\\System\\CentralProcessor' -ErrorAction SilentlyContinue
+      foreach ($k in $keys) {
+        $effClass = (Get-ItemProperty $k.PSPath -Name 'EfficiencyClass' -ErrorAction SilentlyContinue).EfficiencyClass
+        if ($effClass -and $effClass -gt 0) { $effCores++ }
+      }
+    } catch {}
+    if ($effCores -gt 0) {
+      $s.eCoreCount = $effCores
+      $s.pCoreCount = $s.totalLogical - $effCores
+    } else {
+      $s.isHybrid = $false
+    }
+  }
+} catch {}
+# Check if VALORANT affinity is currently set
+$valProc = Get-Process -Name 'VALORANT-Win64-Shipping' -ErrorAction SilentlyContinue
+$s.valorantRunning = ($null -ne $valProc)
+if ($valProc) {
+  $s.currentAffinity = [long]$valProc.ProcessorAffinity
+} else {
+  $s.currentAffinity = -1
+}
+$s | ConvertTo-Json -Compress`;
+    const res = await runPsJson(script).catch(() => ({}));
+    return { success: true, ...res };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('set-cpu-affinity', async (event, { mode }) => {
+  try {
+    if (mode === 'performance') {
+      // Pin VALORANT to P-cores, move system processes to E-cores
+      const script = `
+$keys = Get-ChildItem 'HKLM:\\HARDWARE\\DESCRIPTION\\System\\CentralProcessor' -ErrorAction SilentlyContinue
+$pCoreMask = [long]0
+$eCoreMask = [long]0
+$idx = 0
+foreach ($k in $keys | Sort-Object { [int]$_.PSChildName }) {
+  $effClass = (Get-ItemProperty $k.PSPath -Name 'EfficiencyClass' -ErrorAction SilentlyContinue).EfficiencyClass
+  if ($effClass -and $effClass -gt 0) {
+    $eCoreMask = $eCoreMask -bor ([long]1 -shl $idx)
+  } else {
+    $pCoreMask = $pCoreMask -bor ([long]1 -shl $idx)
+  }
+  $idx++
+}
+if ($pCoreMask -eq 0) { $pCoreMask = [long]([Math]::Pow(2, $idx) - 1) }
+if ($eCoreMask -eq 0) { $eCoreMask = [long]([Math]::Pow(2, $idx) - 1) }
+# Pin VALORANT to P-cores
+$val = Get-Process -Name 'VALORANT-Win64-Shipping' -ErrorAction SilentlyContinue
+if ($val) { $val.ProcessorAffinity = [IntPtr]$pCoreMask }
+# Move system overhead to E-cores (best effort)
+foreach ($name in @('dwm','audiodg','SearchIndexer','MsMpEng')) {
+  $p = Get-Process -Name $name -ErrorAction SilentlyContinue
+  if ($p) { try { $p.ProcessorAffinity = [IntPtr]$eCoreMask } catch {} }
+}`;
+      const encoded = psEncode(script);
+      await spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded]);
+    } else {
+      // Reset all affinities to use all cores
+      const script = `
+$totalLogical = (Get-CimInstance Win32_Processor | Select-Object -First 1).NumberOfLogicalProcessors
+$allMask = [long]([Math]::Pow(2, $totalLogical) - 1)
+$val = Get-Process -Name 'VALORANT-Win64-Shipping' -ErrorAction SilentlyContinue
+if ($val) { $val.ProcessorAffinity = [IntPtr]$allMask }
+foreach ($name in @('dwm','audiodg','SearchIndexer','MsMpEng')) {
+  $p = Get-Process -Name $name -ErrorAction SilentlyContinue
+  if ($p) { try { $p.ProcessorAffinity = [IntPtr]$allMask } catch {} }
+}`;
+      const encoded = psEncode(script);
+      await spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded]);
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FEATURE 9: Windows Visual Effects Stripping
+// ─────────────────────────────────────────────────────────────────────────────
+
+ipcMain.handle('check-visual-effects', async () => {
+  try {
+    const script = `
+$s = @{}
+$vfx = (Get-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects' -Name 'VisualFXSetting' -ErrorAction SilentlyContinue).VisualFXSetting
+$s.stripped = ($vfx -eq 2)
+# Also check if animations are disabled
+$dwm = (Get-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\DWM' -Name 'EnableAeroPeek' -ErrorAction SilentlyContinue).EnableAeroPeek
+$s.aeroPeekOff = ($dwm -eq 0)
+$s | ConvertTo-Json -Compress`;
+    const res = await runPsJson(script).catch(() => ({}));
+    return { success: true, stripped: res.stripped || false, aeroPeekOff: res.aeroPeekOff || false };
+  } catch (err) {
+    return { success: false, error: err.message, stripped: false };
+  }
+});
+
+ipcMain.handle('toggle-visual-effects', async (event, strip) => {
+  try {
+    if (strip) {
+      const script = `
+# Set to Custom mode with performance-only options
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects' -Name 'VisualFXSetting' -Value 2 -Type DWord -Force -ErrorAction SilentlyContinue
+# Disable specific visual effects
+Set-ItemProperty -Path 'HKCU:\\Control Panel\\Desktop' -Name 'DragFullWindows' -Value '0' -Type String -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path 'HKCU:\\Control Panel\\Desktop' -Name 'FontSmoothing' -Value '2' -Type String -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path 'HKCU:\\Control Panel\\Desktop\\WindowMetrics' -Name 'MinAnimate' -Value '0' -Type String -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'TaskbarAnimations' -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'ListviewAlphaSelect' -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\DWM' -Name 'EnableAeroPeek' -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\DWM' -Name 'AlwaysHibernateThumbnails' -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+# Disable transparency
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize' -Name 'EnableTransparency' -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue`;
+      const encoded = psEncode(script);
+      await spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded]);
+    } else {
+      const script = `
+# Restore to "Let Windows choose best"
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\VisualEffects' -Name 'VisualFXSetting' -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path 'HKCU:\\Control Panel\\Desktop' -Name 'DragFullWindows' -Value '1' -Type String -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path 'HKCU:\\Control Panel\\Desktop\\WindowMetrics' -Name 'MinAnimate' -Value '1' -Type String -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'TaskbarAnimations' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\Advanced' -Name 'ListviewAlphaSelect' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\DWM' -Name 'EnableAeroPeek' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\DWM' -Name 'AlwaysHibernateThumbnails' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Themes\\Personalize' -Name 'EnableTransparency' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue`;
+      const encoded = psEncode(script);
+      await spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded]);
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FEATURE 10: Windows Defender Exclusions for VALORANT
+// ─────────────────────────────────────────────────────────────────────────────
+
+ipcMain.handle('check-defender-exclusion', async () => {
+  try {
+    const script = `
+$s = @{}
+$exclusions = (Get-MpPreference -ErrorAction SilentlyContinue).ExclusionPath
+$riotPath = 'C:\\Riot Games'
+$valLocal = "$env:LOCALAPPDATA\\VALORANT"
+$s.riotExcluded = ($exclusions -contains $riotPath -or ($exclusions | Where-Object { $_ -like '*Riot Games*' }).Count -gt 0)
+$s.valLocalExcluded = ($exclusions -contains $valLocal -or ($exclusions | Where-Object { $_ -like '*VALORANT*' }).Count -gt 0)
+$s.isExcluded = ($s.riotExcluded -and $s.valLocalExcluded)
+$s | ConvertTo-Json -Compress`;
+    const res = await runPsJson(script).catch(() => ({}));
+    return { success: true, isExcluded: res.isExcluded || false };
+  } catch (err) {
+    return { success: false, error: err.message, isExcluded: false };
+  }
+});
+
+ipcMain.handle('toggle-defender-exclusion', async (event, add) => {
+  try {
+    if (add) {
+      await spawnAsync('powershell.exe', ['-NoProfile', '-Command',
+        `Add-MpPreference -ExclusionPath 'C:\\Riot Games' -Force -ErrorAction SilentlyContinue; Add-MpPreference -ExclusionPath "$env:LOCALAPPDATA\\VALORANT" -Force -ErrorAction SilentlyContinue`
+      ]);
+    } else {
+      await spawnAsync('powershell.exe', ['-NoProfile', '-Command',
+        `Remove-MpPreference -ExclusionPath 'C:\\Riot Games' -Force -ErrorAction SilentlyContinue; Remove-MpPreference -ExclusionPath "$env:LOCALAPPDATA\\VALORANT" -Force -ErrorAction SilentlyContinue`
+      ]);
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FEATURE 11: Focus Assist / Notification Suppression
+// ─────────────────────────────────────────────────────────────────────────────
+
+ipcMain.handle('check-focus-assist', async () => {
+  try {
+    const script = `
+$s = @{}
+$toasts = (Get-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings' -Name 'NOC_GLOBAL_SETTING_TOASTS_ENABLED' -ErrorAction SilentlyContinue).NOC_GLOBAL_SETTING_TOASTS_ENABLED
+$s.notificationsDisabled = ($toasts -eq 0)
+$focusAssist = (Get-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\CloudStore\\Store\\DefaultAccount\\Current\\default$windows.data.notifications.quiethourssettings\\windows.data.notifications.quiethourssettings' -Name 'Data' -ErrorAction SilentlyContinue)
+$s.focusAssistActive = ($null -ne $focusAssist)
+$s | ConvertTo-Json -Compress`;
+    const res = await runPsJson(script).catch(() => ({}));
+    return { success: true, notificationsDisabled: res.notificationsDisabled || false };
+  } catch (err) {
+    return { success: false, error: err.message, notificationsDisabled: false };
+  }
+});
+
+ipcMain.handle('toggle-focus-assist', async (event, enable) => {
+  try {
+    if (enable) {
+      const script = `
+# Disable toast notifications
+if (-not (Test-Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings')) { New-Item -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings' -Force | Out-Null }
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings' -Name 'NOC_GLOBAL_SETTING_TOASTS_ENABLED' -Value 0 -Type DWord -Force
+# Disable notification sounds
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings' -Name 'NOC_GLOBAL_SETTING_ALLOW_NOTIFICATION_SOUND' -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue
+# Disable lock screen notifications
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings' -Name 'NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK' -Value 0 -Type DWord -Force -ErrorAction SilentlyContinue`;
+      const encoded = psEncode(script);
+      await spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded]);
+    } else {
+      const script = `
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings' -Name 'NOC_GLOBAL_SETTING_TOASTS_ENABLED' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings' -Name 'NOC_GLOBAL_SETTING_ALLOW_NOTIFICATION_SOUND' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue
+Set-ItemProperty -Path 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Notifications\\Settings' -Name 'NOC_GLOBAL_SETTING_ALLOW_TOASTS_ABOVE_LOCK' -Value 1 -Type DWord -Force -ErrorAction SilentlyContinue`;
+      const encoded = psEncode(script);
+      await spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded]);
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FEATURE 12: Scheduled Task Cleanup (Disable CPU-heavy telemetry tasks)
+// ─────────────────────────────────────────────────────────────────────────────
+
+const GAMING_DISABLE_TASKS = [
+  '\\Microsoft\\Windows\\Application Experience\\Microsoft Compatibility Appraiser',
+  '\\Microsoft\\Windows\\Application Experience\\ProgramDataUpdater',
+  '\\Microsoft\\Windows\\Customer Experience Improvement Program\\Consolidator',
+  '\\Microsoft\\Windows\\Customer Experience Improvement Program\\UsbCeip',
+  '\\Microsoft\\Windows\\DiskDiagnostic\\Microsoft-Windows-DiskDiagnosticDataCollector',
+  '\\Microsoft\\Windows\\Windows Error Reporting\\QueueReporting',
+  '\\Microsoft\\Windows\\Autochk\\Proxy',
+  '\\Microsoft\\Windows\\Power Efficiency Diagnostics\\AnalyzeSystem'
+];
+
+ipcMain.handle('check-scheduled-tasks', async () => {
+  try {
+    const taskNames = GAMING_DISABLE_TASKS.map(t => `'${t}'`).join(',');
+    const script = `
+$tasks = @(${taskNames})
+$disabled = 0
+$total = 0
+foreach ($t in $tasks) {
+  try {
+    $task = Get-ScheduledTask -TaskPath ($t -replace '\\\\[^\\\\]+$','\\') -TaskName ($t -replace '.*\\\\','') -ErrorAction SilentlyContinue
+    if ($task) {
+      $total++
+      if ($task.State -eq 'Disabled') { $disabled++ }
+    }
+  } catch {}
+}
+@{ disabled = $disabled; total = $total; allDisabled = ($disabled -eq $total -and $total -gt 0) } | ConvertTo-Json -Compress`;
+    const res = await runPsJson(script).catch(() => ({}));
+    return { success: true, allDisabled: res.allDisabled || false, disabled: res.disabled || 0, total: res.total || 0 };
+  } catch (err) {
+    return { success: false, error: err.message, allDisabled: false };
+  }
+});
+
+ipcMain.handle('toggle-scheduled-tasks', async (event, disable) => {
+  try {
+    const action = disable ? 'Disable' : 'Enable';
+    const taskNames = GAMING_DISABLE_TASKS.map(t => `'${t}'`).join(',');
+    const script = `
+$tasks = @(${taskNames})
+foreach ($t in $tasks) {
+  try {
+    $taskPath = $t -replace '\\\\[^\\\\]+$','\\'
+    $taskName = $t -replace '.*\\\\',''
+    ${action}-ScheduledTask -TaskPath $taskPath -TaskName $taskName -ErrorAction SilentlyContinue | Out-Null
+  } catch {}
+}`;
+    const encoded = psEncode(script);
+    await spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded]);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// FEATURE 13: Ultimate Performance Power Plan
+// ─────────────────────────────────────────────────────────────────────────────
+
+ipcMain.handle('activate-ultimate-performance', async () => {
+  try {
+    // Check if Ultimate Performance already exists
+    const checkScript = `
+$plans = powercfg /list 2>$null
+$ultimate = $plans | Select-String 'e9a42b02-d5df-448d-aa00-03f14749eb61'
+if ($ultimate) { echo 'exists' } else {
+  $dup = powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2>$null
+  if ($LASTEXITCODE -eq 0) { echo 'created' } else { echo 'failed' }
+}`;
+    const result = await execAsync(`powershell -NoProfile -Command "${checkScript.replace(/"/g, '\\"')}"`);
+    if (result.includes('failed')) {
+      return { success: false, error: 'Could not create Ultimate Performance plan' };
+    }
+    // Activate it
+    await spawnAsync('powercfg.exe', ['/setactive', 'e9a42b02-d5df-448d-aa00-03f14749eb61']);
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('check-ultimate-performance', async () => {
+  try {
+    const plan = await execAsync('powercfg /getactivescheme');
+    const isUltimate = plan.includes('e9a42b02');
+    return { success: true, isUltimate };
+  } catch (err) {
+    return { success: false, error: err.message, isUltimate: false };
   }
 });
 

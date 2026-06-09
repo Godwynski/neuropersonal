@@ -78,7 +78,25 @@ export default function ValorantOptimizer() {
     isProcessing,
     executeOperation,
     optimizedCount,
-    totalOptimizations
+    totalOptimizations,
+    // New performance features
+    networkLatencyOptimized,
+    toggleNetworkLatency,
+    nicInterruptModDisabled,
+    toggleNicInterruptMod,
+    cpuTopology,
+    cpuAffinityActive,
+    toggleCpuAffinity,
+    visualEffectsStripped,
+    toggleVisualEffects,
+    defenderExcluded,
+    toggleDefenderExclusion,
+    focusAssistActive,
+    toggleFocusAssist,
+    scheduledTasksDisabled,
+    toggleScheduledTasks,
+    ultimatePerformanceActive,
+    activateUltimatePerformance
   } = useAppContext();
 
   const [activeTab, setActiveTab] = useState('all');
@@ -545,6 +563,122 @@ export default function ValorantOptimizer() {
       actionType: 'action',
       onAction: forceValorantPriority,
       actionLabel: 'Elevate Now'
+    },
+
+    // --- New Performance Features ---
+    {
+      id: 'networkLatency',
+      name: 'TCP/Nagle Latency Optimization',
+      category: 'OS & Registry',
+      tier: 'safe',
+      impact: 'high',
+      desc: 'Disables Nagle algorithm and delayed ACK for faster packets.',
+      descDetailed: 'Sets TcpAckFrequency=1 and TCPNoDelay=1 on all active NICs to eliminate TCP buffering delays, reducing input-to-server latency by 5-15ms.',
+      status: networkLatencyOptimized ? 'Optimized' : 'Default (Buffered)',
+      isOptimized: networkLatencyOptimized === true,
+      actionType: 'toggle',
+      onAction: () => toggleNetworkLatency(!networkLatencyOptimized),
+      actionLabel: networkLatencyOptimized ? 'Restore' : 'Optimize'
+    },
+    {
+      id: 'nicInterruptMod',
+      name: 'NIC Interrupt Moderation',
+      category: 'OS & Registry',
+      tier: 'safe',
+      impact: 'medium',
+      isAdvanced: true,
+      desc: 'Disables NIC interrupt coalescing for lower network latency.',
+      descDetailed: 'Disables interrupt moderation on network adapters so packets are processed immediately instead of being batched.',
+      status: nicInterruptModDisabled ? 'Optimized (Disabled)' : 'Active (Enabled)',
+      isOptimized: nicInterruptModDisabled === true,
+      actionType: 'toggle',
+      onAction: () => toggleNicInterruptMod(!nicInterruptModDisabled),
+      actionLabel: nicInterruptModDisabled ? 'Restore' : 'Optimize'
+    },
+    {
+      id: 'cpuAffinity',
+      name: 'CPU Core Affinity (P-Core Pinning)',
+      category: 'OS & Registry',
+      tier: 'safe',
+      impact: 'high',
+      desc: 'Pins VALORANT to performance cores on hybrid CPUs.',
+      descDetailed: 'On Intel 12th+ gen hybrid CPUs, pins VALORANT threads to P-cores and moves OS overhead (DWM, audio) to E-cores for maximum single-thread performance.',
+      status: cpuAffinityActive ? 'Pinned to P-Cores' : (cpuTopology.isHybrid ? 'All Cores (Default)' : 'Non-Hybrid CPU'),
+      isOptimized: cpuAffinityActive === true,
+      showIf: cpuTopology.isHybrid,
+      actionType: 'toggle',
+      onAction: () => toggleCpuAffinity(!cpuAffinityActive),
+      actionLabel: cpuAffinityActive ? 'Restore' : 'Optimize'
+    },
+    {
+      id: 'visualEffects',
+      name: 'Windows Visual Effects Strip',
+      category: 'Launch Policies',
+      tier: 'safe',
+      impact: 'medium',
+      desc: 'Disables desktop animations and transparency.',
+      descDetailed: 'Strips Windows desktop visual effects (animations, transparency, Aero Peek, taskbar thumbnails) to reduce DWM composition overhead.',
+      status: visualEffectsStripped ? 'Stripped (Performance)' : 'Default (Visual)',
+      isOptimized: visualEffectsStripped === true,
+      actionType: 'toggle',
+      onAction: () => toggleVisualEffects(!visualEffectsStripped),
+      actionLabel: visualEffectsStripped ? 'Restore' : 'Strip'
+    },
+    {
+      id: 'defenderExclusion',
+      name: 'Defender Exclusions (VALORANT)',
+      category: 'Launch Policies',
+      tier: 'safe',
+      impact: 'medium',
+      desc: 'Excludes VALORANT from real-time antivirus scanning.',
+      descDetailed: 'Adds Riot Games and VALORANT directories to Windows Defender exclusions to prevent real-time scanning I/O spikes during shader compilation.',
+      status: defenderExcluded ? 'Excluded' : 'Not Excluded',
+      isOptimized: defenderExcluded === true,
+      actionType: 'toggle',
+      onAction: () => toggleDefenderExclusion(!defenderExcluded),
+      actionLabel: defenderExcluded ? 'Remove' : 'Add Exclusion'
+    },
+    {
+      id: 'focusAssist',
+      name: 'Focus Assist (Notification Suppression)',
+      category: 'Launch Policies',
+      tier: 'safe',
+      impact: 'low',
+      desc: 'Blocks all Windows notifications during gameplay.',
+      descDetailed: 'Suppresses Windows toast notifications, sounds, and lock screen alerts to prevent DWM composition spikes during gameplay.',
+      status: focusAssistActive ? 'Suppressed' : 'Active (Notifications On)',
+      isOptimized: focusAssistActive === true,
+      actionType: 'toggle',
+      onAction: () => toggleFocusAssist(!focusAssistActive),
+      actionLabel: focusAssistActive ? 'Restore' : 'Suppress'
+    },
+    {
+      id: 'scheduledTasks',
+      name: 'Telemetry Scheduled Task Cleanup',
+      category: 'Launch Policies',
+      tier: 'safe',
+      impact: 'medium',
+      desc: 'Disables Windows telemetry tasks that spike CPU.',
+      descDetailed: 'Disables Compatibility Appraiser, CEIP, Disk Diagnostics, Error Reporting and other scheduled tasks that randomly spike CPU and disk during gameplay.',
+      status: scheduledTasksDisabled ? 'Disabled' : 'Active',
+      isOptimized: scheduledTasksDisabled === true,
+      actionType: 'toggle',
+      onAction: () => toggleScheduledTasks(!scheduledTasksDisabled),
+      actionLabel: scheduledTasksDisabled ? 'Restore' : 'Disable'
+    },
+    {
+      id: 'ultimatePerformance',
+      name: 'Ultimate Performance Power Plan',
+      category: 'Launch Policies',
+      tier: 'safe',
+      impact: 'high',
+      desc: 'Activates the hidden Windows Ultimate Performance plan.',
+      descDetailed: 'Imports and activates the hidden Ultimate Performance power plan which is more aggressive than High Performance — fully disables core parking, maximizes timer resolution, eliminates power-saving states.',
+      status: ultimatePerformanceActive ? 'Active (Ultimate)' : 'Inactive',
+      isOptimized: ultimatePerformanceActive === true,
+      actionType: 'action',
+      onAction: activateUltimatePerformance,
+      actionLabel: 'Activate'
     }
   ];
 

@@ -53,6 +53,32 @@ contextBridge.exposeInMainWorld('api', {
   getLoginItem: () => ipcRenderer.invoke('get-login-item'),
   setLoginItem: (enable) => ipcRenderer.invoke('set-login-item', enable),
   restartPc: () => ipcRenderer.invoke('restart-pc'),
+
+  // Feature 6: TCP/Nagle Network Latency
+  checkNetworkLatency: () => ipcRenderer.invoke('check-network-latency-status'),
+  toggleNetworkLatency: (enable) => ipcRenderer.invoke('toggle-network-latency', enable),
+  // Feature 7: NIC Interrupt Moderation
+  checkNicInterruptMod: () => ipcRenderer.invoke('check-nic-interrupt-mod'),
+  toggleNicInterruptMod: (disable) => ipcRenderer.invoke('toggle-nic-interrupt-mod', disable),
+  // Feature 8: CPU Affinity Manager
+  checkCpuTopology: () => ipcRenderer.invoke('check-cpu-topology'),
+  setCpuAffinity: (config) => ipcRenderer.invoke('set-cpu-affinity', config),
+  // Feature 9: Visual Effects Stripping
+  checkVisualEffects: () => ipcRenderer.invoke('check-visual-effects'),
+  toggleVisualEffects: (strip) => ipcRenderer.invoke('toggle-visual-effects', strip),
+  // Feature 10: Defender Exclusions
+  checkDefenderExclusion: () => ipcRenderer.invoke('check-defender-exclusion'),
+  toggleDefenderExclusion: (add) => ipcRenderer.invoke('toggle-defender-exclusion', add),
+  // Feature 11: Focus Assist
+  checkFocusAssist: () => ipcRenderer.invoke('check-focus-assist'),
+  toggleFocusAssist: (enable) => ipcRenderer.invoke('toggle-focus-assist', enable),
+  // Feature 12: Scheduled Tasks
+  checkScheduledTasks: () => ipcRenderer.invoke('check-scheduled-tasks'),
+  toggleScheduledTasks: (disable) => ipcRenderer.invoke('toggle-scheduled-tasks', disable),
+  // Feature 13: Ultimate Performance Plan
+  checkUltimatePerformance: () => ipcRenderer.invoke('check-ultimate-performance'),
+  activateUltimatePerformance: () => ipcRenderer.invoke('activate-ultimate-performance'),
+
   onValorantStatusChange: (callback) => {
     ipcRenderer.on('valorant-status-change', (event, isRunning) => callback(isRunning));
   }

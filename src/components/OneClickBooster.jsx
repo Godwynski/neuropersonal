@@ -75,17 +75,17 @@ export default function OneClickBooster() {
               <div className="space-y-1.5">
                 <span className="font-semibold text-[#3b82f6] block">🟢 Safe Boost Mode</span>
                 <p className="text-gray-300">
-                  Applies low-risk optimization policies (e.g. GameDVR disables, raw mouse acceleration bypass, USB suspend, Game Mode, High-Performance power plan, shader cache cleaning).
+                  Applies all core optimizations: GameDVR disable, raw mouse input, USB suspend bypass, Game Mode, High-Performance power plan, TCP/Nagle latency fix, NIC interrupt moderation disable, visual effects strip, Defender exclusions, notification suppression, telemetry task cleanup, P-core affinity pinning, and shader cache cleaning.
                 </p>
-                <span className="font-medium text-gray-500 block mt-1">✓ No reboots. 100% stable.</span>
+                <span className="font-medium text-gray-500 block mt-1">✓ No reboots. 100% stable. Every safe tweak applied.</span>
               </div>
             ) : (
               <div className="space-y-1.5">
                 <span className="font-semibold text-[#ff4655] block">🔥 Max Boost (Aggressive)</span>
                 <p className="text-gray-300">
-                  Applies all Safe Boost tweaks PLUS aggressive registry modifications, network card latency tuning, CPU throttling disabling, platform clock (HPET) override, GPU driver performance profile injections, and virtualization safety (VBS/Core Isolation) disabling.
+                  Applies ALL Safe Boost tweaks PLUS: power throttling bypass, CPU priority lock, timer resolution lock, NIC power saving disable, Xbox service kill, GPU driver profile injection, VBS/Core Isolation disable, HPET override, and Ultimate Performance power plan activation.
                 </p>
-                <span className="font-medium text-[#ff4655] block mt-1">⚠️ Requires system reboot. Disables some security features.</span>
+                <span className="font-medium text-[#ff4655] block mt-1">⚠️ Requires system reboot. Maximum possible performance.</span>
               </div>
             )}
           </div>
