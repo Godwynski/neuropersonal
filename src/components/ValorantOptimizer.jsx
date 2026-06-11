@@ -96,7 +96,8 @@ export default function ValorantOptimizer() {
     scheduledTasksDisabled,
     toggleScheduledTasks,
     ultimatePerformanceActive,
-    activateUltimatePerformance
+    activateUltimatePerformance,
+    deactivateUltimatePerformance
   } = useAppContext();
 
   const [activeTab, setActiveTab] = useState('all');
@@ -673,12 +674,14 @@ export default function ValorantOptimizer() {
       tier: 'safe',
       impact: 'high',
       desc: 'Activates the hidden Windows Ultimate Performance plan.',
-      descDetailed: 'Imports and activates the hidden Ultimate Performance power plan which is more aggressive than High Performance — fully disables core parking, maximizes timer resolution, eliminates power-saving states.',
-      status: ultimatePerformanceActive ? 'Active (Ultimate)' : 'Inactive',
+      descDetailed: 'Imports and activates the hidden Ultimate Performance power plan which is more aggressive than High Performance — fully disables core parking, maximizes timer resolution, eliminates power-saving states. Auto-activates when you launch VALORANT.',
+      status: ultimatePerformanceActive ? 'Active (Ultimate Performance)' : 'Inactive (High/Balanced)',
       isOptimized: ultimatePerformanceActive === true,
-      actionType: 'action',
-      onAction: activateUltimatePerformance,
-      actionLabel: 'Activate'
+      actionType: 'toggle',
+      onAction: () => ultimatePerformanceActive
+        ? deactivateUltimatePerformance()
+        : activateUltimatePerformance(),
+      actionLabel: ultimatePerformanceActive ? 'Restore' : 'Activate'
     }
   ];
 

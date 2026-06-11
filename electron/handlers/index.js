@@ -104,12 +104,23 @@ $s | ConvertTo-Json -Compress`;
 
     const batchB = `
 $s = @{}
-$usb = powercfg /q SCHEME_CURRENT 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 2>$null
-$s.disableUsbSuspend  = ($usb -match '0x00000000')
+$usbVal = $null
+try {
+  $usbRaw = (Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerSettings\\2a737441-1930-4402-8d77-b2bebba308a3\\48e6b7a6-50f5-4782-a5d4-53bb8f07e226\\DefaultPowerSchemeValues' -EA SilentlyContinue)
+  if ($usbRaw) {
+    $acKey = (Get-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows\\CurrentVersion\\Explorer\\PowerCfg\\PowerSchemes' -EA SilentlyContinue)
+  }
+  $activePlan = (powercfg /getactivescheme 2>$null) -replace '.*GUID: ([a-f0-9-]+).*','$1'
+  $usbOut = powercfg /q "$activePlan" 2a737441-1930-4402-8d77-b2bebba308a3 48e6b7a6-50f5-4782-a5d4-53bb8f07e226 2>$null
+  if ($usbOut -match 'Current AC Power Setting Index:\s*0x0+\s') { $usbVal = 0 }
+  elseif ($usbOut -match '0x00000000') { $usbVal = 0 }
+  else { $usbVal = 1 }
+} catch { $usbVal = 1 }
+$s.disableUsbSuspend = ($usbVal -eq 0)
 $park = powercfg /q SCHEME_CURRENT sub_processor CPMinCores 2>$null
 $s.disableCoreParking = ($park -match '0x00000064')
 $plan = powercfg /getactivescheme 2>$null
-$s.powerPlanMode      = if ($plan -match '8c5e7fda') { 'high' } else { 'balanced' }
+$s.powerPlanMode = if ($plan -match '8c5e7fda') { 'high' } elseif ($plan -match 'e9a42b02') { 'ultimate' } else { 'balanced' }
 $bcd = bcdedit /enum '{current}' 2>$null
 $s.disableDynamicTick = ($bcd -match 'disabledynamictick' -and $bcd -match 'Yes')
 $s | ConvertTo-Json -Compress`;
@@ -140,7 +151,9 @@ $classPath = 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Class\\{4d36e968-e325-1
 if ($gpuName -match 'AMD|Radeon') {
   $amdKey = Get-ChildItem $classPath -EA SilentlyContinue | Where-Object { (Get-ItemProperty $_.PSPath -EA SilentlyContinue).DriverDesc -like '*AMD*' -or (Get-ItemProperty $_.PSPath -EA SilentlyContinue).DriverDesc -like '*Radeon*' } | Select-Object -First 1
   if ($amdKey) {
-    $s.freesyncEnabled = ((Get-ItemProperty $amdKey.PSPath -Name KMD_EnableInternalLargePage -EA SilentlyContinue).KMD_EnableInternalLargePage -eq 1)
+    $fs = (Get-ItemProperty $amdKey.PSPath -Name EnableFreeSync -EA SilentlyContinue).EnableFreeSync
+    if ($null -eq $fs) { $fs = (Get-ItemProperty $amdKey.PSPath -Name KMD_EnableFreeSync -EA SilentlyContinue).KMD_EnableFreeSync }
+    $s.freesyncEnabled = ($fs -eq 1)
   } else { $s.freesyncEnabled = $false }
 } elseif ($gpuName -match 'NVIDIA') {
   $s.freesyncEnabled = ((Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\nvlddmkm\\Global\\NVTweak' -Name EnableAdaptiveSync -EA SilentlyContinue).EnableAdaptiveSync -eq 1)
@@ -280,7 +293,11 @@ ipcMain.handle('set-dashboard-tweak', async (event, { tweakName, active, extraAr
       const gpuName = (await getCachedGpuName()).toLowerCase();
       if (gpuName.includes('amd') || gpuName.includes('radeon')) {
         const activePath = await getActiveGpuDevicePath();
-        await setRegistryValue(activePath, 'KMD_EnableInternalLargePage', val, 'DWord');
+        // Write to EnableFreeSync (primary) and KMD_EnableFreeSync (fallback key used by some driver versions)
+        await setRegistryValue(activePath, 'EnableFreeSync', val, 'DWord');
+        await setRegistryValue(activePath, 'KMD_EnableFreeSync', val, 'DWord').catch(() => {});
+        // Also set AllowFreeSyncInWindowing for windowed FreeSync support
+        await setRegistryValue(activePath, 'AllowFreeSyncInWindowing', val, 'DWord').catch(() => {});
       } else if (gpuName.includes('nvidia')) {
         await setRegistryValue('HKLM:\\SYSTEM\\CurrentControlSet\\Services\\nvlddmkm\\Global\\NVTweak', 'EnableAdaptiveSync', val, 'DWord');
       }
@@ -1861,20 +1878,43 @@ foreach ($t in $tasks) {
 
 ipcMain.handle('activate-ultimate-performance', async () => {
   try {
-    // Check if Ultimate Performance already exists
-    const checkScript = `
-$plans = powercfg /list 2>$null
-$ultimate = $plans | Select-String 'e9a42b02-d5df-448d-aa00-03f14749eb61'
-if ($ultimate) { echo 'exists' } else {
-  $dup = powercfg -duplicatescheme e9a42b02-d5df-448d-aa00-03f14749eb61 2>$null
-  if ($LASTEXITCODE -eq 0) { echo 'created' } else { echo 'failed' }
-}`;
-    const result = await execAsync(`powershell -NoProfile -Command "${checkScript.replace(/"/g, '\\"')}"`);
-    if (result.includes('failed')) {
-      return { success: false, error: 'Could not create Ultimate Performance plan' };
+    // Step 1: Try to duplicate the hidden Ultimate Performance scheme
+    let ultimateGuid = 'e9a42b02-d5df-448d-aa00-03f14749eb61';
+    let planAvailable = false;
+
+    // Check if it already exists in the plan list
+    const listOut = await execAsync('powercfg /list').catch(() => '');
+    if (listOut.toLowerCase().includes('e9a42b02')) {
+      planAvailable = true;
+    } else {
+      // Try to duplicate it (may fail on Windows Home)
+      try {
+        const dupOut = await execAsync(`powercfg -duplicatescheme ${ultimateGuid}`);
+        if (dupOut && !dupOut.toLowerCase().includes('error')) {
+          planAvailable = true;
+        }
+      } catch (dupErr) {
+        console.error('Silent error caught: Ultimate Performance duplicate failed:', dupErr.message);
+      }
     }
-    // Activate it
-    await spawnAsync('powercfg.exe', ['/setactive', 'e9a42b02-d5df-448d-aa00-03f14749eb61']);
+
+    if (!planAvailable) {
+      // Fallback: activate High Performance plan instead and apply aggressive settings
+      await spawnAsync('powercfg.exe', ['/setactive', '8c5e7fda-e8bf-4a96-9a85-a6e23a8c635c']);
+      // Apply additional aggressive settings on top of High Performance
+      const aggScript = `
+powercfg /setacvalueindex SCHEME_CURRENT sub_processor PROCTHROTTLEMAX 100
+powercfg /setacvalueindex SCHEME_CURRENT sub_processor PROCTHROTTLEMIN 100
+powercfg /setacvalueindex SCHEME_CURRENT sub_processor CPMinCores 100
+powercfg /setacvalueindex SCHEME_CURRENT sub_processor DISTRIBUTEUTIL 0
+powercfg /setactive SCHEME_CURRENT`;
+      const encoded = psEncode(aggScript);
+      await spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded]).catch(() => {});
+      return { success: true, fallback: true };
+    }
+
+    // Activate the Ultimate Performance plan
+    await spawnAsync('powercfg.exe', ['/setactive', ultimateGuid]);
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };

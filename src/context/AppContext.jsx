@@ -544,8 +544,29 @@ export function AppProvider({ children }) {
   const activateUltimatePerformance = async () => {
     if (!window.api || !window.api.activateUltimatePerformance) return;
     const res = await window.api.activateUltimatePerformance();
-    if (res.success) { setUltimatePerformanceActive(true); setPowerPlanMode('ultimate'); addLog('[Power] Ultimate Performance plan activated'); addToast('Ultimate Performance plan activated', 'success'); }
-    else addToast(`Failed: ${res.error}`, 'error');
+    if (res.success) {
+      setUltimatePerformanceActive(true);
+      setPowerPlanMode('ultimate');
+      addLog('[Power] Ultimate Performance plan activated');
+      if (res.fallback) {
+        addToast('High Performance + Aggressive CPU tuning applied (Ultimate plan unavailable on this edition)', 'warning');
+      } else {
+        addToast('Ultimate Performance plan activated', 'success');
+      }
+    }
+    else addToast(`Failed to activate Ultimate Performance: ${res.error}`, 'error');
+  };
+
+  const deactivateUltimatePerformance = async () => {
+    if (window.api && window.api.setDashboardTweak) {
+      const res = await window.api.setDashboardTweak('powerPlan', 'high');
+      if (res.success) {
+        setUltimatePerformanceActive(false);
+        setPowerPlanMode('high');
+        addLog('[Power] Reverted to High Performance plan');
+        addToast('Reverted to High Performance plan', 'info');
+      }
+    }
   };
 
   const cleanAllShaderCaches = async () => {
@@ -566,6 +587,7 @@ export function AppProvider({ children }) {
   };
 
   const togglePowerPlan = async () => {
+    // Cycle: balanced → high → balanced (ultimate is managed separately)
     const nextMode = powerPlanMode === 'balanced' ? 'high' : 'balanced';
     if (window.api && window.api.setDashboardTweak) {
       // If we don't have the original plan saved, assume it's the opposite of what we're setting
@@ -779,6 +801,10 @@ export function AppProvider({ children }) {
 
   const launchValorant = async () => {
     await triggerValorantAutoBoost();
+    // Auto-activate Ultimate Performance plan on launch
+    if (!ultimatePerformanceActive) {
+      await activateUltimatePerformance();
+    }
     if (window.api && window.api.launchValorant) {
       addLog('[Launcher] Launching VALORANT via Riot Client...');
       const res = await window.api.launchValorant(valorantPath);
@@ -1095,7 +1121,7 @@ export function AppProvider({ children }) {
       defenderExcluded, toggleDefenderExclusion,
       focusAssistActive, toggleFocusAssist,
       scheduledTasksDisabled, toggleScheduledTasks,
-      ultimatePerformanceActive, activateUltimatePerformance,
+      ultimatePerformanceActive, activateUltimatePerformance, deactivateUltimatePerformance,
       optimizedCount, totalOptimizations
     }}>
       {children}
