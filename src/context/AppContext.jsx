@@ -205,6 +205,10 @@ export function AppProvider({ children }) {
     } catch (e) { console.error('Failed to refresh status:', e); }
   };
 
+  const checkVanguardHealth = async () => {
+    await refreshAllStatus();
+  };
+
   // ─────────────────────────────────────────────────────────────────────────────
   // Backups
   // ─────────────────────────────────────────────────────────────────────────────
@@ -1113,6 +1117,7 @@ export function AppProvider({ children }) {
       runDeepPerformanceOptimize, triggerValorantAutoRevert, triggerValorantAutoBoost,
       runDiagnosticFix, runMacro, scanTempFolder, purgeTempFolder, launchAdminPanel, formatBytes, launchValorant,
       forceValorantPriority,
+      toggleGameMode, togglePowerPlan, scanValorantCaches, clearValorantLogs, checkVanguardHealth,
       // New performance features
       networkLatencyOptimized, toggleNetworkLatency,
       nicInterruptModDisabled, toggleNicInterruptMod,

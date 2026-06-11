@@ -35,6 +35,31 @@ async function getRegistryValue(keyPath, valueName) {
   }
 }
 
+async function getRegistryValueAndType(keyPath, valueName) {
+  const safeKey = sanitizeRegistryKey(keyPath);
+  const safeVal = sanitizeRegistryValueName(valueName);
+  if (!safeKey || !safeVal) return null;
+  try {
+    const script = `
+$val = (Get-ItemProperty -Path '${safeKey}' -Name '${safeVal}' -ErrorAction SilentlyContinue).${safeVal}
+if ($null -ne $val) {
+  $type = (Get-Item -Path '${safeKey}').GetValueKind('${safeVal}')
+  @{ value = $val; type = $type.ToString() } | ConvertTo-Json -Compress
+} else {
+  ""
+}`;
+    const out = await runPs(script);
+    if (out) {
+      try {
+        return JSON.parse(out);
+      } catch (e) {}
+    }
+    return null;
+  } catch (err) {
+    return null;
+  }
+}
+
 function getBackupsFilePath() {
   const userDataPath = path.normalize(app.getPath('userData'));
   const filePath = path.normalize(path.join(userDataPath, 'registry-backups.json'));
@@ -49,7 +74,9 @@ async function backupRegistryValueBeforeChange(keyPath, valueName) {
   const safeVal = sanitizeRegistryValueName(valueName);
   if (!safeKey || !safeVal) return;
   try {
-    const val = await getRegistryValue(safeKey, safeVal);
+    const original = await getRegistryValueAndType(safeKey, safeVal);
+    if (!original) return;
+
     const p = getBackupsFilePath();
     let backups = [];
     if (fs.existsSync(p)) {
@@ -57,12 +84,12 @@ async function backupRegistryValueBeforeChange(keyPath, valueName) {
     }
 
     const exists = backups.some(b => b.keyPath.toLowerCase() === safeKey.toLowerCase() && b.valueName.toLowerCase() === safeVal.toLowerCase());
-    if (!exists && val !== '') {
+    if (!exists) {
       backups.push({
         keyPath: safeKey,
         valueName: safeVal,
-        value: val,
-        type: isNaN(Number(val)) ? 'String' : 'DWord',
+        value: original.value,
+        type: original.type,
         timestamp: new Date().toISOString()
       });
       fs.writeFileSync(p, JSON.stringify(backups, null, 2), 'utf8');
@@ -126,6 +153,7 @@ module.exports = {
   sanitizeRegistryValueName,
   sanitizeRegistryValueNameOrPath,
   getRegistryValue,
+  getRegistryValueAndType,
   getBackupsFilePath,
   backupRegistryValueBeforeChange,
   setRegistryValue,

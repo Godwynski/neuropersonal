@@ -31,10 +31,6 @@ try {
   cachedIsAdmin = true;
 } catch (e) {}
 
-// #39: Cached GPU info — detected once, reused everywhere
-let cachedGpuName = null;
-let cachedGpuVendor = null;
-
 // #2: Security — allowlisted service names for bgService handler
 const allowedServiceNames = new Set([
   'wuauserv', 'SysMain', 'XblAuthManager', 'XblGameSave',
@@ -44,7 +40,7 @@ const allowedServiceNames = new Set([
 // ─────────────────────────────────────────────────────────────────────────────
 // System Modules
 // ─────────────────────────────────────────────────────────────────────────────
-const { spawnAsync, psEncode, runPsJson, runPs, getCachedGpuName, getCachedGpuVendor } = require('./system/powershell');
+const { spawnAsync, psEncode, runPsJson, runPs, getCachedGpuName, getCachedGpuVendor, setCachedGpu } = require('./system/powershell');
 const {
   sanitizeRegistryKey,
   sanitizeRegistryValueName,
@@ -294,10 +290,10 @@ const globalState = {
 };
 
 require('./handlers/index')(ipcMain, {
-  app, mainWindow, globalState, allowedServiceNames,
+  app, getMainWindow: () => mainWindow, globalState, allowedServiceNames,
   execAsync, spawnAsync, psEncode, runPsJson, runPs,
   sanitizeRegistryKey, sanitizeRegistryValueName, sanitizeRegistryValueNameOrPath,
   getRegistryValue, getBackupsFilePath, backupRegistryValueBeforeChange,
   setRegistryValue, removeRegistryValue, setRegistryPathValue, removeRegistryPathValue,
-  getActiveGpuDevicePath, getCachedGpuName, getCachedGpuVendor
+  getActiveGpuDevicePath, getCachedGpuName, getCachedGpuVendor, setCachedGpu
 });

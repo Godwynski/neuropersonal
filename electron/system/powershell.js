@@ -89,8 +89,16 @@ async function getCachedGpuName() {
   return cachedGpuName;
 }
 
-function getCachedGpuVendor() {
+async function getCachedGpuVendor() {
+  if (!cachedGpuVendor) {
+    await getCachedGpuName();
+  }
   return cachedGpuVendor;
+}
+
+function setCachedGpu(name, vendor) {
+  cachedGpuName = name;
+  cachedGpuVendor = vendor;
 }
 
 module.exports = {
@@ -99,5 +107,6 @@ module.exports = {
   runPsJson,
   runPs,
   getCachedGpuName,
-  getCachedGpuVendor
+  getCachedGpuVendor,
+  setCachedGpu
 };

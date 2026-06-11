@@ -7,12 +7,12 @@ let lastCpuInfo = null;
 
 module.exports = function registerHandlers(ipcMain, deps) {
   const {
-    app, mainWindow, globalState, allowedServiceNames,
+    app, getMainWindow, globalState, allowedServiceNames,
     execAsync, spawnAsync, psEncode, runPsJson, runPs,
     sanitizeRegistryKey, sanitizeRegistryValueName, sanitizeRegistryValueNameOrPath,
     getRegistryValue, getBackupsFilePath, backupRegistryValueBeforeChange,
     setRegistryValue, removeRegistryValue, setRegistryPathValue, removeRegistryPathValue,
-    getActiveGpuDevicePath, getCachedGpuName, getCachedGpuVendor
+    getActiveGpuDevicePath, getCachedGpuName, getCachedGpuVendor, setCachedGpu
   } = deps;
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1044,8 +1044,7 @@ ipcMain.handle('detect-gpu', async () => {
       if (!error && stdout) {
         const parts = stdout.trim().split(', ');
         if (parts.length >= 6) {
-          cachedGpuName = parts[0];
-          cachedGpuVendor = 'nvidia';
+          setCachedGpu(parts[0], 'nvidia');
           return resolve({
             success: true,
             gpu: {
@@ -1073,8 +1072,7 @@ ipcMain.handle('detect-gpu', async () => {
           else if (name.toLowerCase().includes('amd') || name.toLowerCase().includes('radeon')) vendor = 'amd';
           else if (name.toLowerCase().includes('intel')) vendor = 'intel';
 
-          cachedGpuName = name;
-          cachedGpuVendor = vendor;
+          setCachedGpu(name, vendor);
 
           resolve({
             success: true,
@@ -1144,7 +1142,7 @@ ipcMain.handle('backup-registry', async (event, { keyPath, valueName }) => {
 ipcMain.handle('select-valorant-path', async () => {
   try {
     const { dialog } = require('electron');
-    const res = await dialog.showOpenDialog(mainWindow, {
+    const res = await dialog.showOpenDialog(getMainWindow(), {
       title: 'Select VALORANT Executable',
       properties: ['openFile'],
       filters: [
@@ -1316,7 +1314,7 @@ ipcMain.handle('toggle-amd-shader-cache', async (event, alwaysOn) => {
 
 ipcMain.handle('check-gpu-driver-profile', async () => {
   try {
-    const vendor = cachedGpuVendor || 'unknown';
+    const vendor = (await getCachedGpuVendor()) || 'unknown';
     const result = { success: true, vendor };
 
     if (vendor === 'nvidia') {
@@ -1602,7 +1600,7 @@ try {
   }
 } catch {}
 # Check if VALORANT affinity is currently set
-$valProc = Get-Process -Name 'VALORANT-Win64-Shipping' -ErrorAction SilentlyContinue
+$valProc = Get-Process -Name 'VALORANT-Win64-Shipping' -ErrorAction SilentlyContinue | Select-Object -First 1
 $s.valorantRunning = ($null -ne $valProc)
 if ($valProc) {
   $s.currentAffinity = [long]$valProc.ProcessorAffinity
@@ -1638,12 +1636,10 @@ foreach ($k in $keys | Sort-Object { [int]$_.PSChildName }) {
 if ($pCoreMask -eq 0) { $pCoreMask = [long]([Math]::Pow(2, $idx) - 1) }
 if ($eCoreMask -eq 0) { $eCoreMask = [long]([Math]::Pow(2, $idx) - 1) }
 # Pin VALORANT to P-cores
-$val = Get-Process -Name 'VALORANT-Win64-Shipping' -ErrorAction SilentlyContinue
-if ($val) { $val.ProcessorAffinity = [IntPtr]$pCoreMask }
+Get-Process -Name 'VALORANT-Win64-Shipping' -ErrorAction SilentlyContinue | ForEach-Object { try { $_.ProcessorAffinity = [IntPtr]$pCoreMask } catch {} }
 # Move system overhead to E-cores (best effort)
 foreach ($name in @('dwm','audiodg','SearchIndexer','MsMpEng')) {
-  $p = Get-Process -Name $name -ErrorAction SilentlyContinue
-  if ($p) { try { $p.ProcessorAffinity = [IntPtr]$eCoreMask } catch {} }
+  Get-Process -Name $name -ErrorAction SilentlyContinue | ForEach-Object { try { $_.ProcessorAffinity = [IntPtr]$eCoreMask } catch {} }
 }`;
       const encoded = psEncode(script);
       await spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded]);
@@ -1652,11 +1648,9 @@ foreach ($name in @('dwm','audiodg','SearchIndexer','MsMpEng')) {
       const script = `
 $totalLogical = (Get-CimInstance Win32_Processor | Select-Object -First 1).NumberOfLogicalProcessors
 $allMask = [long]([Math]::Pow(2, $totalLogical) - 1)
-$val = Get-Process -Name 'VALORANT-Win64-Shipping' -ErrorAction SilentlyContinue
-if ($val) { $val.ProcessorAffinity = [IntPtr]$allMask }
+Get-Process -Name 'VALORANT-Win64-Shipping' -ErrorAction SilentlyContinue | ForEach-Object { try { $_.ProcessorAffinity = [IntPtr]$allMask } catch {} }
 foreach ($name in @('dwm','audiodg','SearchIndexer','MsMpEng')) {
-  $p = Get-Process -Name $name -ErrorAction SilentlyContinue
-  if ($p) { try { $p.ProcessorAffinity = [IntPtr]$allMask } catch {} }
+  Get-Process -Name $name -ErrorAction SilentlyContinue | ForEach-Object { try { $_.ProcessorAffinity = [IntPtr]$allMask } catch {} }
 }`;
       const encoded = psEncode(script);
       await spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-EncodedCommand', encoded]);
