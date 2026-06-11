@@ -1872,20 +1872,62 @@ foreach ($t in $tasks) {
 
 ipcMain.handle('activate-ultimate-performance', async () => {
   try {
-    // Step 1: Try to duplicate the hidden Ultimate Performance scheme
     let ultimateGuid = 'e9a42b02-d5df-448d-aa00-03f14749eb61';
+    let targetGuid = null;
     let planAvailable = false;
 
     // Check if it already exists in the plan list
     const listOut = await execAsync('powercfg /list').catch(() => '');
-    if (listOut.toLowerCase().includes('e9a42b02')) {
+    if (listOut.toLowerCase().includes(ultimateGuid)) {
+      targetGuid = ultimateGuid;
       planAvailable = true;
     } else {
-      // Try to duplicate it (may fail on Windows Home)
+      // Parse powercfg /list to check for any existing Ultimate Performance scheme
+      const lines = listOut.split(/\r?\n/);
+      for (const line of lines) {
+        if (line.toLowerCase().includes('ultimate performance')) {
+          const match = line.match(/GUID:\s+([a-fA-F0-9-]+)/i);
+          if (match) {
+            targetGuid = match[1];
+            planAvailable = true;
+            break;
+          }
+        }
+      }
+    }
+
+    // If not found in powercfg /list, check the registry for powrprof.dll,-19 (localized systems)
+    if (!planAvailable) {
+      try {
+        const findScript = `
+          try {
+            $schemes = Get-ItemProperty HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\User\\PowerSchemes\\* -ErrorAction SilentlyContinue
+            $match = $schemes | Where-Object { $_.FriendlyName -like '*powrprof.dll,-19*' -or $_.FriendlyName -like '*Ultimate Performance*' } | Select-Object -First 1
+            if ($match) { $match.PSChildName } else { "" }
+          } catch {
+            ""
+          }
+        `;
+        const foundGuid = (await runPs(findScript)).trim();
+        if (foundGuid) {
+          targetGuid = foundGuid;
+          planAvailable = true;
+        }
+      } catch (regErr) {
+        console.error('Silent error caught while searching registry for Ultimate Performance:', regErr.message);
+      }
+    }
+
+    // If still not available, duplicate it
+    if (!planAvailable) {
       try {
         const dupOut = await execAsync(`powercfg -duplicatescheme ${ultimateGuid}`);
         if (dupOut && !dupOut.toLowerCase().includes('error')) {
-          planAvailable = true;
+          const match = dupOut.match(/GUID:\s+([a-fA-F0-9-]+)/i);
+          if (match) {
+            targetGuid = match[1];
+            planAvailable = true;
+          }
         }
       } catch (dupErr) {
         console.error('Silent error caught: Ultimate Performance duplicate failed:', dupErr.message);
@@ -1907,8 +1949,8 @@ powercfg /setactive SCHEME_CURRENT`;
       return { success: true, fallback: true };
     }
 
-    // Activate the Ultimate Performance plan
-    await spawnAsync('powercfg.exe', ['/setactive', ultimateGuid]);
+    // Activate the found/duplicated Ultimate Performance plan
+    await spawnAsync('powercfg.exe', ['/setactive', targetGuid]);
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
@@ -1918,8 +1960,31 @@ powercfg /setactive SCHEME_CURRENT`;
 ipcMain.handle('check-ultimate-performance', async () => {
   try {
     const plan = await execAsync('powercfg /getactivescheme');
-    const isUltimate = plan.includes('e9a42b02');
-    return { success: true, isUltimate };
+    const match = plan.match(/GUID:\s+([a-fA-F0-9-]+)\s+\((.*)\)/i);
+    if (!match) return { success: true, isUltimate: false };
+
+    const activeGuid = match[1].toLowerCase();
+    const activeName = match[2].toLowerCase();
+
+    if (activeGuid === 'e9a42b02-d5df-448d-aa00-03f14749eb61' || activeName.includes('ultimate performance')) {
+      return { success: true, isUltimate: true };
+    }
+
+    // Check registry for powrprof.dll,-19 (localized systems)
+    try {
+      const regOut = await spawnAsync('powershell.exe', [
+        '-NoProfile',
+        '-Command',
+        `(Get-ItemProperty -Path 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\User\\PowerSchemes\\${activeGuid}' -Name 'FriendlyName' -ErrorAction SilentlyContinue).FriendlyName`
+      ]);
+      if (regOut && regOut.toLowerCase().includes('powrprof.dll,-19')) {
+        return { success: true, isUltimate: true };
+      }
+    } catch (e) {
+      console.error('Silent error caught while checking registry for Ultimate Performance:', e.message);
+    }
+
+    return { success: true, isUltimate: false };
   } catch (err) {
     return { success: false, error: err.message, isUltimate: false };
   }
