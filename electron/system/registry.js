@@ -1,7 +1,7 @@
 const path = require('path');
 const { app } = require('electron');
 const fs = require('fs');
-const { runPs, spawnAsync, getCachedGpuName } = require('./powershell');
+const { runPs, getCachedGpuName } = require('./powershell');
 
 function sanitizeRegistryKey(keyPath) {
   if (typeof keyPath !== 'string') return null;
@@ -153,7 +153,6 @@ module.exports = {
   sanitizeRegistryValueName,
   sanitizeRegistryValueNameOrPath,
   getRegistryValue,
-  getRegistryValueAndType,
   getBackupsFilePath,
   backupRegistryValueBeforeChange,
   setRegistryValue,

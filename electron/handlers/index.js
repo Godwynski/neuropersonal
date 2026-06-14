@@ -1,5 +1,5 @@
 const os = require('os');
-const { exec, execSync, spawn } = require('child_process');
+const { exec, spawn } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
@@ -9,8 +9,8 @@ module.exports = function registerHandlers(ipcMain, deps) {
   const {
     app, getMainWindow, globalState, allowedServiceNames,
     execAsync, spawnAsync, psEncode, runPsJson, runPs,
-    sanitizeRegistryKey, sanitizeRegistryValueName, sanitizeRegistryValueNameOrPath,
-    getRegistryValue, getBackupsFilePath, backupRegistryValueBeforeChange,
+    sanitizeRegistryKey, sanitizeRegistryValueName,
+    getBackupsFilePath, backupRegistryValueBeforeChange,
     setRegistryValue, removeRegistryValue, setRegistryPathValue, removeRegistryPathValue,
     getActiveGpuDevicePath, getCachedGpuName, getCachedGpuVendor, setCachedGpu
   } = deps;

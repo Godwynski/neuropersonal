@@ -7,8 +7,6 @@ export default function ValorantOptimizer() {
   const {
     isElectron,
     valorantPath,
-    valorantPathDetected,
-    browseValorantPath,
     valorantRunning,
     setValorantRunning,
     launchValorant,
@@ -24,16 +22,12 @@ export default function ValorantOptimizer() {
     scanningVal,
     cleaningLogs,
     cleaningShaders,
-    valorantLogs,
     optimizationOptions,
     setOptimizationOptions,
     purgeAppsChecklist,
     setPurgeAppsChecklist,
     runningApps,
-    isAdmin,
-    valorantConfigs,
     selectedConfig,
-    setSelectedConfig,
     saveValorantConfig,
     registryStates,
     toggleGameDvr,
@@ -53,7 +47,6 @@ export default function ValorantOptimizer() {
     powerThrottlingDisabled,
     togglePowerThrottling,
     cleanAllShaderCaches,
-    applyOptimizationProfile,
     gsyncDisabled,
     toggleGsync,
     freesyncEnabled,
@@ -62,10 +55,8 @@ export default function ValorantOptimizer() {
     persistentPriorityEnabled,
     togglePersistentPriority,
     vbsStatus,
-    vbsRebootRequired,
     toggleVbs,
     hpetDisabled,
-    hpetRebootRequired,
     toggleHpet,
     amdOptimizations,
     toggleAmdMpo,
@@ -75,7 +66,6 @@ export default function ValorantOptimizer() {
     applyGpuDriverProfile,
     hardwareInfo,
     toggleLegacyRebar,
-    isProcessing,
     executeOperation,
     optimizedCount,
     totalOptimizations,
@@ -101,9 +91,7 @@ export default function ValorantOptimizer() {
   } = useAppContext();
 
   const [activeTab, setActiveTab] = useState('OS & Registry');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [showAdvanced, setShowAdvanced] = useState(false);
-
+    
   const [lastScannedAt, setLastScannedAt] = useState(null);
 
   // Confirm Modal state
@@ -118,48 +106,27 @@ export default function ValorantOptimizer() {
   const closeConfirm = () => setConfirmDialog(prev => ({ ...prev, isOpen: false }));
 
   // Resolution scale tooltip
-  const [showResTooltip, setShowResTooltip] = useState(false);
-
+  
   // Custom refresh rate
-  const [customRateValue, setCustomRateValue] = useState('');
-  const [showCustomRateInput, setShowCustomRateInput] = useState(false);
-  const customRateInputRef = useRef(null);
-
+      
   // Per-action loading tracking
   const [processingActionId, setProcessingActionId] = useState(null);
-  const [justDoneActionId, setJustDoneActionId] = useState(null);
-
+  
   // Wraps executeOperation with per-action loading state + success flash
   const runAction = async (actionId, label, fn) => {
     if (processingActionId) return; // already running
     setProcessingActionId(actionId);
     try {
       await executeOperation(label, fn);
-      setJustDoneActionId(actionId);
-      setTimeout(() => setJustDoneActionId(prev => prev === actionId ? null : prev), 1200);
     } finally {
       setProcessingActionId(null);
     }
   };
 
-  // Track which categories are collapsed
-  const [collapsedCategories, setCollapsedCategories] = useState({
-    'OS & Registry': false,
-    'GPU & Monitor': false,
-    'Caches & Cleaners': false,
-    'Launch Policies': false
-  });
-
-  const toggleCategoryCollapse = (category) => {
-    setCollapsedCategories(prev => ({
-      ...prev,
-      [category]: !prev[category]
-    }));
-  };
 
 
-  const optimizationPercentage = Math.round((optimizedCount / totalOptimizations) * 100);
 
+  
   // Compile all optimization actions into 1 unified list
   const allActions = [
     // --- Registry & OS ---
