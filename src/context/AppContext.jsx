@@ -11,19 +11,11 @@ const formatBytes = (bytes) => {
   return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-// Premade 1-Click Macros List
-export const premadeMacros = [
-  { key: 'm-dns', name: 'Flush DNS Cache', desc: 'Refreshes address lookup table for faster network requests.', cmd: 'ipconfig /flushdns' },
-  { key: 'm-ram', name: 'Purge Standby List', desc: 'Clears Windows standby memory list via NtSetSystemInformation to free committed but unused RAM.', cmd: 'powershell -Command "..."' },
-  { key: 'm-explorer', name: 'Restart Desktop UI', desc: 'Restores frozen Windows taskbars by restarting explorer.exe.', cmd: 'taskkill /f /im explorer.exe && start explorer.exe' }
-];
-
 export function AppProvider({ children }) {
   const [isElectron, setIsElectron] = useState(!!window.api);
 
-  // UI Reorganization State
-  const [uiMode, setUiMode] = useState('simple'); // 'simple' | 'advanced'
-  const [activeAppTab, setActiveAppTab] = useState('dashboard'); // 'dashboard' | 'advanced' | 'cleaners' | 'settings'
+  // UI State
+  const [activeAppTab, setActiveAppTab] = useState('dashboard'); // 'dashboard' | 'advanced' | 'settings'
 
   // #11: Logs use objects with timestamps instead of strings
   const [systemLogs, setSystemLogs] = useState([
@@ -45,10 +37,6 @@ export function AppProvider({ children }) {
   const [tempFolderSize, setTempFolderSize] = useState('Click Scan');
   const [scanningTemp, setScanningTemp] = useState(false);
   const [purgingTemp, setPurgingTemp] = useState(false);
-  const [defragSectors, setDefragSectors] = useState([]);
-  const [files, setFiles] = useState([]);
-  const [tweaks, setTweaks] = useState({ darkMode: true, hiddenFiles: false, taskbarAutohide: false });
-  const [runningMacro, setRunningMacro] = useState(null);
   const [isWindowVisible, setIsWindowVisible] = useState(true);
   const [runningFix, setRunningFix] = useState(null);
   const [fixStatusText, setFixStatusText] = useState('');
@@ -952,17 +940,6 @@ export function AppProvider({ children }) {
     finally { setRunningFix(null); }
   };
 
-  const runMacro = async (macroKey, macroName) => {
-    if (runningMacro) return;
-    setRunningMacro(macroKey); addLog(`[Macro] Running: "${macroName}"`);
-    try {
-      const res = await window.api.runMacro(macroKey);
-      if (res.success) addLog(`[Macro] Completed.`);
-      else addLog(`[Macro Error] ${res.error}`);
-    } catch (e) { addLog(`[Macro Exception] ${e.message}`); } 
-    finally { setRunningMacro(null); }
-  };
-
   const scanTempFolder = async () => {
     if (scanningTemp) return;
     setScanningTemp(true); addLog('[Storage] Analyzing temp file size...');
@@ -1065,12 +1042,11 @@ export function AppProvider({ children }) {
   return (
     <AppContext.Provider value={{
       isElectron, setIsElectron,
-      uiMode, setUiMode, activeAppTab, setActiveAppTab,
+      activeAppTab, setActiveAppTab,
       systemLogs, setSystemLogs, valorantLogs: systemLogs, addLog,
       stats, setStats, tempFolderSize, setTempFolderSize,
       scanningTemp, setScanningTemp, purgingTemp, setPurgingTemp,
-      defragSectors, setDefragSectors, files, setFiles, tweaks, setTweaks,
-      runningMacro, setRunningMacro, isWindowVisible, setIsWindowVisible,
+      isWindowVisible, setIsWindowVisible,
       runningFix, setRunningFix, fixStatusText, setFixStatusText,
       valorantRunning, setValorantRunning, autoBoostActive, setAutoBoostActive,
       gameModeActive, setGameModeActive, powerPlanMode, setPowerPlanMode,
@@ -1108,7 +1084,7 @@ export function AppProvider({ children }) {
       toggleAmdShaderCache, applyGpuDriverProfile, toggleLegacyRebar, cleanAllShaderCaches,
       applyOptimizationProfile, toggleMaxBoost, toggleBgService, toggleTimerResolution,
       runDeepPerformanceOptimize, triggerValorantAutoRevert, triggerValorantAutoBoost,
-      runDiagnosticFix, runMacro, scanTempFolder, purgeTempFolder, launchAdminPanel, formatBytes, launchValorant,
+      runDiagnosticFix, scanTempFolder, purgeTempFolder, launchAdminPanel, formatBytes, launchValorant,
       forceValorantPriority,
       toggleGameMode, togglePowerPlan, scanValorantCaches, clearValorantLogs, checkVanguardHealth,
       // New performance features
