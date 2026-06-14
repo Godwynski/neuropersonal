@@ -132,7 +132,7 @@ function createWindow() {
       nodeIntegration: false
     },
     show: false,
-    backgroundColor: '#0f172a'
+    backgroundColor: '#0a0a0a'
   });
 
   if (isDev) {

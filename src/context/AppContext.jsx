@@ -998,13 +998,6 @@ export function AppProvider({ children }) {
     setCleaningLogs(false);
   };
 
-  const clearShaderCache = async () => {
-    if (cleaningShaders) return;
-    setCleaningShaders(true);
-    if (window.api && window.api.runCacheCleaner) await window.api.runCacheCleaner('purgeShader');
-    setShaderCacheSize('0.00 Bytes'); addLog('[Scrubber] DirectX shader caches purged.');
-    setCleaningShaders(false);
-  };
 
   const launchAdminPanel = async (utility) => {
     if (window.api && window.api.launchAdminUtility) await window.api.launchAdminUtility(utility);

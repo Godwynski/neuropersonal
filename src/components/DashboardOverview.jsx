@@ -4,6 +4,8 @@ import Spinner from './Spinner';
 
 export default function DashboardOverview() {
   const {
+    stats,
+    gpuInfo,
     maxBoostStatus,
     boostProfile,
     setBoostProfile,
@@ -14,8 +16,17 @@ export default function DashboardOverview() {
     executeOperation,
     applyOptimizationProfile,
     optimizedCount,
-    totalOptimizations = 11,
-    setActiveAppTab
+    totalOptimizations = 17,
+    setActiveAppTab,
+    // Quick actions
+    runningFix,
+    runDiagnosticFix,
+    tempFolderSize,
+    scanningTemp,
+    purgingTemp,
+    scanTempFolder,
+    purgeTempFolder,
+    valorantRunning
   } = useAppContext();
 
   const [presetLoading, setPresetLoading] = useState(null);
@@ -35,146 +46,278 @@ export default function DashboardOverview() {
   };
 
   const optimizationPercentage = Math.round(((optimizedCount || 0) / totalOptimizations) * 100) || 0;
+  const healthColor = optimizationPercentage >= 80 ? '#3b82f6' : optimizationPercentage >= 50 ? '#eab308' : '#ff4655';
+  const healthLabel = optimizationPercentage >= 80 ? 'Excellent' : optimizationPercentage >= 50 ? 'Good' : 'Needs Work';
 
   return (
-    <div className="p-4 md:p-8 font-inter text-gray-200 h-full overflow-y-auto custom-scrollbar space-y-6 md:space-y-8 bg-[#0a0a0a]">
+    <div className="p-4 md:p-6 font-inter text-gray-200 flex-1 overflow-y-auto custom-scrollbar min-h-0 bg-[#0a0a0a]">
       
-      {/* Header section */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-3xl font-bold font-outfit text-white">System Dashboard</h1>
-          <p className="text-sm text-gray-400 mt-1">Welcome to NeurOptimize. Make your PC and games run smoother.</p>
+      {/* ── Top Stats Bar ── */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+        {/* CPU */}
+        <div className="bg-[#141414] border border-[#262626] rounded-xl p-3.5">
+          <div className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider font-outfit mb-1.5">CPU</div>
+          <div className="text-xl font-bold text-white font-outfit">{stats.cpuLoad}%</div>
+          <div className="w-full h-1.5 bg-[#0a0a0a] rounded-full overflow-hidden mt-2 border border-[#262626]">
+            <div className="h-full bg-[#3b82f6] transition-all duration-500" style={{ width: `${stats.cpuLoad}%` }} />
+          </div>
+          <div className="text-[10px] text-gray-500 mt-1.5 truncate">{stats.cpuCores} cores</div>
+        </div>
+
+        {/* RAM */}
+        <div className="bg-[#141414] border border-[#262626] rounded-xl p-3.5">
+          <div className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider font-outfit mb-1.5">Memory</div>
+          <div className="text-xl font-bold text-white font-outfit">{stats.memUsagePercent}%</div>
+          <div className="w-full h-1.5 bg-[#0a0a0a] rounded-full overflow-hidden mt-2 border border-[#262626]">
+            <div className="h-full bg-[#ff4655] transition-all duration-500" style={{ width: `${stats.memUsagePercent}%` }} />
+          </div>
+          <div className="text-[10px] text-gray-500 mt-1.5">{stats.usedMemGB} / {stats.totalMemGB} GB</div>
+        </div>
+
+        {/* GPU */}
+        <div className="bg-[#141414] border border-[#262626] rounded-xl p-3.5">
+          <div className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider font-outfit mb-1.5">GPU</div>
+          <div className="text-xl font-bold text-white font-outfit">{gpuInfo.temperature}°C</div>
+          <div className="w-full h-1.5 bg-[#0a0a0a] rounded-full overflow-hidden mt-2 border border-[#262626]">
+            <div className="h-full bg-orange-500 transition-all duration-500" style={{ width: `${gpuInfo.utilization}%` }} />
+          </div>
+          <div className="text-[10px] text-gray-500 mt-1.5 truncate">{gpuInfo.name !== 'Detecting...' ? gpuInfo.name : 'Detecting GPU...'}</div>
+        </div>
+
+        {/* Optimization Score */}
+        <div className="bg-[#141414] border border-[#262626] rounded-xl p-3.5">
+          <div className="text-[10px] text-gray-500 font-semibold uppercase tracking-wider font-outfit mb-1.5">Optimized</div>
+          <div className="text-xl font-bold font-outfit" style={{ color: healthColor }}>{optimizationPercentage}%</div>
+          <div className="w-full h-1.5 bg-[#0a0a0a] rounded-full overflow-hidden mt-2 border border-[#262626]">
+            <div className="h-full transition-all duration-1000" style={{ width: `${optimizationPercentage}%`, backgroundColor: healthColor }} />
+          </div>
+          <div className="text-[10px] mt-1.5 font-semibold" style={{ color: healthColor }}>{optimizedCount}/{totalOptimizations} tweaks · {healthLabel}</div>
         </div>
       </div>
 
-      {/* Health Overview Card */}
-      <div className="glass-panel p-6 rounded-2xl border border-[#262626] bg-[#141414]/40 relative overflow-hidden">
-        <div className="absolute top-0 right-0 p-8 opacity-10">
-          <svg width="120" height="120" viewBox="0 0 24 24" fill="currentColor">
-            <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10zm-1-11v6h2v-6h-2zm0-4v2h2V7h-2z"/>
-          </svg>
+      {/* ── Performance Profile Selection + Apply ── */}
+      <div className="mb-6">
+        <div className="flex items-center justify-between mb-4">
+          <div>
+            <h2 className="text-lg font-bold font-outfit text-white">Performance Profile</h2>
+            <p className="text-xs text-gray-500 mt-0.5">Select a mode, then apply. We handle the complex settings.</p>
+          </div>
+          {maxBoostActive && (
+            <span className="px-3 py-1 rounded-full bg-[#3b82f6]/10 text-[#3b82f6] text-[10px] font-bold uppercase tracking-wider border border-[#3b82f6]/30 flex items-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] animate-pulse" />
+              Boost Active
+            </span>
+          )}
         </div>
         
-        <h2 className="text-lg font-bold font-outfit text-white mb-2">System Health & Optimization</h2>
-        <p className="text-sm text-gray-400 max-w-xl mb-6">
-          This score represents how many safe optimizations are active on your system. A higher score means better gaming performance and responsiveness.
-        </p>
-
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-4 md:gap-6">
-          {/* Circular Progress (Simplified) */}
-          <div className="relative w-24 h-24 flex items-center justify-center rounded-full bg-[#0a0a0a] border-4 border-[#262626]">
-            <span className="text-2xl font-bold text-white">{optimizationPercentage}%</span>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
           
-          <div className="flex-1 w-full text-center md:text-left">
-            <div className="flex justify-between text-sm font-semibold mb-2">
-              <span className="text-gray-300">Optimization Level</span>
-              <span className={optimizationPercentage >= 80 ? 'text-[#3b82f6]' : optimizationPercentage >= 50 ? 'text-yellow-500' : 'text-[#ff4655]'}>
-                {optimizationPercentage >= 80 ? 'Excellent' : optimizationPercentage >= 50 ? 'Good' : 'Needs Optimization'}
-              </span>
+          {/* Maximum Performance */}
+          <button 
+            className={`text-left p-4 rounded-xl border transition-all relative overflow-hidden group ${
+              boostProfile === 'aggressive' 
+                ? 'border-[#ff4655] bg-[#ff4655]/8 shadow-[0_0_20px_rgba(255,70,85,0.08)]' 
+                : 'border-[#262626] bg-[#141414]/50 hover:border-[#3f3f46]'
+            }`}
+            onClick={() => setBoostProfile('aggressive')}
+          >
+            {boostProfile === 'aggressive' && (
+              <div className="absolute top-3 right-3">
+                <svg className="w-4 h-4 text-[#ff4655]" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-[#ff4655]/15 flex items-center justify-center shrink-0">
+                <span className="text-sm">🎮</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Maximum Performance</h3>
+                <span className="text-[10px] text-[#ff4655] font-semibold">⚠ May need reboot</span>
+              </div>
             </div>
-            <div className="w-full h-3 bg-[#0a0a0a] rounded-full overflow-hidden border border-[#262626]">
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              Kills background apps, disables VBS, forces maximum CPU/GPU clocks. Best for competitive gaming.
+            </p>
+          </button>
+
+          {/* Balanced */}
+          <button 
+            className={`text-left p-4 rounded-xl border transition-all relative overflow-hidden group ${
+              boostProfile === 'safe' 
+                ? 'border-[#3b82f6] bg-[#3b82f6]/8 shadow-[0_0_20px_rgba(59,130,246,0.08)]' 
+                : 'border-[#262626] bg-[#141414]/50 hover:border-[#3f3f46]'
+            }`}
+            onClick={() => setBoostProfile('safe')}
+          >
+            {boostProfile === 'safe' && (
+              <div className="absolute top-3 right-3">
+                <svg className="w-4 h-4 text-[#3b82f6]" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-[#3b82f6]/15 flex items-center justify-center shrink-0">
+                <span className="text-sm">⚖️</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Balanced Mode</h3>
+                <span className="text-[10px] text-[#3b82f6] font-semibold">✓ Safe & Stable</span>
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              Improves game responsiveness without killing apps. Recommended daily driver for most users.
+            </p>
+          </button>
+
+          {/* Restore Defaults */}
+          <button 
+            className="text-left p-4 rounded-xl border border-[#262626] bg-[#141414]/50 hover:border-[#3f3f46] transition-all"
+            onClick={() => runPreset('revert')}
+            disabled={isBusy}
+          >
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-gray-600/15 flex items-center justify-center shrink-0">
+                <span className="text-sm">↩️</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Restore Defaults</h3>
+                {presetLoading === 'revert' ? (
+                  <span className="text-[10px] text-gray-400 font-semibold flex items-center gap-1"><Spinner className="w-2.5 h-2.5"/> Reverting...</span>
+                ) : (
+                  <span className="text-[10px] text-gray-500 font-semibold">Undo all tweaks</span>
+                )}
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              Reverts all system tweaks back to Windows defaults. Use this if something feels off.
+            </p>
+          </button>
+
+        </div>
+
+        {/* Apply / Revert Button */}
+        <button
+          onClick={() => executeOperation(
+            maxBoostActive ? "Reverting System Optimizations..." : "Applying Performance Profile...",
+            () => maxBoostActive ? toggleMaxBoost(false) : toggleMaxBoost(true, boostProfile)
+          )}
+          disabled={isBusy}
+          className={`w-full py-3.5 px-6 rounded-xl font-bold text-sm transition-all ${
+            isBoosting ? 'bg-[#3b82f6] text-white' 
+            : isReverting ? 'bg-[#ff4655] text-white'
+            : maxBoostActive ? 'bg-[#ff4655] hover:bg-[#ff4655]/90 text-white' 
+            : 'bg-white text-[#0a0a0a] hover:bg-gray-100'
+          } disabled:opacity-60`}
+        >
+          {isBoosting ? (
+            <span className="flex items-center justify-center gap-2"><Spinner className="w-4 h-4"/> Applying Profile...</span>
+          ) : isReverting ? (
+            <span className="flex items-center justify-center gap-2"><Spinner className="w-4 h-4"/> Restoring System...</span>
+          ) : maxBoostActive ? (
+            'Stop Boost & Revert to Defaults'
+          ) : (
+            `Apply ${boostProfile === 'aggressive' ? 'Maximum Performance' : 'Balanced Mode'}`
+          )}
+        </button>
+        
+        {/* Progress bar — only when boosting/reverting */}
+        {(isBoosting || isReverting) && (
+          <div className="mt-3">
+            <div className="flex justify-between text-[11px] text-gray-400 font-medium mb-1">
+              <span>{isBoosting ? 'Optimizing...' : 'Restoring...'}</span>
+              <span>{maxBoostProgress}%</span>
+            </div>
+            <div className="w-full h-1.5 bg-[#141414] rounded-full overflow-hidden border border-[#262626]">
               <div 
-                className={`h-full transition-all duration-1000 ${optimizationPercentage >= 80 ? 'bg-[#3b82f6]' : optimizationPercentage >= 50 ? 'bg-yellow-500' : 'bg-[#ff4655]'}`}
-                style={{ width: `${optimizationPercentage}%` }}
+                className={`h-full transition-all duration-300 ${isBoosting ? 'bg-[#3b82f6]' : 'bg-[#ff4655]'}`}
+                style={{ width: `${maxBoostProgress}%` }}
               />
             </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* 1-Click Profiles */}
+      {/* ── Quick Actions Strip ── */}
       <div>
-        <h2 className="text-xl font-bold font-outfit text-white mb-4">1-Click Profiles</h2>
-        <p className="text-sm text-gray-400 mb-6">Choose how you want to use your PC right now. We'll handle the complex settings behind the scenes.</p>
-        
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          
-          {/* Gaming Profile */}
-          <div className={`p-6 rounded-2xl border transition-all cursor-pointer ${boostProfile === 'aggressive' ? 'border-[#ff4655] bg-[#ff4655]/10 shadow-[0_0_15px_rgba(255,70,85,0.15)]' : 'border-[#262626] bg-[#141414]/50 hover:border-gray-500'}`}
-               onClick={() => setBoostProfile('aggressive')}>
-            <div className="w-10 h-10 rounded-full bg-[#ff4655]/20 flex items-center justify-center mb-4">
-              <span className="text-xl">🎮</span>
-            </div>
-            <h3 className="text-lg font-bold text-white mb-2">Maximum Performance</h3>
-            <p className="text-xs text-gray-400 mb-4 h-16">
-              The ultimate gaming experience. Disables background apps and forces your hardware to run at maximum speed for the highest frames possible.
-            </p>
-            <span className="text-[10px] font-semibold text-[#ff4655] uppercase tracking-wider">⚠️ May require reboot</span>
-          </div>
-
-          {/* Balanced Profile */}
-          <div className={`p-6 rounded-2xl border transition-all cursor-pointer ${boostProfile === 'safe' ? 'border-[#3b82f6] bg-[#3b82f6]/10 shadow-[0_0_15px_rgba(59,130,246,0.15)]' : 'border-[#262626] bg-[#141414]/50 hover:border-gray-500'}`}
-               onClick={() => setBoostProfile('safe')}>
-            <div className="w-10 h-10 rounded-full bg-[#3b82f6]/20 flex items-center justify-center mb-4">
-              <span className="text-xl">⚖️</span>
-            </div>
-            <h3 className="text-lg font-bold text-white mb-2">Balanced Mode</h3>
-            <p className="text-xs text-gray-400 mb-4 h-16">
-              The recommended daily driver. Improves game responsiveness smoothly without aggressively shutting down your background applications.
-            </p>
-            <span className="text-[10px] font-semibold text-[#3b82f6] uppercase tracking-wider">✓ Safe & Stable</span>
-          </div>
-
-          {/* Restore Defaults */}
-          <div className="p-6 rounded-2xl border border-[#262626] bg-[#141414]/50 hover:border-gray-500 transition-all cursor-pointer"
-               onClick={() => runPreset('revert')}>
-            <div className="w-10 h-10 rounded-full bg-gray-600/20 flex items-center justify-center mb-4">
-              <span className="text-xl">↩️</span>
-            </div>
-            <h3 className="text-lg font-bold text-white mb-2">Restore Defaults</h3>
-            <p className="text-xs text-gray-400 mb-4 h-16">
-              Experiencing issues? Click here to revert all system tweaks back to standard Windows default settings.
-            </p>
-            {presetLoading === 'revert' ? (
-               <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider flex items-center gap-1"><Spinner className="w-3 h-3"/> Reverting...</span>
-            ) : (
-               <span className="text-[10px] font-semibold text-gray-400 uppercase tracking-wider">Click to Revert</span>
-            )}
-          </div>
-
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-bold font-outfit text-white uppercase tracking-wider">Quick Actions</h2>
+          <button 
+            onClick={() => setActiveAppTab('advanced')}
+            className="text-[11px] text-[#3b82f6] hover:text-[#3b82f6]/80 font-semibold transition-colors"
+          >
+            Advanced Tweaks →
+          </button>
         </div>
-
-        {/* Master Apply Button */}
-        <div className="mt-8 flex flex-col items-center">
+        
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+          {/* Clear RAM */}
           <button
-            onClick={() => executeOperation(
-              maxBoostActive ? "Reverting System Optimizations..." : "Boosting System Parameters...",
-              () => maxBoostActive ? toggleMaxBoost(false) : toggleMaxBoost(true, boostProfile)
-            )}
-            disabled={isBusy}
-            className={`w-full max-w-md py-4 px-8 rounded-xl font-bold text-lg transition-all shadow-lg hover:scale-105 active:scale-95 ${
-              isBoosting ? 'bg-[#3b82f6] text-white' 
-              : isReverting ? 'bg-[#ff4655] text-white'
-              : maxBoostActive ? 'bg-[#ff4655] text-white' 
-              : 'bg-white text-black hover:bg-gray-200'
+            onClick={() => runDiagnosticFix('ramRejuvenation')}
+            disabled={runningFix !== null || scanningTemp || purgingTemp}
+            className={`flex flex-col items-center gap-2 p-3.5 rounded-xl border transition-all disabled:opacity-50 ${
+              runningFix === 'ramRejuvenation'
+                ? 'bg-[#3b82f6]/10 border-[#3b82f6]/30 text-[#3b82f6]'
+                : 'bg-[#141414] border-[#262626] text-gray-300 hover:bg-[#1a1a1a] hover:border-[#3f3f46]'
             }`}
           >
-            {isBoosting ? (
-              <span className="flex items-center justify-center gap-2"><Spinner className="w-5 h-5"/> Applying Profile...</span>
-            ) : isReverting ? (
-              <span className="flex items-center justify-center gap-2"><Spinner className="w-5 h-5"/> Restoring System...</span>
-            ) : maxBoostActive ? (
-              'Stop Boost & Revert'
-            ) : (
-              'APPLY PROFILE NOW'
-            )}
+            <span className="text-xl">🧠</span>
+            <span className="text-[11px] font-semibold font-outfit">
+              {runningFix === 'ramRejuvenation' ? <span className="flex items-center gap-1"><Spinner className="w-3 h-3"/>Clearing...</span> : 'Clear RAM'}
+            </span>
           </button>
-          
-          {(maxBoostActive || isBoosting || isReverting) && (
-            <div className="w-full max-w-md mt-4 space-y-2">
-              <div className="flex justify-between text-xs text-gray-400 font-medium">
-                <span>{isBoosting ? 'Optimizing...' : isReverting ? 'Restoring...' : 'Boost Active'}</span>
-                <span>{maxBoostProgress}%</span>
-              </div>
-              <div className="w-full h-2 bg-[#141414] rounded-full overflow-hidden border border-[#262626]">
-                <div 
-                  className={`h-full transition-all duration-300 ${isBoosting ? 'bg-[#3b82f6]' : isReverting ? 'bg-[#ff4655]' : 'bg-[#3b82f6]'}`}
-                  style={{ width: `${maxBoostProgress}%` }}
-                />
-              </div>
-            </div>
-          )}
+
+          {/* Restart Desktop UI */}
+          <button
+            onClick={() => runDiagnosticFix('chronosReset')}
+            disabled={runningFix !== null || scanningTemp || purgingTemp}
+            className={`flex flex-col items-center gap-2 p-3.5 rounded-xl border transition-all disabled:opacity-50 ${
+              runningFix === 'chronosReset'
+                ? 'bg-[#3b82f6]/10 border-[#3b82f6]/30 text-[#3b82f6]'
+                : 'bg-[#141414] border-[#262626] text-gray-300 hover:bg-[#1a1a1a] hover:border-[#3f3f46]'
+            }`}
+          >
+            <span className="text-xl">🖥️</span>
+            <span className="text-[11px] font-semibold font-outfit">
+              {runningFix === 'chronosReset' ? <span className="flex items-center gap-1"><Spinner className="w-3 h-3"/>Restarting...</span> : 'Restart UI'}
+            </span>
+          </button>
+
+          {/* Scan Temp */}
+          <button
+            onClick={scanTempFolder}
+            disabled={runningFix !== null || scanningTemp || purgingTemp}
+            className={`flex flex-col items-center gap-2 p-3.5 rounded-xl border transition-all disabled:opacity-50 ${
+              scanningTemp
+                ? 'bg-[#3b82f6]/10 border-[#3b82f6]/30 text-[#3b82f6]'
+                : 'bg-[#141414] border-[#262626] text-gray-300 hover:bg-[#1a1a1a] hover:border-[#3f3f46]'
+            }`}
+          >
+            <span className="text-xl">🔍</span>
+            <span className="text-[11px] font-semibold font-outfit">
+              {scanningTemp ? <span className="flex items-center gap-1"><Spinner className="w-3 h-3"/>Scanning...</span> : (
+                <>Scan Temp<br/><span className="text-[9px] text-gray-500 font-normal">{tempFolderSize}</span></>
+              )}
+            </span>
+          </button>
+
+          {/* Purge Temp */}
+          <button
+            onClick={purgeTempFolder}
+            disabled={runningFix !== null || scanningTemp || purgingTemp || tempFolderSize === 'Click Scan' || tempFolderSize === '0 Bytes'}
+            className={`flex flex-col items-center gap-2 p-3.5 rounded-xl border transition-all disabled:opacity-50 ${
+              purgingTemp
+                ? 'bg-[#ff4655]/10 border-[#ff4655]/30 text-[#ff4655]'
+                : 'bg-[#141414] border-[#262626] text-gray-300 hover:bg-[#1a1a1a] hover:border-[#3f3f46]'
+            }`}
+          >
+            <span className="text-xl">🗑️</span>
+            <span className="text-[11px] font-semibold font-outfit">
+              {purgingTemp ? <span className="flex items-center gap-1"><Spinner className="w-3 h-3"/>Purging...</span> : 'Purge Temp'}
+            </span>
+          </button>
         </div>
       </div>
     </div>

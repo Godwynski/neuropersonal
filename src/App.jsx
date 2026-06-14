@@ -1,11 +1,11 @@
 import React from 'react';
-import logoImg from '../public/logo.png';
+const logoImg = '/logo.png';
 import Toast from './components/Toast';
 import Sidebar from './components/Sidebar';
 import ValorantOptimizer from './components/ValorantOptimizer';
 import BottomConsole from './components/BottomConsole';
 import DashboardOverview from './components/DashboardOverview';
-import SystemCleaners from './components/SystemCleaners';
+
 import RegistryRollback from './components/RegistryRollback';
 import { AppProvider } from './context/AppContext';
 import { useAppContext } from './hooks/useAppContext';
@@ -155,14 +155,11 @@ function DashboardContent() {
 
         {/* Right Content Area */}
         <main className="flex-1 flex flex-col overflow-hidden bg-[#0a0a0a] border-t md:border-t-0 md:border-l border-[#262626]">
-          <div className="flex-1 overflow-y-auto custom-scrollbar">
+          <div className="flex-1 overflow-hidden flex flex-col relative min-h-0">
             {activeAppTab === 'dashboard' && <DashboardOverview />}
             {activeAppTab === 'advanced' && <ValorantOptimizer />}
-            {activeAppTab === 'cleaners' && (
-              <div className="p-4 md:p-8 max-w-5xl w-full mx-auto"><SystemCleaners /></div>
-            )}
             {activeAppTab === 'settings' && (
-              <div className="p-4 md:p-8 max-w-5xl w-full mx-auto"><RegistryRollback /></div>
+              <div className="p-4 md:p-6 max-w-5xl w-full mx-auto flex-1 overflow-y-auto custom-scrollbar min-h-0"><RegistryRollback /></div>
             )}
           </div>
           <BottomConsole 

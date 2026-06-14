@@ -100,7 +100,7 @@ export default function ValorantOptimizer() {
     deactivateUltimatePerformance
   } = useAppContext();
 
-  const [activeTab, setActiveTab] = useState('all');
+  const [activeTab, setActiveTab] = useState('OS & Registry');
   const [searchQuery, setSearchQuery] = useState('');
   const [showAdvanced, setShowAdvanced] = useState(false);
 
@@ -692,11 +692,8 @@ export default function ValorantOptimizer() {
     // Advanced filtering
     if (!showAdvanced && action.isAdvanced) return false;
     
-    // Tab filtering
-    if (activeTab === 'safe' && action.tier !== 'safe') return false;
-    if (activeTab === 'aggressive' && action.tier !== 'aggressive' && action.tier !== 'experimental') return false;
-    if (activeTab === 'gpu' && action.category !== 'GPU & Monitor') return false;
-    if (activeTab === 'cleanup' && action.category !== 'Caches & Cleaners' && action.category !== 'Launch Policies') return false;
+    // Tab filtering — activeTab is always a category name
+    if (action.category !== activeTab) return false;
     
     // Search query filtering
     if (searchQuery.trim() !== '') {
@@ -717,115 +714,118 @@ export default function ValorantOptimizer() {
 
   return (
     <>
-    <div className="space-y-6 font-inter text-gray-200 bg-[#0a0a0a] p-2">
+    <div className="flex flex-col flex-1 min-h-0 overflow-hidden font-inter text-gray-200 bg-[#0a0a0a]">
       
-      {/* Page Header */}
-      <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 md:gap-0 border-b-2 border-[#262626] pb-3">
-        <div>
-          <h1 className="text-xl font-bold font-outfit">Advanced Engine Tweaks</h1>
-          <p className="text-[11.5px] text-gray-400">Low-level system modifications for maximum performance.</p>
-        </div>
-        <div className="flex items-center gap-3 text-xs">
-          {!valorantRunning ? (
-            <button 
-              onClick={launchValorant}
-              className="px-4 py-2 bg-[#ff4655] hover:bg-[#ff4655]/90 text-white border border-[#262626] font-outfit rounded-lg flex items-center gap-1.5 font-bold transition-all cursor-pointer shadow-md hover:shadow-sm active:scale-95"
-            >
-              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                <path d="M8 5v14l11-7z"/>
-              </svg>
-              LAUNCH VALORANT
-            </button>
-          ) : (
-            !isElectron && (
+      {/* ── Sticky Header Zone ── */}
+      <div className="shrink-0 border-b border-[#262626] bg-[#0a0a0a]">
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-3 px-4 md:px-6 pt-4 pb-3">
+          <div>
+            <h1 className="text-lg font-bold font-outfit text-white">Advanced Tweaks</h1>
+            <p className="text-[11px] text-gray-500">Low-level system modifications for maximum gaming performance.</p>
+          </div>
+          <div className="flex items-center gap-2.5 text-xs">
+            {!valorantRunning ? (
               <button 
-                onClick={() => setValorantRunning(false)} 
-                className="border border-[#262626] px-3 py-1 rounded-lg bg-[#0a0a0a] hover:bg-[#141414] cursor-pointer text-gray-200 font-bold"
+                onClick={launchValorant}
+                className="px-3.5 py-2 bg-[#ff4655] hover:bg-[#ff4655]/90 text-white font-outfit rounded-lg flex items-center gap-1.5 font-bold transition-all cursor-pointer text-[11px]"
               >
-                Simulate Exit
+                <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
+                  <path d="M8 5v14l11-7z"/>
+                </svg>
+                LAUNCH VALORANT
               </button>
-            )
-          )}
-          <span className={`px-3 py-1.5 border border-[#262626] font-mono font-bold rounded-lg ${valorantRunning ? 'bg-[#3b82f6]/10 text-[#3b82f6]' : 'bg-[#141414] text-gray-400'}`}>
-            STATUS: {valorantRunning ? 'VALORANT IS OPEN (BOOST ACTIVE)' : 'VALORANT IS CLOSED'}
-          </span>
-        </div>
-      </header>
-
-      {/* Main Layout: Top Nav + Content */}
-      <div className="flex flex-col gap-6">
-        
-        {/* Horizontal Navigation Categories */}
-        <div className="w-full flex flex-wrap gap-2 border-b-2 border-[#262626] pb-4">
-          {['OS & Registry', 'GPU & Monitor', 'Caches & Cleaners', 'Launch Policies'].map(cat => (
-            <button
-              key={cat}
-              onClick={() => setActiveTab(cat)}
-              className={`px-5 py-2 rounded-full font-bold text-sm transition-all cursor-pointer ${
-                activeTab === cat 
-                  ? 'bg-pencil-black text-white shadow-md border border-[#3f3f46]'
-                  : 'text-gray-400 bg-transparent hover:bg-[#262626] hover:text-white border border-transparent'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+            ) : (
+              !isElectron && (
+                <button 
+                  onClick={() => setValorantRunning(false)} 
+                  className="border border-[#262626] px-3 py-1.5 rounded-lg bg-[#141414] hover:bg-[#262626] cursor-pointer text-gray-300 font-semibold text-[11px]"
+                >
+                  Simulate Exit
+                </button>
+              )
+            )}
+            <span className={`px-2.5 py-1.5 border rounded-lg font-semibold text-[11px] ${valorantRunning ? 'border-[#3b82f6]/30 bg-[#3b82f6]/10 text-[#3b82f6]' : 'border-[#262626] bg-[#141414] text-gray-500'}`}>
+              {valorantRunning ? '● VALORANT ACTIVE' : '○ VALORANT IDLE'}
+            </span>
+          </div>
         </div>
 
-        {/* Content Area */}
-        <div className="w-full space-y-6">
-          <div className="border border-[#262626] rounded-xl bg-[#141414]/50 overflow-hidden shadow-md">
-            <div className="bg-[#141414] border-b border-[#262626] px-6 py-4 flex justify-between items-center">
-              <h2 className="text-sm font-bold text-gray-200 font-outfit uppercase tracking-wider">{activeTab}</h2>
-              <span className="px-2 py-1 bg-[#0a0a0a] rounded-lg text-[10px] font-bold border border-[#262626] text-gray-400">
-                {allActions.filter(a => a.category === activeTab && a.isOptimized).length} Active
-              </span>
-            </div>
+        {/* Category Tabs */}
+        <div className="flex gap-1 px-4 md:px-6 pb-3 overflow-x-auto scrollbar-hide">
+          {['OS & Registry', 'GPU & Monitor', 'Caches & Cleaners', 'Launch Policies'].map(cat => {
+            const catCount = allActions.filter(a => a.category === cat && a.showIf !== false && a.isOptimized).length;
+            const catTotal = allActions.filter(a => a.category === cat && a.showIf !== false).length;
+            return (
+              <button
+                key={cat}
+                onClick={() => setActiveTab(cat)}
+                className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold text-[12px] transition-all cursor-pointer whitespace-nowrap shrink-0 ${
+                  activeTab === cat 
+                    ? 'bg-[#1a1a1a] text-white border border-[#3f3f46]'
+                    : 'text-gray-400 hover:bg-[#141414] hover:text-gray-300 border border-transparent'
+                }`}
+              >
+                {cat}
+                {catCount > 0 && (
+                  <span className="px-1.5 py-0.5 rounded-md text-[9px] font-bold bg-[#3b82f6]/15 text-[#3b82f6]">
+                    {catCount}/{catTotal}
+                  </span>
+                )}
+              </button>
+            );
+          })}
+        </div>
+      </div>
 
-            <div className="divide-y divide-[#262626]">
+      {/* ── Scrollable Content ── */}
+      <div className="flex-1 overflow-y-auto custom-scrollbar min-h-0">
+        <div className="px-4 md:px-6 py-4 space-y-4">
+
+          {/* Tweak Cards */}
+          <div className="border border-[#262626] rounded-xl bg-[#141414]/30 overflow-hidden">
+            <div className="divide-y divide-[#262626]/60">
               {allActions.filter(action => action.category === activeTab).map((action) => {
-                // Ignore showIf condition if false
                 if (action.showIf === false) return null;
 
                 const isThisLoading = processingActionId === action.id;
-                const isThisDone = justDoneActionId === action.id;
                 const isAnyLoading = processingActionId !== null;
 
                 return (
-                  <div key={action.id} className="p-4 md:p-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 sm:gap-0 hover:bg-[#141414]/80 transition-colors">
+                  <div key={action.id} className="px-4 md:px-5 py-3.5 flex items-center justify-between gap-4 hover:bg-[#141414]/60 transition-colors">
                     
-                    <div className="flex-1 pr-0 sm:pr-8 w-full">
-                      <div className="flex items-center gap-2 mb-1">
-                        <span className="font-bold text-gray-200 font-outfit text-sm">{action.name}</span>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="font-semibold text-[13px] text-gray-200">{action.name}</span>
                         {action.tier === 'aggressive' && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-[#ff4655]/10 text-[#ff4655] border border-[#ff4655]/20">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-[#ff4655]/10 text-[#ff4655] border border-[#ff4655]/20">
                             Aggressive
                           </span>
                         )}
                         {action.tier === 'experimental' && (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase tracking-wide bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
+                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-yellow-500/10 text-yellow-500 border border-yellow-500/20">
                             Experimental
                           </span>
                         )}
                       </div>
-                      <p className="text-xs text-gray-400">{action.descDetailed || action.desc}</p>
+                      <p className="text-[11px] text-gray-500 leading-relaxed">{action.desc}</p>
                     </div>
 
-                    <div className="flex-shrink-0 flex items-center justify-between sm:justify-end w-full sm:w-auto gap-4">
-                      <span className={`text-[10px] font-bold uppercase tracking-wide ${action.isOptimized ? 'text-[#3b82f6]' : 'text-gray-500'}`}>
-                        {isThisLoading ? 'Working...' : action.isOptimized ? 'Active' : 'Disabled'}
+                    <div className="flex items-center gap-3 shrink-0">
+                      <span className={`text-[10px] font-semibold uppercase tracking-wide ${action.isOptimized ? 'text-[#3b82f6]' : 'text-gray-600'}`}>
+                        {isThisLoading ? '...' : action.isOptimized ? 'On' : 'Off'}
                       </span>
                       
                       {action.actionType === 'toggle' && (
                         <button
                           onClick={() => runAction(action.id, action.name, action.onAction)}
                           disabled={isAnyLoading}
-                          className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none ${
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
                             action.isOptimized ? 'bg-[#3b82f6]' : 'bg-[#262626]'
-                          } ${isAnyLoading ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer'}`}
+                          } ${isAnyLoading ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer'}`}
                         >
-                          <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                            action.isOptimized ? 'translate-x-6' : 'translate-x-1'
+                          <span className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white transition-transform ${
+                            action.isOptimized ? 'translate-x-[18px]' : 'translate-x-[3px]'
                           }`} />
                         </button>
                       )}
@@ -834,24 +834,24 @@ export default function ValorantOptimizer() {
                         <button
                           onClick={() => runAction(action.id, action.name, action.onAction)}
                           disabled={action.disabled || isAnyLoading}
-                          className="px-4 py-2 bg-[#262626] hover:bg-[#3f3f46] text-white text-xs font-bold rounded-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
+                          className="px-3 py-1.5 bg-[#1a1a1a] hover:bg-[#262626] text-white text-[11px] font-semibold rounded-lg transition-all disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border border-[#262626]"
                         >
-                          {isThisLoading ? <Spinner className="w-4 h-4" /> : action.actionLabel}
+                          {isThisLoading ? <Spinner className="w-3.5 h-3.5" /> : action.actionLabel}
                         </button>
                       )}
 
                       {action.actionType === 'multiple' && (
-                        <div className="flex gap-2">
+                        <div className="flex gap-1.5">
                           {action.options.map((opt, oIdx) => (
                             <button
                               key={oIdx}
                               onClick={() => runAction(`${action.id}-${oIdx}`, opt.label, opt.onClick)}
                               disabled={isAnyLoading}
-                              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-all cursor-pointer border ${
+                              className={`px-2.5 py-1.5 text-[11px] font-semibold rounded-lg transition-all cursor-pointer border ${
                                 opt.primary 
-                                  ? 'bg-[#262626] border-[#3f3f46] text-white hover:bg-[#3f3f46]' 
-                                  : 'bg-transparent border-[#262626] text-gray-400 hover:text-white hover:bg-[#262626]'
-                              } disabled:opacity-50`}
+                                  ? 'bg-[#1a1a1a] border-[#3f3f46] text-white hover:bg-[#262626]' 
+                                  : 'bg-transparent border-[#262626] text-gray-400 hover:text-white hover:bg-[#1a1a1a]'
+                              } disabled:opacity-40`}
                             >
                               {opt.label}
                             </button>
@@ -868,85 +868,54 @@ export default function ValorantOptimizer() {
 
           {/* Checklist sub-options for Background App Purging */}
           {optimizationOptions.purgeApps && activeTab === 'Launch Policies' && (
-            <div className="p-4 border border-[#262626] bg-[#141414]/20 rounded-lg text-xs space-y-3 relative">
-              {/* Tape decoration */}
-              <div className="absolute -top-3 left-6 w-16 h-4 bg-pencil-black/10 border border-[#3f3f46] rotate-1 pointer-events-none" />
+            <div className="p-4 border border-[#262626] bg-[#141414]/30 rounded-xl text-xs space-y-3">
               <div>
-                <span className="font-bold text-gray-200 font-outfit text-sm block">Background Application Manager</span>
-                <p className="text-[11px] text-gray-400 mt-1">Select applications to automatically close when launching VALORANT. You can also forcefully close currently active applications immediately.</p>
+                <span className="font-bold text-gray-200 font-outfit text-sm block">Background App Manager</span>
+                <p className="text-[11px] text-gray-500 mt-0.5">Auto-close these apps when VALORANT launches. Currently running apps shown below.</p>
               </div>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pt-2">
+              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2.5">
                 {Object.keys(purgeAppsChecklist).filter(appKey => runningApps && runningApps[appKey]).length === 0 ? (
-                  <div className="col-span-full p-4 border border-dashed border-[#262626] rounded-lg text-center text-gray-400 text-xs italic bg-[#0a0a0a]">
+                  <div className="col-span-full p-3 border border-dashed border-[#262626] rounded-lg text-center text-gray-500 text-xs">
                     No managed applications are currently running.
                   </div>
                 ) : (
                   Object.keys(purgeAppsChecklist)
                     .filter(appKey => runningApps && runningApps[appKey])
                     .map(appKey => {
-                      const isRunning = true;
                       const isChecked = !!purgeAppsChecklist[appKey];
                       
                       return (
                     <div 
                       key={appKey} 
-                      className={`flex flex-col gap-2 p-3 border rounded-lg transition-all ${
-                        isChecked ? 'border-pencil-black/50 bg-[#141414]/80 shadow-sm' : 'border-[#262626] bg-[#0a0a0a]'
+                      className={`flex items-center justify-between p-2.5 border rounded-lg transition-all ${
+                        isChecked ? 'border-[#3b82f6]/30 bg-[#3b82f6]/5' : 'border-[#262626] bg-[#0a0a0a]'
                       }`}
                     >
-                      <div className="flex justify-between items-start">
-                        <label className="flex items-center gap-2 cursor-pointer group">
-                          <div className={`w-4 h-4 rounded-sm border flex items-center justify-center transition-colors ${
-                            isChecked ? 'bg-pencil-black border-pencil-black' : 'border-[#3f3f46] bg-[#141414] group-hover:border-gray-400'
-                          }`}>
-                            {isChecked && (
-                              <svg className="w-3 h-3 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M5 13l4 4L19 7" />
-                              </svg>
-                            )}
-                          </div>
-                          <input 
-                            type="checkbox" 
-                            className="hidden"
-                            checked={isChecked}
-                            onChange={(e) => {
-                              setPurgeAppsChecklist({ ...purgeAppsChecklist, [appKey]: e.target.checked });
-                            }}
-                          />
-                          <span className="capitalize font-bold text-gray-200 font-outfit text-[12px]">{appKey}</span>
-                        </label>
-                        
-                        {isRunning ? (
-                          <span className="flex items-center gap-1.5 px-1.5 py-0.5 rounded text-[9px] font-bold bg-green-500/10 text-green-500 border border-green-500/20">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
-                            ACTIVE
-                          </span>
-                        ) : (
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold text-gray-500">
-                            IDLE
-                          </span>
-                        )}
-                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer flex-1 min-w-0">
+                        <input 
+                          type="checkbox" 
+                          className="accent-[#3b82f6] w-3.5 h-3.5"
+                          checked={isChecked}
+                          onChange={(e) => {
+                            setPurgeAppsChecklist({ ...purgeAppsChecklist, [appKey]: e.target.checked });
+                          }}
+                        />
+                        <span className="capitalize font-semibold text-[11px] text-gray-200 truncate">{appKey}</span>
+                      </label>
                       
-                      {isRunning && (
-                        <div className="pt-2 mt-auto border-t border-[#262626]">
-                          <button
-                            onClick={async () => {
-                              if (window.api && window.api.killProcess) {
-                                const exeName = appKey === 'onedrive' ? 'OneDrive.exe' : (appKey === 'battle.net' ? 'battle.net.exe' : `${appKey}.exe`);
-                                await window.api.killProcess(exeName);
-                              }
-                            }}
-                            className="w-full py-1.5 bg-[#ff4655]/10 hover:bg-[#ff4655]/20 text-[#ff4655] border border-[#ff4655]/30 rounded-lg text-[10px] font-bold font-outfit transition-colors flex items-center justify-center gap-1.5 cursor-pointer active:scale-95"
-                          >
-                            <svg className="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                            FORCE CLOSE NOW
-                          </button>
-                        </div>
-                      )}
+                      <button
+                        onClick={async () => {
+                          if (window.api && window.api.killProcess) {
+                            const exeName = appKey === 'onedrive' ? 'OneDrive.exe' : (appKey === 'battle.net' ? 'battle.net.exe' : `${appKey}.exe`);
+                            await window.api.killProcess(exeName);
+                          }
+                        }}
+                        className="text-[9px] font-bold text-[#ff4655] hover:text-[#ff4655]/80 shrink-0 ml-2"
+                        title={`Kill ${appKey}`}
+                      >
+                        KILL
+                      </button>
                     </div>
                   );
                 }))}
@@ -954,249 +923,110 @@ export default function ValorantOptimizer() {
             </div>
           )}
 
-        </div>
-
-        {/* Right Column: Auxiliary Panels (Takes 1 column) */}
-        <div className="space-y-6">
-          
-          {/* Quick Telemetry & Scan Size Action */}
-          <div className="border border-[#262626] bg-[#0a0a0a] p-4 rounded-lg shadow-md space-y-3.5 text-xs relative">
-            {/* Post-it pin decoration */}
-            <div className="absolute -top-1.5 left-1/2 -translate-x-1/2 w-4 h-4 rounded-full bg-[#ff4655] border border-[#262626] shadow-sm" />
+          {/* ── Diagnostics & Graphics (Inline Cards) ── */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             
-            <div className="flex justify-between items-center border-b-2 border-[#262626] pb-2">
-              <div>
-                <span className="font-bold text-gray-200 font-outfit">Diagnostics</span>
-                {lastScannedAt && !scanningVal && (
-                  <div className="text-[10px] text-gray-400 font-mono mt-0.5">
-                    Last: {lastScannedAt}
-                  </div>
-                )}
+            {/* Diagnostics Panel */}
+            <div className="border border-[#262626] bg-[#141414]/30 p-4 rounded-xl space-y-3 text-xs">
+              <div className="flex justify-between items-center">
+                <span className="font-bold text-gray-200 font-outfit text-sm">Diagnostics</span>
+                <button
+                  onClick={async () => {
+                    await Promise.all([scanValorantCaches(), checkVanguardHealth()]);
+                    setLastScannedAt(new Date().toLocaleTimeString());
+                  }}
+                  disabled={scanningVal}
+                  className="text-[10px] font-semibold px-2.5 py-1 border border-[#262626] rounded-lg bg-[#1a1a1a] text-gray-300 hover:bg-[#262626] transition-all disabled:opacity-50"
+                >
+                  {scanningVal ? 'Scanning...' : 'Scan Now'}
+                </button>
               </div>
-              <button
-                onClick={async () => {
-                  await Promise.all([scanValorantCaches(), checkVanguardHealth()]);
-                  setLastScannedAt(new Date().toLocaleTimeString());
-                }}
-                disabled={scanningVal}
-                className={`flex items-center gap-1.5 text-[10.5px] font-bold px-2 py-1 border border-[#262626] rounded-lg transition-all ${
-                  scanningVal
-                    ? 'bg-[#141414] text-gray-400 cursor-not-allowed shadow-none'
-                    : 'bg-[#262626] text-gray-200 hover:bg-[#3f3f46] cursor-pointer shadow-sm active:translate-x-[1.5px] active:translate-y-[1.5px] active:shadow-none'
-                }`}
-              >
-                {scanningVal ? 'Scanning...' : 'Scan Now'}
-              </button>
+              
+              <div className="grid grid-cols-2 gap-2">
+                <div className={`p-2 border border-[#262626] rounded-lg text-center text-[10px] font-semibold ${vanguardHealth.secureBoot === 'enabled' ? 'text-[#3b82f6]' : 'text-[#ff4655]'}`}>
+                  SecureBoot: {vanguardHealth.secureBoot.toUpperCase()}
+                </div>
+                <div className={`p-2 border border-[#262626] rounded-lg text-center text-[10px] font-semibold ${vanguardHealth.tpm2 === 'active' ? 'text-[#3b82f6]' : 'text-[#ff4655]'}`}>
+                  TPM: {vanguardHealth.tpm2.toUpperCase()}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-2 text-[10px]">
+                <div className="flex justify-between p-2 bg-[#0a0a0a] border border-[#262626] rounded-lg font-semibold">
+                  <span className="text-gray-400">XMP</span>
+                  <span className={hardwareInfo.xmpEnabled ? 'text-[#3b82f6]' : 'text-[#ff4655]'}>{hardwareInfo.xmpEnabled ? 'ON' : 'OFF'}</span>
+                </div>
+                <div className="flex justify-between p-2 bg-[#0a0a0a] border border-[#262626] rounded-lg font-semibold">
+                  <span className="text-gray-400">ReBAR</span>
+                  <span className={hardwareInfo.rebarEnabled ? 'text-[#3b82f6]' : 'text-gray-500'}>{hardwareInfo.rebarEnabled ? 'ON' : 'OFF'}</span>
+                </div>
+              </div>
+
+              {lastScannedAt && !scanningVal && (
+                <div className="text-[10px] text-gray-500">Last scan: {lastScannedAt}</div>
+              )}
             </div>
-            
-            <div className="space-y-3">
-              <div className="p-2 border border-[#262626] bg-[#141414]/20 rounded-lg space-y-1.5">
-                <span className="font-bold text-gray-200 font-outfit block">Anticheat Diagnostics</span>
-                <div className="grid grid-cols-2 gap-1.5 text-[10px] font-bold">
-                  <div className={`p-1.5 border border-[#262626] rounded-lg text-center ${vanguardHealth.secureBoot === 'enabled' ? 'bg-[#0a0a0a] text-[#3b82f6]' : 'bg-[#ff4655] text-white'}`}>
-                    SecureBoot: {vanguardHealth.secureBoot.toUpperCase()}
-                  </div>
-                  <div className={`p-1.5 border border-[#262626] rounded-lg text-center ${vanguardHealth.tpm2 === 'active' ? 'bg-[#0a0a0a] text-[#3b82f6]' : 'bg-[#ff4655] text-white'}`}>
-                    TPM: {vanguardHealth.tpm2.toUpperCase()}
-                  </div>
-                </div>
-              </div>
 
-              <div className="p-2 border border-[#262626] bg-[#141414]/20 rounded-lg space-y-1.5">
-                <span className="font-bold text-gray-200 font-outfit block">Hardware Status</span>
-                <div className="space-y-1 text-[10px]">
-                  <div className="flex justify-between p-1 bg-[#0a0a0a] border border-[#262626] rounded-lg font-bold">
-                    <span>RAM XMP</span>
-                    <span className={hardwareInfo.xmpEnabled ? 'text-[#3b82f6] font-bold' : 'text-[#ff4655] font-bold'}>
-                      {hardwareInfo.xmpEnabled ? 'ENABLED' : 'DISABLED'}
-                    </span>
-                  </div>
-                  <div className="flex justify-between p-1 bg-[#0a0a0a] border border-[#262626] rounded-lg font-bold">
-                    <span>PCIe ReBAR</span>
-                    <span className={hardwareInfo.rebarEnabled ? 'text-[#3b82f6] font-bold' : 'text-gray-400 font-bold'}>
-                      {hardwareInfo.rebarEnabled ? 'ENABLED' : 'DISABLED'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Graphics Settings Tuner (Standalone card) */}
-          <div className="border border-[#262626] bg-[#262626] p-4 rounded-lg shadow-md space-y-4 text-xs relative">
-            {/* Post-it pin decoration */}
-            <div className="absolute -top-1.5 right-6 w-4 h-4 rounded-full bg-[#3b82f6] border border-[#262626] shadow-sm" />
-            <h2 className="font-bold text-gray-200 font-outfit border-b-2 border-[#262626] pb-1.5 text-sm">Game Graphics Config</h2>
-            
-            {selectedConfig ? (
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between font-bold text-gray-200 mb-1 text-[11px] font-outfit">
-                    <div className="flex items-center gap-1">
-                      <span>Resolution Quality Scale</span>
-                      <div className="relative inline-block">
-                        <button
-                          onMouseEnter={() => setShowResTooltip(true)}
-                          onMouseLeave={() => setShowResTooltip(false)}
-                          onFocus={() => setShowResTooltip(true)}
-                          onBlur={() => setShowResTooltip(false)}
-                          className="w-4 h-4 rounded-full border border-[#262626] bg-[#0a0a0a] text-gray-200 text-[9px] font-bold flex items-center justify-center cursor-default"
-                          tabIndex={0}
-                          aria-label="What is Resolution Quality Scale?"
-                        >
-                          ?
-                        </button>
-                        {showResTooltip && (
-                          <div className="absolute left-6 top-0 z-50 w-52 p-3 bg-pencil-black text-white text-[10px] leading-relaxed rounded-lg border border-white shadow-xl">
-                            <div className="font-bold text-[11px] mb-1 font-outfit text-[#fff9c4]">What is Resolution Scale?</div>
-                            <p>Renders the game at a percentage of native resolution and upscales it. Lower values boost FPS.</p>
-                            <div className="mt-1.5 font-bold font-mono text-[9px]">
-                              75–85% = Max Boost | 100% = Native
-                            </div>
-                          </div>
-                        )}
-                      </div>
+            {/* Graphics Config Panel */}
+            <div className="border border-[#262626] bg-[#141414]/30 p-4 rounded-xl space-y-3 text-xs">
+              <h2 className="font-bold text-gray-200 font-outfit text-sm">Game Graphics</h2>
+              
+              {selectedConfig ? (
+                <div className="space-y-3">
+                  <div>
+                    <div className="flex justify-between font-semibold text-[11px] mb-1">
+                      <span className="text-gray-300">Resolution Scale</span>
+                      <span className="text-[#3b82f6] font-mono">{Math.round(selectedConfig.resolutionQuality)}%</span>
                     </div>
-                    <span className="font-mono text-[#3b82f6] font-bold">{Math.round(selectedConfig.resolutionQuality)}%</span>
-                  </div>
-                  <input
-                    type="range"
-                    min="50"
-                    max="100"
-                    value={Math.round(selectedConfig.resolutionQuality)}
-                    onChange={(e) => saveValorantConfig({ resolutionQuality: parseFloat(e.target.value) })}
-                    className="w-full cursor-pointer accent-pencil-black"
-                  />
-                  <div className="flex justify-between text-[9px] text-gray-400 font-bold mt-0.5">
-                    <span>50% (Max FPS)</span>
-                    <span>100% (Native)</span>
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-2 text-[11px]">
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px] font-outfit">Texture Quality</span>
-                    <select value={selectedConfig.textureQuality} onChange={(e) => saveValorantConfig({ textureQuality: parseInt(e.target.value, 10) })} className="p-1.5 border border-[#262626] bg-[#0a0a0a] rounded-lg font-inter">
-                      <option value="0">Low</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option>
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-0.5">
-                    <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px] font-outfit">Shadows</span>
-                    <select value={selectedConfig.shadowQuality} onChange={(e) => saveValorantConfig({ shadowQuality: parseInt(e.target.value, 10) })} className="p-1.5 border border-[#262626] bg-[#0a0a0a] rounded-lg font-inter">
-                      <option value="0">Low (Off)</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option>
-                    </select>
-                  </div>
-                  <div className="flex flex-col gap-0.5 col-span-2">
-                    <span className="text-gray-400 font-bold uppercase tracking-wider text-[9px] font-outfit">Raw Input Buffer</span>
-                    <select value={selectedConfig.rawInputBuffer ? 'true' : 'false'} onChange={(e) => saveValorantConfig({ rawInputBuffer: e.target.value === 'true' })} className="p-1.5 border border-[#262626] bg-[#0a0a0a] rounded-lg font-inter">
-                      <option value="true">On (Raw Input)</option><option value="false">Off</option>
-                    </select>
-                  </div>
-                </div>
-
-                <div className="border-t-2 border-dashed border-[#262626] pt-3 space-y-2">
-                  <div className="space-y-1">
-                    <div className="flex justify-between items-center text-[11px] font-bold">
-                      <span className="text-gray-200 font-outfit">Monitor Refresh Rate</span>
+                    <input
+                      type="range" min="50" max="100"
+                      value={Math.round(selectedConfig.resolutionQuality)}
+                      onChange={(e) => saveValorantConfig({ resolutionQuality: parseFloat(e.target.value) })}
+                      className="w-full cursor-pointer accent-[#3b82f6] h-1.5"
+                    />
+                    <div className="flex justify-between text-[9px] text-gray-500 mt-0.5">
+                      <span>50% (FPS)</span><span>100% (Native)</span>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <select
-                        value={showCustomRateInput ? 'custom' : ([60,144,240,360].includes(monitorRefreshRate) ? monitorRefreshRate : 'custom')}
-                        onChange={(e) => {
-                          if (e.target.value === 'custom') {
-                            setShowCustomRateInput(true);
-                            setCustomRateValue(String(monitorRefreshRate));
-                            setTimeout(() => customRateInputRef.current?.focus(), 50);
-                          } else {
-                            setShowCustomRateInput(false);
-                            applyFrameLimitSettings(frameLimitMode, parseInt(e.target.value, 10));
-                          }
-                        }}
-                        className="flex-1 p-1.5 border border-[#262626] bg-[#0a0a0a] rounded-lg text-[11px] font-inter cursor-pointer"
-                      >
-                        <option value="60">60 Hz</option>
-                        <option value="144">144 Hz</option>
-                        <option value="240">240 Hz</option>
-                        <option value="360">360 Hz</option>
-                        <option value="custom">Custom Hz...</option>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[9px] text-gray-500 font-semibold uppercase font-outfit">Textures</span>
+                      <select value={selectedConfig.textureQuality} onChange={(e) => saveValorantConfig({ textureQuality: parseInt(e.target.value, 10) })} className="p-1.5 border border-[#262626] bg-[#0a0a0a] rounded-lg text-[11px]">
+                        <option value="0">Low</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option>
                       </select>
-                      {showCustomRateInput && (
-                        <div className="flex items-center gap-1">
-                          <input
-                            ref={customRateInputRef}
-                            type="number"
-                            min="24"
-                            max="999"
-                            value={customRateValue}
-                            onChange={(e) => setCustomRateValue(e.target.value)}
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter') {
-                                const hz = parseInt(customRateValue, 10);
-                                if (!isNaN(hz) && hz >= 24 && hz <= 999) {
-                                  applyFrameLimitSettings(frameLimitMode, hz);
-                                  setShowCustomRateInput(false);
-                                }
-                              } else if (e.key === 'Escape') {
-                                setShowCustomRateInput(false);
-                              }
-                            }}
-                            placeholder="e.g. 165"
-                            className="w-16 p-1.5 border border-[#262626] bg-[#0a0a0a] rounded-lg text-[11px] font-mono focus:outline-none focus:ring-1 focus:ring-accent-blue/30"
-                          />
-                          <button
-                            onClick={() => {
-                              const hz = parseInt(customRateValue, 10);
-                              if (!isNaN(hz) && hz >= 24 && hz <= 999) {
-                                applyFrameLimitSettings(frameLimitMode, hz);
-                                setShowCustomRateInput(false);
-                              }
-                            }}
-                            className="text-[10px] font-bold px-2 py-1 bg-pencil-black text-white rounded-lg cursor-pointer border border-[#262626]"
-                          >
-                            Set
-                          </button>
-                        </div>
-                      )}
                     </div>
-                    {!showCustomRateInput && (
-                      <div className="text-[10px] text-gray-400 font-bold">
-                        Active target: <span className="text-gray-200">{monitorRefreshRate} Hz</span>
-                        {![60,144,240,360].includes(monitorRefreshRate) && (
-                          <span className="ml-1 text-[#3b82f6] font-outfit">(custom)</span>
-                        )}
-                      </div>
-                    )}
+                    <div className="flex flex-col gap-0.5">
+                      <span className="text-[9px] text-gray-500 font-semibold uppercase font-outfit">Shadows</span>
+                      <select value={selectedConfig.shadowQuality} onChange={(e) => saveValorantConfig({ shadowQuality: parseInt(e.target.value, 10) })} className="p-1.5 border border-[#262626] bg-[#0a0a0a] rounded-lg text-[11px]">
+                        <option value="0">Low (Off)</option><option value="1">Medium</option><option value="2">High</option><option value="3">Ultra</option>
+                      </select>
+                    </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-2 text-[10px] font-bold">
+
+                  <div className="grid grid-cols-2 gap-2 text-[10px] font-semibold">
                     <button
                       onClick={() => applyFrameLimitSettings('uncapped', monitorRefreshRate)}
-                      title="No frame cap — maximum FPS output"
-                      className={`p-1.5 border border-[#262626] text-center rounded-lg transition-all cursor-pointer ${frameLimitMode === 'uncapped' ? 'bg-pencil-black text-white shadow-none' : 'bg-[#0a0a0a] text-gray-200 shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'}`}
+                      className={`p-1.5 border border-[#262626] text-center rounded-lg transition-all cursor-pointer ${frameLimitMode === 'uncapped' ? 'bg-[#1a1a1a] text-white' : 'bg-[#0a0a0a] text-gray-400 hover:text-white'}`}
                     >
                       UNCAPPED
                     </button>
                     <button
                       onClick={() => applyFrameLimitSettings('vrr', monitorRefreshRate)}
-                      title={`Cap frames just below your ${monitorRefreshRate}Hz refresh rate to stabilize VRR/G-Sync/FreeSync`}
-                      className={`p-1.5 border border-[#262626] text-center rounded-lg transition-all cursor-pointer ${frameLimitMode === 'vrr' ? 'bg-pencil-black text-white shadow-none' : 'bg-[#0a0a0a] text-gray-200 shadow-sm active:translate-x-[1px] active:translate-y-[1px] active:shadow-none'}`}
+                      className={`p-1.5 border border-[#262626] text-center rounded-lg transition-all cursor-pointer ${frameLimitMode === 'vrr' ? 'bg-[#1a1a1a] text-white' : 'bg-[#0a0a0a] text-gray-400 hover:text-white'}`}
                     >
-                      VRR CAP
+                      VRR CAP ({Math.max(30, monitorRefreshRate - 3)})
                     </button>
                   </div>
-                  <div className="text-[9.5px] text-gray-400 font-bold">
-                    {frameLimitMode === 'vrr'
-                      ? `VRR target = ${Math.max(30, monitorRefreshRate - 3)} FPS (3 below refresh)`
-                      : 'Uncapped = no limit config'}
-                  </div>
                 </div>
-              </div>
-            ) : (
-              <div className="text-gray-400 italic text-[11px]">Profile not selected.</div>
-            )}
+              ) : (
+                <div className="text-gray-500 italic text-[11px]">No VALORANT config detected.</div>
+              )}
+            </div>
+
           </div>
 
         </div>
-
       </div>
 
     </div>

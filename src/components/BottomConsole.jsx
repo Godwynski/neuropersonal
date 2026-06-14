@@ -114,7 +114,7 @@ export default function BottomConsole({ logs, onClear, theme }) {
                   </div>
                   {isError && (
                     <button
-                      onClick={() => handleCopy(log, i)}
+                      onClick={() => handleCopy(text, i)}
                       className="opacity-0 group-hover:opacity-100 p-1 rounded bg-[#262626] border border-[#3f3f46] text-gray-300 hover:text-white hover:bg-[#3f3f46] transition-all self-center"
                       title="Copy Error"
                     >
