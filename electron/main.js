@@ -5,10 +5,10 @@ const fs = require('fs');
 
 let mainWindow;
 let tray = null;
-const isDev = !app.isPackaged;
+const isDev = !app.isPackaged && process.env.NODE_ENV !== 'test';
 
 const gotTheLock = app.requestSingleInstanceLock();
-if (!gotTheLock) {
+if (!gotTheLock && process.env.NODE_ENV !== 'test') {
   app.quit();
   process.exit(0);
 }
@@ -144,9 +144,13 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, '../dist/index.html'));
   }
 
+  mainWindow.once('ready-to-show', () => {
+    mainWindow.show();
+  });
+
   // Intercept close event to hide to tray instead of quitting
   mainWindow.on('close', (event) => {
-    if (!app.isQuiting) {
+    if (!app.isQuiting && process.env.NODE_ENV !== 'test') {
       event.preventDefault();
       mainWindow.hide();
     }
