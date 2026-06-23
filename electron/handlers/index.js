@@ -85,21 +85,24 @@ $s.hagsEnabled           = ((Get-ItemProperty 'HKLM:\\System\\CurrentControlSet\
 $s.gameDvrDisabled        = ((Get-ItemProperty 'HKCU:\\System\\GameConfigStore' -Name GameDVR_Enabled -EA SilentlyContinue).GameDVR_Enabled -eq 0)
 $s.priorityOptimized      = ((Get-ItemProperty 'HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Multimedia\\SystemProfile' -Name SystemResponsiveness -EA SilentlyContinue).SystemResponsiveness -eq 0)
 $s.disableMouseAccel      = ((Get-ItemProperty 'HKCU:\\Control Panel\\Mouse' -Name MouseSpeed -EA SilentlyContinue).MouseSpeed -eq '0')
-$s.prioritySeparation     = ((Get-ItemProperty 'HKLM:\\System\\CurrentControlSet\\Control\\PriorityControl' -Name Win32PrioritySeparation -EA SilentlyContinue).Win32PrioritySeparation -eq 38)
-$s.gsyncDisabled          = ((Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Services\\nvlddmkm\\Global\\NVTweak' -Name NvCplGlobalVRREnablement -EA SilentlyContinue).NvCplGlobalVRREnablement -eq 0)
-$s.powerThrottlingDisabled= ((Get-ItemProperty 'HKLM:\\SYSTEM\\CurrentControlSet\\Control\\Power\\PowerThrottling' -Name PowerThrottlingOff -EA SilentlyContinue).PowerThrottlingOff -eq 1)
-$s.globalFsoDisabled      = ((Get-ItemProperty 'HKCU:\\System\\GameConfigStore' -Name GameDVR_FSEBehaviorMode -EA SilentlyContinue).GameDVR_FSEBehaviorMode -eq 2)
-$s.gameModeActive         = ((Get-ItemProperty 'HKCU:\\Software\\Microsoft\\GameBar' -Name AllowAutoGameMode -EA SilentlyContinue).AllowAutoGameMode -eq 1)
+$s.prioritySeparation     = ((Get-ItemProperty 'HKLM:\System\CurrentControlSet\Control\PriorityControl' -Name Win32PrioritySeparation -EA SilentlyContinue).Win32PrioritySeparation -eq 24)
+$s.gsyncDisabled          = ((Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\nvlddmkm\Global\NVTweak' -Name NvCplGlobalVRREnablement -EA SilentlyContinue).NvCplGlobalVRREnablement -eq 0)
+$s.powerThrottlingDisabled= ((Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Power\PowerThrottling' -Name PowerThrottlingOff -EA SilentlyContinue).PowerThrottlingOff -eq 1)
+$s.globalFsoDisabled      = ((Get-ItemProperty 'HKCU:\System\GameConfigStore' -Name GameDVR_FSEBehaviorMode -EA SilentlyContinue).GameDVR_FSEBehaviorMode -eq 2)
+$s.gameModeActive         = ((Get-ItemProperty 'HKCU:\Software\Microsoft\GameBar' -Name AllowAutoGameMode -EA SilentlyContinue).AllowAutoGameMode -eq 1)
 $gp = '${safeGp}'
 if ($gp) {
-  $layerVal = (Get-ItemProperty 'HKCU:\\Software\\Microsoft\\Windows NT\\CurrentVersion\\AppCompatFlags\\Layers' -Name $gp -EA SilentlyContinue).$gp
+  $layerVal = (Get-ItemProperty 'HKCU:\Software\Microsoft\Windows NT\CurrentVersion\AppCompatFlags\Layers' -Name $gp -EA SilentlyContinue).$gp
   $s.disableFullscreenOpt = ($layerVal -like '*DISABLEDXMAXIMIZEDWINDOWEDMODE*')
 } else { $s.disableFullscreenOpt = $false }
 $ex = '${exeName}'
 if ($ex) {
-  $prioVal = (Get-ItemProperty "HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\$ex\\PerfOptions" -Name CpuPriorityClass -EA SilentlyContinue).CpuPriorityClass
+  $prioVal = (Get-ItemProperty "HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\$ex\PerfOptions" -Name CpuPriorityClass -EA SilentlyContinue).CpuPriorityClass
   $s.persistentPriorityEnabled = ($prioVal -eq 3)
 } else { $s.persistentPriorityEnabled = $false }
+$s.symmetricPriorityActive = ((Get-ItemProperty 'HKLM:\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options\VALORANT-Win64-Shipping.exe\PerfOptions' -Name CpuPriorityClass -EA SilentlyContinue).CpuPriorityClass -eq 2)
+$s.electronIgpuIsolated = ((Get-ItemProperty 'HKCU:\SOFTWARE\Microsoft\DirectX\UserGpuPreferences' -Name Discord.exe -EA SilentlyContinue).'Discord.exe' -match 'GpuPreference=1;')
+$s.intelGmmAllocated = ((Get-ItemProperty 'HKLM:\SOFTWARE\Intel\GMM' -Name DedicatedSegmentSize -EA SilentlyContinue).DedicatedSegmentSize -eq 1024)
 $s | ConvertTo-Json -Compress`;
 
     const batchB = `
@@ -183,6 +186,9 @@ $s | ConvertTo-Json -Compress`;
     status.gameModeActive         = a.gameModeActive          ?? false;
     status.disableFullscreenOpt   = a.disableFullscreenOpt    ?? false;
     status.persistentPriorityEnabled = a.persistentPriorityEnabled ?? false;
+    status.symmetricPriorityActive = a.symmetricPriorityActive ?? false;
+    status.electronIgpuIsolated = a.electronIgpuIsolated ?? false;
+    status.intelGmmAllocated = a.intelGmmAllocated ?? false;
 
     status.disableUsbSuspend  = b.disableUsbSuspend  ?? false;
     status.disableCoreParking = b.disableCoreParking  ?? false;
@@ -281,7 +287,7 @@ ipcMain.handle('set-dashboard-tweak', async (event, { tweakName, active, extraAr
       }
     }
     else if (tweakName === 'prioritySeparation') {
-      const val = active ? 38 : 26;
+      const val = active ? 24 : 26;
       await setRegistryValue('HKLM:\\System\\CurrentControlSet\\Control\\PriorityControl', 'Win32PrioritySeparation', val, 'DWord');
     }
     else if (tweakName === 'gsyncDisabled') {
@@ -334,11 +340,62 @@ ipcMain.handle('set-dashboard-tweak', async (event, { tweakName, active, extraAr
     }
     else if (tweakName === 'msiEnabled') {
       const val = active ? 1 : 0;
+      const priority = active ? 3 : 0;
       const gpuPnpCmd = `powershell -NoProfile -Command "$gpu = Get-CimInstance Win32_VideoController | Select-Object -First 1; if ($gpu -and $gpu.PNPDeviceID -match 'PCI\\\\\\\\(?<device>.+)') { echo $Matches['device'] }"`;
       const pnpDevice = await execAsync(gpuPnpCmd);
       if (pnpDevice) {
         const msiPath = `HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\${pnpDevice}\\Device Parameters\\Interrupt Management\\MessageSignaledInterruptProperties`;
         await setRegistryValue(msiPath, 'MSISupported', val, 'DWord');
+        if (active) {
+            await setRegistryValue(msiPath, 'MessageNumberLimit', 1, 'DWord');
+            await setRegistryValue(`HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\${pnpDevice}\\Device Parameters\\Interrupt Management\\Affinity Policy`, 'DevicePriority', priority, 'DWord');
+        } else {
+            await removeRegistryValue(msiPath, 'MessageNumberLimit');
+            await removeRegistryValue(`HKLM:\\SYSTEM\\CurrentControlSet\\Enum\\PCI\\${pnpDevice}\\Device Parameters\\Interrupt Management\\Affinity Policy`, 'DevicePriority');
+        }
+      }
+    }
+    else if (tweakName === 'symmetricPriority') {
+      const valDiscord = active ? 2 : null; // Normal
+      const valVgc = active ? 1 : null;     // Idle
+      
+      const setOrDel = async (exe, val) => {
+        const path = `HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\${exe}\\PerfOptions`;
+        if (val !== null) {
+          await spawnAsync('powershell.exe', ['-NoProfile', '-Command', `if (-not (Test-Path '${path}')) { New-Item -Path '${path}' -Force | Out-Null }`]);
+          await setRegistryValue(path, 'CpuPriorityClass', val, 'DWord');
+        }
+        else {
+          try { await spawnAsync('powershell.exe', ['-NoProfile', '-Command', `Remove-Item -Path '${path}' -Force -ErrorAction SilentlyContinue`]); } catch(e){}
+        }
+      };
+      
+      await setOrDel('VALORANT-Win64-Shipping.exe', valDiscord);
+      await setOrDel('Discord.exe', valDiscord);
+      await setOrDel('Spotify.exe', valDiscord);
+      await setOrDel('vgc.exe', valVgc);
+    }
+    else if (tweakName === 'electronIgpu') {
+      const val = active ? "GpuPreference=1;" : null;
+      const path = 'HKCU:\\SOFTWARE\\Microsoft\\DirectX\\UserGpuPreferences';
+      await spawnAsync('powershell.exe', ['-NoProfile', '-Command', `if (-not (Test-Path '${path}')) { New-Item -Path '${path}' -Force | Out-Null }`]);
+      if (val) {
+        await setRegistryValue(path, 'Discord.exe', val, 'String');
+        await setRegistryValue(path, 'Spotify.exe', val, 'String');
+        await setRegistryValue(path, 'obs64.exe', val, 'String');
+      } else {
+        await removeRegistryValue(path, 'Discord.exe');
+        await removeRegistryValue(path, 'Spotify.exe');
+        await removeRegistryValue(path, 'obs64.exe');
+      }
+    }
+    else if (tweakName === 'intelGmm') {
+      const path = 'HKLM:\\SOFTWARE\\Intel\\GMM';
+      if (active) {
+        await spawnAsync('powershell.exe', ['-NoProfile', '-Command', `if (-not (Test-Path '${path}')) { New-Item -Path '${path}' -Force | Out-Null }`]);
+        await setRegistryValue(path, 'DedicatedSegmentSize', 1024, 'DWord');
+      } else {
+        await removeRegistryValue(path, 'DedicatedSegmentSize');
       }
     }
     else if (tweakName === 'gameMode') {
@@ -404,14 +461,10 @@ ipcMain.handle('run-macro', async (event, macroKey) => {
 ipcMain.handle('run-cache-cleaner', async (event, type) => {
   try {
     if (type === 'scan') {
-      const tempCmd = `powershell -NoProfile -Command "if (Test-Path $env:TEMP) { Get-ChildItem -Path $env:TEMP -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum | Select-Object -ExpandProperty Sum } else { echo 0 }"`;
-      const valLogsCmd = `powershell -NoProfile -Command "if (Test-Path '$env:LOCALAPPDATA\\VALORANT\\Saved\\Logs') { Get-ChildItem -Path '$env:LOCALAPPDATA\\VALORANT\\Saved\\Logs' -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum | Select-Object -ExpandProperty Sum } else { echo 0 }"`;
-      const shaderCmd = `powershell -NoProfile -Command "(Get-ChildItem -Path '$env:LOCALAPPDATA\\NVIDIA\\DXCache', '$env:LOCALAPPDATA\\NVIDIA\\GLCache', '$env:LOCALAPPDATA\\AMD\\DxCache', '$env:LOCALAPPDATA\\D3DSCache' -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum"`;
-      
       const [tempOut, valLogsOut, shaderOut] = await Promise.all([
-        execAsync(tempCmd).catch(() => '0'),
-        execAsync(valLogsCmd).catch(() => '0'),
-        execAsync(shaderCmd).catch(() => '0'),
+        spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', "if (Test-Path $env:TEMP) { (Get-ChildItem -Path $env:TEMP -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum } else { 0 }"]).catch(() => '0'),
+        spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', "if (Test-Path '$env:LOCALAPPDATA\\VALORANT\\Saved\\Logs') { (Get-ChildItem -Path '$env:LOCALAPPDATA\\VALORANT\\Saved\\Logs' -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum } else { 0 }"]).catch(() => '0'),
+        spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', "(Get-ChildItem -Path '$env:LOCALAPPDATA\\NVIDIA\\DXCache', '$env:LOCALAPPDATA\\NVIDIA\\GLCache', '$env:LOCALAPPDATA\\AMD\\DxCache', '$env:LOCALAPPDATA\\D3DSCache' -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum"]).catch(() => '0'),
       ]);
 
       return {
@@ -434,6 +487,115 @@ ipcMain.handle('run-cache-cleaner', async (event, type) => {
   } catch (err) {
     return { success: false, error: err.message };
   }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IPC Handler: Optimize Electron Shortcuts
+// ─────────────────────────────────────────────────────────────────────────────
+
+ipcMain.handle('optimize-electron-shortcuts', async () => {
+  try {
+    const script = `
+$targets = @("Discord.lnk", "Spotify.lnk")
+$dirs = @("$env:USERPROFILE\\Desktop", "$env:APPDATA\\Microsoft\\Windows\\Start Menu\\Programs")
+$flags = "--disable-renderer-backgrounding --disable-accelerated-layers --disable-accelerated-fixed-root-background --no-sandbox --js-flags=\`"--max-old-space-size=4096\`""
+
+$wshShell = New-Object -ComObject WScript.Shell
+$optimizedCount = 0
+
+foreach ($dir in $dirs) {
+  if (Test-Path $dir) {
+    $shortcuts = Get-ChildItem -Path $dir -Filter "*.lnk" -Recurse -ErrorAction SilentlyContinue
+    foreach ($shortcut in $shortcuts) {
+      if ($targets -contains $shortcut.Name) {
+        $link = $wshShell.CreateShortcut($shortcut.FullName)
+        if (-not ($link.Arguments -like "*--disable-renderer-backgrounding*")) {
+          $link.Arguments = "$($link.Arguments) $flags"
+          $link.Save()
+          $optimizedCount++
+        }
+      }
+    }
+  }
+}
+$optimizedCount
+    `;
+    const count = await spawnAsync('powershell.exe', ['-NoProfile', '-Command', script]);
+    return { success: true, count: parseInt(count.trim()) || 0 };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IPC Handlers: Virtual Memory and Standby List Automations
+// ─────────────────────────────────────────────────────────────────────────────
+
+ipcMain.handle('check-pagefile-status', async () => {
+  try {
+    const script = `
+$mem = Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize
+$totalRamMB = [math]::Round($mem.TotalVisibleMemorySize / 1024)
+$targetMB = [math]::Round($totalRamMB * 1.5)
+$pf = Get-CimInstance Win32_PageFileSetting -ErrorAction SilentlyContinue
+if (-not $pf) { return @{ optimized = $false } | ConvertTo-Json -Compress }
+$isOptimized = ($pf.InitialSize -eq $targetMB -and $pf.MaximumSize -eq $targetMB)
+@{ optimized = $isOptimized; initial = $pf.InitialSize; max = $pf.MaximumSize; target = $targetMB } | ConvertTo-Json -Compress
+    `;
+    const res = await runPsJson(script);
+    return { success: true, optimized: res.optimized || false, details: res };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('set-pagefile', async (event, enable) => {
+  try {
+    if (enable) {
+      const script = `
+$mem = Get-CimInstance Win32_OperatingSystem | Select-Object TotalVisibleMemorySize
+$totalRamMB = [math]::Round($mem.TotalVisibleMemorySize / 1024)
+$targetMB = [math]::Round($totalRamMB * 1.5)
+$sys = Get-CimInstance Win32_ComputerSystem
+if ($sys.AutomaticManagedPagefile) {
+  Set-CimInstance -Query "Select * from Win32_ComputerSystem" -Property @{AutomaticManagedPagefile=$False}
+}
+$pf = Get-CimInstance Win32_PageFileSetting
+if (-not $pf) {
+  Set-WmiInstance -Class Win32_PageFileSetting -Arguments @{Name="C:\\pagefile.sys"; InitialSize=$targetMB; MaximumSize=$targetMB} -ErrorAction SilentlyContinue | Out-Null
+} else {
+  $pf | Set-CimInstance -Property @{InitialSize=$targetMB; MaximumSize=$targetMB}
+}
+      `;
+      await spawnAsync('powershell.exe', ['-NoProfile', '-Command', script]);
+    } else {
+      await spawnAsync('powershell.exe', ['-NoProfile', '-Command', 'Set-CimInstance -Query "Select * from Win32_ComputerSystem" -Property @{AutomaticManagedPagefile=$True}']);
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+let standbyInterval = null;
+ipcMain.handle('start-standby-cleaner', () => {
+  if (standbyInterval) return { success: true, alreadyRunning: true };
+  standbyInterval = setInterval(async () => {
+    try {
+      await execAsync('powershell -NoProfile -Command "Add-Type @\\"\\nusing System; using System.Runtime.InteropServices;\\npublic class MemPurge {\\n    [DllImport(\\"ntdll.dll\\")] public static extern int NtSetSystemInformation(int InfoClass, ref int Info, int Length);\\n    public static void ClearStandbyList() { int cmd = 4; NtSetSystemInformation(80, ref cmd, sizeof(int)); }\\n}\\n\\"@; [MemPurge]::ClearStandbyList(); [System.GC]::Collect(); [System.GC]::WaitForPendingFinalizers()"');
+    } catch (e) {
+      console.error('Standby cleaner error:', e);
+    }
+  }, 5 * 60 * 1000); // 5 minutes
+  return { success: true };
+});
+
+ipcMain.handle('stop-standby-cleaner', () => {
+  if (standbyInterval) {
+    clearInterval(standbyInterval);
+    standbyInterval = null;
+  }
+  return { success: true };
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -1092,6 +1254,55 @@ ipcMain.handle('detect-gpu', async () => {
       });
     });
   });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IPC Handler: Lightweight GPU Stats (temp + utilization only)
+// Avoids re-running full GPU detection; safe to poll every 10s
+// ─────────────────────────────────────────────────────────────────────────────
+
+ipcMain.handle('get-gpu-stats', async () => {
+  const gpuName = await getCachedGpuName().catch(() => 'Unknown');
+  const vendor = await getCachedGpuVendor().catch(() => 'unknown');
+
+  // Fast path: NVIDIA with nvidia-smi
+  if (vendor === 'nvidia') {
+    try {
+      const out = await spawnAsync('nvidia-smi.exe', [
+        '--query-gpu=temperature.gpu,utilization.gpu',
+        '--format=csv,noheader,nounits'
+      ]);
+      const parts = out.trim().split(', ');
+      return {
+        success: true,
+        temperature: parseInt(parts[0], 10) || 0,
+        utilization: parseInt(parts[1], 10) || 0
+      };
+    } catch (e) { /* fall through to generic */ }
+  }
+
+  // Generic path: Windows performance counters (works for AMD/Intel too)
+  try {
+    const script = `
+$util = 0; $temp = 0
+try {
+  $samples = (Get-Counter '\\GPU Engine(*engtype_3D)\\Utilization Percentage' -ErrorAction SilentlyContinue).CounterSamples | Where-Object CookedValue
+  if ($samples) { $util = ($samples.CookedValue | Measure-Object -Sum).Sum; if ($util -gt 100) { $util = 100 } }
+} catch {}
+try {
+  $tZone = (Get-Counter '\\Thermal Zone Information(*)\\Temperature' -ErrorAction SilentlyContinue).CounterSamples | Where-Object CookedValue
+  if ($tZone) { $temp = ($tZone[0].CookedValue - 273.15) }
+} catch {}
+@{ temperature = [Math]::Round($temp); utilization = [Math]::Round($util) } | ConvertTo-Json -Compress`;
+    const res = await runPsJson(script).catch(() => ({}));
+    return {
+      success: true,
+      temperature: res.temperature || 0,
+      utilization: res.utilization || 0
+    };
+  } catch (err) {
+    return { success: false, temperature: 0, utilization: 0 };
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

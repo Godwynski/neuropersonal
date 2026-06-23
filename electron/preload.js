@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('api', {
   detectValorantPath: () => ipcRenderer.invoke('detect-valorant-path'),
   launchValorant: (gamePath) => ipcRenderer.invoke('launch-valorant', gamePath),
   detectGpu: () => ipcRenderer.invoke('detect-gpu'),
+  getGpuStats: () => ipcRenderer.invoke('get-gpu-stats'),
   saveAppSettings: (settings) => ipcRenderer.invoke('save-app-settings', settings),
   loadAppSettings: () => ipcRenderer.invoke('load-app-settings'),
   backupRegistry: (keyPath, valueName) => ipcRenderer.invoke('backup-registry', { keyPath, valueName }),
@@ -40,6 +41,7 @@ contextBridge.exposeInMainWorld('api', {
   launchAdminUtility: (utility) => ipcRenderer.invoke('launch-admin-utility', utility),
   killProcess: (processName) => ipcRenderer.invoke('kill-process', processName),
   getRunningApps: () => ipcRenderer.invoke('get-running-apps'),
+  optimizeElectronShortcuts: () => ipcRenderer.invoke('optimize-electron-shortcuts'),
   getRegistryBackups: () => ipcRenderer.invoke('get-registry-backups'),
   restoreRegistryBackup: (backupIndex) => ipcRenderer.invoke('restore-registry-backup', backupIndex),
   deleteRegistryBackup: (backupIndex) => ipcRenderer.invoke('delete-registry-backup', backupIndex),
@@ -77,6 +79,13 @@ contextBridge.exposeInMainWorld('api', {
   toggleScheduledTasks: (disable) => ipcRenderer.invoke('toggle-scheduled-tasks', disable),
   // Feature 13: Ultimate Performance Plan
   checkUltimatePerformance: () => ipcRenderer.invoke('check-ultimate-performance'),
+  // Feature 14: Virtual Memory Pagefile
+  checkPagefileStatus: () => ipcRenderer.invoke('check-pagefile-status'),
+  setPagefile: (enable) => ipcRenderer.invoke('set-pagefile', enable),
+  // Feature 15: Standby Cache Automation
+  startStandbyCleaner: () => ipcRenderer.invoke('start-standby-cleaner'),
+  stopStandbyCleaner: () => ipcRenderer.invoke('stop-standby-cleaner'),
+
   activateUltimatePerformance: () => ipcRenderer.invoke('activate-ultimate-performance'),
 
   onValorantStatusChange: (callback) => {

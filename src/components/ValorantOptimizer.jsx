@@ -87,10 +87,24 @@ export default function ValorantOptimizer() {
     toggleScheduledTasks,
     ultimatePerformanceActive,
     activateUltimatePerformance,
-    deactivateUltimatePerformance
+    deactivateUltimatePerformance,
+    symmetricPriorityActive,
+    toggleSymmetricPriority,
+    electronIgpuIsolated,
+    toggleElectronIgpu,
+    intelGmmAllocated,
+    toggleIntelGmm,
+    optimizeElectronShortcuts,
+    applyCompetitiveRenderConfig,
+    pageFileOptimized,
+    togglePagefile,
+    autoStandbyCleanerActive,
+    toggleStandbyCleaner
   } = useAppContext();
 
   const [activeTab, setActiveTab] = useState('OS & Registry');
+  const [showAdvanced, setShowAdvanced] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
     
   const [lastScannedAt, setLastScannedAt] = useState(null);
 
@@ -180,12 +194,82 @@ export default function ValorantOptimizer() {
       tier: 'safe',
       impact: 'high',
       desc: 'Prioritizes VALORANT CPU threads.',
-      descDetailed: 'Instructs Windows thread scheduler to prioritize VALORANT game threads.',
+      descDetailed: 'Instructs Windows thread scheduler to prioritize VALORANT game threads. (Note: Can conflict with Symmetric Priority Engine)',
       status: persistentPriorityEnabled ? 'Optimized' : 'Active (Unoptimized)',
       isOptimized: persistentPriorityEnabled === true,
       actionType: 'toggle',
       onAction: () => togglePersistentPriority(!persistentPriorityEnabled),
       actionLabel: persistentPriorityEnabled ? 'Restore' : 'Optimize'
+    },
+    {
+      id: 'symmetricPriority',
+      name: 'Symmetric Priority Engine',
+      category: 'OS & Registry',
+      tier: 'safe',
+      impact: 'high',
+      desc: 'Re-balances thread scheduling for VALORANT/Vanguard.',
+      descDetailed: 'Sets VALORANT and Electron apps to Normal priority and Vanguard (vgc.exe) to Low/Idle to prevent CPU starvation.',
+      status: symmetricPriorityActive ? 'Optimized' : 'Active (Unoptimized)',
+      isOptimized: symmetricPriorityActive === true,
+      actionType: 'toggle',
+      onAction: () => toggleSymmetricPriority(!symmetricPriorityActive),
+      actionLabel: symmetricPriorityActive ? 'Restore' : 'Optimize'
+    },
+    {
+      id: 'electronIgpu',
+      name: 'Electron GPU Isolation',
+      category: 'OS & Registry',
+      tier: 'safe',
+      impact: 'medium',
+      desc: 'Forces Discord/Spotify to use iGPU.',
+      descDetailed: 'Creates DirectX UserGpuPreferences to force hardware-accelerated Electron apps (Discord, Spotify) onto the integrated graphics (iGPU), freeing up the dGPU for VALORANT.',
+      status: electronIgpuIsolated ? 'Optimized' : 'Active (Unoptimized)',
+      isOptimized: electronIgpuIsolated === true,
+      actionType: 'toggle',
+      onAction: () => toggleElectronIgpu(!electronIgpuIsolated),
+      actionLabel: electronIgpuIsolated ? 'Restore' : 'Optimize'
+    },
+    {
+      id: 'intelGmm',
+      name: 'Intel GMM VRAM Allocation',
+      category: 'OS & Registry',
+      tier: 'safe',
+      impact: 'low',
+      desc: 'Pre-allocates iGPU memory.',
+      descDetailed: 'Sets DedicatedSegmentSize=1024 for Intel Integrated Graphics to prevent Dynamic Memory Management (DMM) from stealing system RAM while gaming.',
+      status: intelGmmAllocated ? 'Optimized' : 'Active (Unoptimized)',
+      isOptimized: intelGmmAllocated === true,
+      actionType: 'toggle',
+      onAction: () => toggleIntelGmm(!intelGmmAllocated),
+      actionLabel: intelGmmAllocated ? 'Restore' : 'Optimize'
+    },
+    {
+      id: 'electronShortcuts',
+      name: 'Electron App Shortcut Tuner',
+      category: 'OS & Registry',
+      tier: 'safe',
+      impact: 'high',
+      desc: 'Injects bypass flags into Discord/Spotify shortcuts.',
+      descDetailed: 'Modifies desktop and start menu shortcuts for Discord and Spotify to inject --disable-renderer-backgrounding and memory limits, bypassing aggressive Chrome suspension.',
+      status: 'Ready',
+      isOptimized: false,
+      actionType: 'action',
+      onAction: optimizeElectronShortcuts,
+      actionLabel: 'Optimize Shortcuts'
+    },
+    {
+      id: 'pagefile',
+      name: 'Virtual Memory (Static Pagefile)',
+      category: 'OS & Registry',
+      tier: 'safe',
+      impact: 'medium',
+      desc: 'Locks pagefile size to 1.5x physical RAM.',
+      descDetailed: 'Locks the Windows virtual memory pagefile to 1.5x physical RAM to prevent dynamic resizing disk I/O stutters.',
+      status: pageFileOptimized ? 'Optimized (Static)' : 'System Managed',
+      isOptimized: pageFileOptimized === true,
+      actionType: 'toggle',
+      onAction: () => togglePagefile(!pageFileOptimized),
+      actionLabel: pageFileOptimized ? 'Restore' : 'Optimize'
     },
     {
       id: 'timerResolution',
@@ -460,6 +544,35 @@ export default function ValorantOptimizer() {
       actionLabel: 'Purge Shaders',
       disabled: cleaningShaders || shaderCacheSize === 'Click Scan' || shaderCacheSize === '0.00 Bytes'
     },
+    {
+      id: 'standbyCleaner',
+      name: 'Automated Standby Cache Management',
+      category: 'Caches & Cleaners',
+      tier: 'safe',
+      impact: 'high',
+      desc: 'Automatically purges standby memory list in the background.',
+      descDetailed: 'Runs a background loop (like ISLC) to purge the standby memory list and force garbage collection, maintaining ultra-low scheduling latency.',
+      status: autoStandbyCleanerActive ? 'Active (Running)' : 'Inactive',
+      isOptimized: autoStandbyCleanerActive === true,
+      actionType: 'toggle',
+      onAction: () => toggleStandbyCleaner(!autoStandbyCleanerActive),
+      actionLabel: autoStandbyCleanerActive ? 'Stop' : 'Start'
+    },
+
+    {
+      id: 'competitiveRender',
+      name: 'Apply Competitive Render Config',
+      category: 'Caches & Cleaners',
+      tier: 'safe',
+      impact: 'high',
+      desc: 'Edits GameUserSettings.ini for 80% res scaling and nullified scalability.',
+      descDetailed: 'Applies 80% internal resolution scaling, strips out all visual bloat, and enables raw input buffer for maximum framerate and lowest latency.',
+      status: 'Ready to Apply',
+      isOptimized: false,
+      actionType: 'action',
+      onAction: applyCompetitiveRenderConfig,
+      actionLabel: 'Apply Config'
+    },
 
     // --- Gaming Launch policies ---
     {
@@ -652,32 +765,19 @@ export default function ValorantOptimizer() {
     }
   ];
 
-  // Filtering actions based on tab selection, search query and display rules
-  const filteredActions = allActions.filter(action => {
+  // Filter helper used by both tab counts and render
+  const filterAction = (action) => {
     if (action.showIf === false) return false;
-    
-    // Advanced filtering
     if (!showAdvanced && action.isAdvanced) return false;
-    
-    // Tab filtering — activeTab is always a category name
-    if (action.category !== activeTab) return false;
-    
-    // Search query filtering
     if (searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase();
       const nameMatch = action.name.toLowerCase().includes(query);
       const descMatch = (action.descDetailed || action.desc).toLowerCase().includes(query);
       const catMatch = action.category.toLowerCase().includes(query);
-      return nameMatch || descMatch || catMatch;
+      if (!nameMatch && !descMatch && !catMatch) return false;
     }
-    
     return true;
-  });
-
-  // Unique categories list to render accordions
-  const activeCategories = ['OS & Registry', 'GPU & Monitor', 'Caches & Cleaners', 'Launch Policies'].filter(cat => 
-    filteredActions.some(action => action.category === cat)
-  );
+  };
 
   return (
     <>
@@ -718,11 +818,39 @@ export default function ValorantOptimizer() {
           </div>
         </div>
 
+        {/* Search + Advanced Toggle */}
+        <div className="flex items-center gap-3 px-4 md:px-6 pb-2">
+          <div className="relative flex-1 max-w-xs">
+            <input
+              type="text"
+              placeholder="Search tweaks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 bg-[#141414] border border-[#262626] rounded-lg text-[11px] text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 transition-colors"
+            />
+            <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+            </svg>
+          </div>
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all border ${
+              showAdvanced 
+                ? 'bg-[#3b82f6]/10 border-[#3b82f6]/30 text-[#3b82f6]' 
+                : 'bg-[#141414] border-[#262626] text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+            {showAdvanced ? 'Advanced: ON' : 'Advanced: OFF'}
+          </button>
+        </div>
+
         {/* Category Tabs */}
         <div className="flex gap-1 px-4 md:px-6 pb-3 overflow-x-auto scrollbar-hide">
           {['OS & Registry', 'GPU & Monitor', 'Caches & Cleaners', 'Launch Policies'].map(cat => {
-            const catCount = allActions.filter(a => a.category === cat && a.showIf !== false && a.isOptimized).length;
-            const catTotal = allActions.filter(a => a.category === cat && a.showIf !== false).length;
+            const catActions = allActions.filter(a => a.category === cat && filterAction(a));
+            const catCount = catActions.filter(a => a.isOptimized).length;
+            const catTotal = catActions.length;
             return (
               <button
                 key={cat}
@@ -752,8 +880,7 @@ export default function ValorantOptimizer() {
           {/* Tweak Cards */}
           <div className="border border-[#262626] rounded-xl bg-[#141414]/30 overflow-hidden">
             <div className="divide-y divide-[#262626]/60">
-              {allActions.filter(action => action.category === activeTab).map((action) => {
-                if (action.showIf === false) return null;
+              {allActions.filter(action => action.category === activeTab && filterAction(action)).map((action) => {
 
                 const isThisLoading = processingActionId === action.id;
                 const isAnyLoading = processingActionId !== null;

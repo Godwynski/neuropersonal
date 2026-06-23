@@ -93,6 +93,9 @@ export function AppProvider({ children }) {
   const [powerThrottlingDisabled, setPowerThrottlingDisabled] = useState(false);
   const [msiEnabled, setMsiEnabled] = useState(false);
   const [persistentPriorityEnabled, setPersistentPriorityEnabled] = useState(false);
+  const [symmetricPriorityActive, setSymmetricPriorityActive] = useState(false);
+  const [electronIgpuIsolated, setElectronIgpuIsolated] = useState(false);
+  const [intelGmmAllocated, setIntelGmmAllocated] = useState(false);
 
   // Advanced States
   const [vbsStatus, setVbsStatus] = useState({ vbsEnabled: false, memoryIntegrity: false, vmPlatform: 'unknown', hypervisorPlatform: 'unknown' });
@@ -113,12 +116,15 @@ export function AppProvider({ children }) {
   const [focusAssistActive, setFocusAssistActive] = useState(false);
   const [scheduledTasksDisabled, setScheduledTasksDisabled] = useState(false);
   const [ultimatePerformanceActive, setUltimatePerformanceActive] = useState(false);
+  const [pageFileOptimized, setPageFileOptimized] = useState(false);
+  const [autoStandbyCleanerActive, setAutoStandbyCleanerActive] = useState(false);
 
   // One-Click Performance Booster State
   const [maxBoostActive, setMaxBoostActive] = useState(false);
   const [maxBoostProgress, setMaxBoostProgress] = useState(0);
   const [maxBoostStatus, setMaxBoostStatus] = useState('idle');
   const [boostProfile, setBoostProfile] = useState('safe');
+  const [boostPreState, setBoostPreState] = useState(null); // Tracks what was changed by boost for smart revert
 
   // Toast Notifications (#33: Queue overflow, max 3 visible)
   const [toasts, setToasts] = useState([]);
@@ -165,6 +171,9 @@ export function AppProvider({ children }) {
         setGlobalFsoDisabled(s.globalFsoDisabled);
         setPowerThrottlingDisabled(s.powerThrottlingDisabled);
         setPersistentPriorityEnabled(s.persistentPriorityEnabled);
+        setSymmetricPriorityActive(s.symmetricPriorityActive);
+        setElectronIgpuIsolated(s.electronIgpuIsolated);
+        setIntelGmmAllocated(s.intelGmmAllocated);
         
         // #28: Init Game Mode and Power Plan from system status
         setGameModeActive(s.gameModeActive);
@@ -272,6 +281,9 @@ export function AppProvider({ children }) {
   const togglePowerThrottling = (v) => toggleGeneric('powerThrottlingDisabled', v, setPowerThrottlingDisabled, `Power Throttling ${v ? 'disabled' : 'enabled'}`);
   const toggleMsiMode = (v) => toggleGeneric('msiEnabled', v, setMsiEnabled, `MSI Mode ${v ? 'enabled' : 'disabled'}`);
   const togglePersistentPriority = (v) => toggleGeneric('persistentPriorityEnabled', v, setPersistentPriorityEnabled, `Persistent priority ${v ? 'enabled' : 'disabled'}`, null, { gamePath: valorantPath });
+  const toggleSymmetricPriority = (v) => toggleGeneric('symmetricPriority', v, setSymmetricPriorityActive, `Symmetric Priority ${v ? 'enabled' : 'disabled'}`);
+  const toggleElectronIgpu = (v) => toggleGeneric('electronIgpu', v, setElectronIgpuIsolated, `Electron iGPU Isolation ${v ? 'enabled' : 'disabled'}`);
+  const toggleIntelGmm = (v) => toggleGeneric('intelGmm', v, setIntelGmmAllocated, `Intel GMM Allocation ${v ? 'enabled' : 'disabled'}`);
   const toggleBgService = (svc, start) => toggleGeneric('bgService', start, (val) => setBgServices(p => ({...p, [svc]: val})), `${svc} ${start ? 'started' : 'stopped'}`, null, { serviceName: svc });
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -332,6 +344,15 @@ export function AppProvider({ children }) {
     await saveValorantConfig({
       resolutionQuality: 100, textureQuality: 0, shadowQuality: 0, effectsQuality: 0,
       antiAliasingQuality: 0, postProcessQuality: 0, viewDistanceQuality: 0, shadingQuality: 0, vsync: false
+    });
+  };
+
+  const applyCompetitiveRenderConfig = async () => {
+    if (!selectedConfig) return;
+    await saveValorantConfig({
+      resolutionQuality: 80, textureQuality: 0, shadowQuality: 0, effectsQuality: 0,
+      antiAliasingQuality: 0, postProcessQuality: 0, viewDistanceQuality: 0, shadingQuality: 0,
+      texturePoolSizeLimit: 0, vsync: false, rawInputBuffer: true
     });
   };
 
@@ -446,6 +467,18 @@ export function AppProvider({ children }) {
     }
   };
 
+  const optimizeElectronShortcuts = async () => {
+    if (window.api && window.api.optimizeElectronShortcuts) {
+      const res = await window.api.optimizeElectronShortcuts();
+      if (res.success) {
+        addToast(`Optimized ${res.count} Electron app shortcuts!`, 'success');
+        addLog(`[System] Optimized ${res.count} Electron shortcuts (V8/Renderer bypass).`);
+      } else {
+        addToast(`Failed to optimize shortcuts: ${res.error}`, 'error');
+      }
+    }
+  };
+
   // ─────────────────────────────────────────────────────────────────────────────
   // New Performance Feature Toggles
   // ─────────────────────────────────────────────────────────────────────────────
@@ -549,6 +582,31 @@ export function AppProvider({ children }) {
     else addToast(`Failed to activate Ultimate Performance: ${res.error}`, 'error');
   };
 
+  const checkPagefileStatus = async () => {
+    if (!window.api || !window.api.checkPagefileStatus) return;
+    try { const res = await window.api.checkPagefileStatus(); if (res.success) setPageFileOptimized(res.optimized || false); } catch (e) {}
+  };
+
+  const togglePagefile = async (enable) => {
+    if (!window.api || !window.api.setPagefile) return;
+    const res = await window.api.setPagefile(enable);
+    if (res.success) {
+      setPageFileOptimized(enable);
+      addLog(`[System] Virtual Memory Pagefile ${enable ? 'locked to 1.5x RAM' : 'set to System Managed'}`);
+      addToast(`Virtual Memory ${enable ? 'Optimized' : 'Restored'}`, 'success');
+    }
+  };
+
+  const toggleStandbyCleaner = async (enable) => {
+    if (!window.api || !window.api.startStandbyCleaner) return;
+    const res = enable ? await window.api.startStandbyCleaner() : await window.api.stopStandbyCleaner();
+    if (res.success) {
+      setAutoStandbyCleanerActive(enable);
+      addLog(`[Memory] Auto Standby Cleaner ${enable ? 'started (5m interval)' : 'stopped'}`);
+      addToast(`Standby Cleaner ${enable ? 'Active' : 'Stopped'}`, 'success');
+    }
+  };
+
   const deactivateUltimatePerformance = async () => {
     if (window.api && window.api.setDashboardTweak) {
       const res = await window.api.setDashboardTweak('powerPlan', 'high');
@@ -618,36 +676,44 @@ export function AppProvider({ children }) {
           const saved = await window.api.loadAppSettings();
           if (saved.success && saved.settings) {
             if (saved.settings.boostProfile) setBoostProfile(saved.settings.boostProfile);
-            if (saved.settings.revertQueue) setRevertQueue(saved.settings.revertQueue); // #20
+            if (saved.settings.revertQueue) setRevertQueue(saved.settings.revertQueue);
           }
         } catch (e) {}
       }
 
       try {
+        // Phase 1: Critical path (must complete before UI is interactive)
         setInitMessage("Scanning system paths...");
         await detectValorantPath();
         
         setInitMessage("Fetching system tweaks status...");
         await refreshAllStatus();
 
+        // Phase 2: Parallel batch - GPU, configs, hardware (independent checks)
         setInitMessage("Loading configurations...");
-        await loadValorantConfigs();
-        await detectGpu();
-        await checkHpetStatus();
-        await checkAmdOptimizations();
-        await checkGpuDriverProfile();
-        await checkHardwareBottlenecks();
+        await Promise.all([
+          loadValorantConfigs(),
+          detectGpu(),
+          checkHpetStatus(),
+          checkHardwareBottlenecks(),
+          loadRegistryBackups(),
+        ]);
 
-        setInitMessage("Checking new performance features...");
-        await checkNetworkLatency();
-        await checkNicInterruptMod();
-        await checkCpuTopology();
-        await checkVisualEffects();
-        await checkDefenderExclusion();
-        await checkFocusAssist();
-        await checkScheduledTasks();
-        await checkUltimatePerformance();
-        await loadRegistryBackups();
+        // Phase 3: Parallel batch - feature status checks (all independent)
+        setInitMessage("Checking performance features...");
+        await Promise.all([
+          checkAmdOptimizations(),
+          checkGpuDriverProfile(),
+          checkNetworkLatency(),
+          checkNicInterruptMod(),
+          checkCpuTopology(),
+          checkVisualEffects(),
+          checkDefenderExclusion(),
+          checkFocusAssist(),
+          checkScheduledTasks(),
+          checkUltimatePerformance(),
+          checkPagefileStatus(),
+        ]);
       } catch (err) { console.error(err); } 
       finally { setIsInitializing(false); }
     };
@@ -677,14 +743,17 @@ export function AppProvider({ children }) {
   // System Automation: Valorant Process Listener
   useEffect(() => {
     if (window.api && window.api.onValorantStatusChange) {
-      window.api.onValorantStatusChange((isRunning) => {
+      const handler = (isRunning) => {
         setValorantRunning(isRunning);
         if (isRunning && autoBoostActive && !maxBoostActive) {
           executeOperation("Auto-Boosting for VALORANT...", () => toggleMaxBoost(true, boostProfile));
         } else if (!isRunning && maxBoostActive) {
           executeOperation("Auto-Reverting System...", () => toggleMaxBoost(false));
         }
-      });
+      };
+      window.api.onValorantStatusChange(handler);
+      // Note: Electron preload ipcRenderer.on doesn't return a removeListener handle
+      // but we still mark this as intentional to prevent double-registration
     }
   }, [autoBoostActive, maxBoostActive, boostProfile]);
 
@@ -711,14 +780,6 @@ export function AppProvider({ children }) {
           previousValorantRunning.current = data.valorantRunning;
         }
 
-        // #23: Poll GPU Temp & Utilization
-        if (window.api.detectGpu) {
-          const gpuRes = await window.api.detectGpu();
-          if (gpuRes.success && gpuRes.gpu) {
-            setGpuInfo(prev => ({ ...prev, temperature: gpuRes.gpu.temperature, utilization: gpuRes.gpu.utilization }));
-          }
-        }
-
         // Poll Running Apps
         if (window.api.getRunningApps) {
           const appsRes = await window.api.getRunningApps();
@@ -731,7 +792,22 @@ export function AppProvider({ children }) {
 
     fetchStats();
     const interval = setInterval(fetchStats, 2000);
-    return () => clearInterval(interval);
+
+    // GPU stats on a slower 10-second interval using lightweight endpoint
+    const fetchGpuStats = async () => {
+      if (window.api.getGpuStats) {
+        try {
+          const gpuRes = await window.api.getGpuStats();
+          if (gpuRes.success) {
+            setGpuInfo(prev => ({ ...prev, temperature: gpuRes.temperature, utilization: gpuRes.utilization }));
+          }
+        } catch (e) {}
+      }
+    };
+    fetchGpuStats();
+    const gpuInterval = setInterval(fetchGpuStats, 10000);
+
+    return () => { clearInterval(interval); clearInterval(gpuInterval); };
   }, [isElectron, isWindowVisible, revertQueue, powerPlanMode]);
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -807,35 +883,97 @@ export function AppProvider({ children }) {
 
   const toggleMaxBoost = async (enable, profileType = 'safe') => {
     if (enable) {
+      // Capture pre-boost state for smart revert
+      const preState = {
+        gameModeWasActive: gameModeActive,
+        powerPlanWas: powerPlanMode,
+        gameDvrWasDisabled: registryStates.gameDvrDisabled,
+        mouseAccelWasDisabled: latencyTweaks.disableMouseAccel,
+        usbSuspendWasDisabled: latencyTweaks.disableUsbSuspend,
+        powerThrottlingWasDisabled: powerThrottlingDisabled,
+        nicPowerWasDisabled: nicPowerSavingDisabled,
+        persistentPriorityWasEnabled: persistentPriorityEnabled,
+        xblWasStopped: !bgServices.XblAuthManager,
+        timerResWasActive: timerResActive,
+        networkLatencyWasOptimized: networkLatencyOptimized,
+        nicInterruptModWasDisabled: nicInterruptModDisabled,
+        visualEffectsWereStripped: visualEffectsStripped,
+        defenderWasExcluded: defenderExcluded,
+        focusAssistWasActive: focusAssistActive,
+        scheduledTasksWereDisabled: scheduledTasksDisabled,
+        cpuAffinityWasActive: cpuAffinityActive,
+        vbsWasEnabled: vbsStatus.vbsEnabled,
+      };
+      setBoostPreState(preState);
+
       setMaxBoostStatus('boosting'); setMaxBoostActive(true); setMaxBoostProgress(10);
       await new Promise(r => setTimeout(r, 200));
 
-      if (profileType === 'safe') {
+      if (profileType === 'lowend') {
+        // LOW-END PC MODE: Only Tier 1 & 2 tweaks that genuinely help at 30fps
+        setMaxBoostProgress(15);
+        // Graphics: Force all-low tournament settings
+        if (selectedConfig) await applyTournamentPreset();
+        
+        setMaxBoostProgress(25);
+        // Tier 1: Highest impact system tweaks
+        if (!preState.gameDvrWasDisabled) await toggleGameDvr(true);
+        if (powerPlanMode !== 'high') await togglePowerPlan();
+        if (!preState.powerThrottlingWasDisabled) await togglePowerThrottling(true);
+        
+        setMaxBoostProgress(40);
+        // Kill background apps (biggest single win on low-end)
+        if (optimizationOptions.purgeApps) await runDeepPerformanceOptimize();
+        
+        setMaxBoostProgress(55);
+        // System overhead reduction
+        if (!preState.visualEffectsWereStripped) await toggleVisualEffects(true);
+        if (!preState.scheduledTasksWereDisabled) await toggleScheduledTasks(true);
+        if (!preState.defenderWasExcluded) await toggleDefenderExclusion(true);
+        
+        setMaxBoostProgress(70);
+        // CPU and latency
+        if (!preState.persistentPriorityWasEnabled) await togglePersistentPriority(true);
+        if (!preState.mouseAccelWasDisabled) await toggleLatencyTweak('disableMouseAccel', true);
+        if (!preState.timerResWasActive) await toggleTimerResolution(true);
+        
+        setMaxBoostProgress(82);
+        // Network
+        if (!preState.networkLatencyWasOptimized) await toggleNetworkLatency(true);
+        if (!preState.focusAssistWasActive) await toggleFocusAssist(true);
+
+        setMaxBoostProgress(92);
+        // Ultimate Performance plan
+        if (!ultimatePerformanceActive) await activateUltimatePerformance();
+
+        // NOTE: Deliberately skipping shader cache purge — it hurts more than helps on low-end
+        // NOTE: Deliberately skipping VBS toggle — requires reboot, not suitable for quick boost
+        
+        setMaxBoostProgress(100); setMaxBoostStatus('active');
+        addToast("Low-End PC Boost activated! Graphics set to minimum.", "success");
+      } else if (profileType === 'safe') {
         setMaxBoostProgress(20);
-        if (!gameModeActive) await toggleGameMode();
+        if (!preState.gameModeWasActive) await toggleGameMode();
         if (powerPlanMode !== 'high') await togglePowerPlan();
         
         setMaxBoostProgress(35);
-        if (!registryStates.gameDvrDisabled) await toggleGameDvr(true);
+        if (!preState.gameDvrWasDisabled) await toggleGameDvr(true);
         for (const tweak of ['disableMouseAccel', 'disableUsbSuspend']) {
           if (!latencyTweaks[tweak]) await toggleLatencyTweak(tweak, true);
         }
 
         setMaxBoostProgress(50);
-        // Network optimizations
-        if (!networkLatencyOptimized) await toggleNetworkLatency(true);
-        if (!nicInterruptModDisabled) await toggleNicInterruptMod(true);
+        if (!preState.networkLatencyWasOptimized) await toggleNetworkLatency(true);
+        if (!preState.nicInterruptModWasDisabled) await toggleNicInterruptMod(true);
 
         setMaxBoostProgress(65);
-        // System overhead reduction
-        if (!visualEffectsStripped) await toggleVisualEffects(true);
-        if (!defenderExcluded) await toggleDefenderExclusion(true);
-        if (!focusAssistActive) await toggleFocusAssist(true);
-        if (!scheduledTasksDisabled) await toggleScheduledTasks(true);
+        if (!preState.visualEffectsWereStripped) await toggleVisualEffects(true);
+        if (!preState.defenderWasExcluded) await toggleDefenderExclusion(true);
+        if (!preState.focusAssistWasActive) await toggleFocusAssist(true);
+        if (!preState.scheduledTasksWereDisabled) await toggleScheduledTasks(true);
 
         setMaxBoostProgress(80);
-        // CPU affinity (hybrid only)
-        if (cpuTopology.isHybrid && !cpuAffinityActive) await toggleCpuAffinity(true);
+        if (cpuTopology.isHybrid && !preState.cpuAffinityWasActive) await toggleCpuAffinity(true);
 
         setMaxBoostProgress(90);
         await cleanAllShaderCaches();
@@ -843,40 +981,38 @@ export function AppProvider({ children }) {
         setMaxBoostProgress(100); setMaxBoostStatus('active');
         addToast("Safe Performance Boost activated!", "success");
       } else {
+        // aggressive / max profile
         setMaxBoostProgress(15);
-        if (!gameModeActive) await toggleGameMode();
+        if (!preState.gameModeWasActive) await toggleGameMode();
         if (powerPlanMode !== 'high') await togglePowerPlan();
         
         setMaxBoostProgress(25);
-        if (!registryStates.gameDvrDisabled) await toggleGameDvr(true);
+        if (!preState.gameDvrWasDisabled) await toggleGameDvr(true);
         for (const tweak of ['disableMouseAccel', 'disableUsbSuspend']) {
           if (!latencyTweaks[tweak]) await toggleLatencyTweak(tweak, true);
         }
         
         setMaxBoostProgress(40);
-        if (!powerThrottlingDisabled) await togglePowerThrottling(true);
-        if (!nicPowerSavingDisabled) await toggleNicPower(true);
-        if (!persistentPriorityEnabled) await togglePersistentPriority(true);
-        if (bgServices.XblAuthManager) await toggleBgService('XblAuthManager', false);
+        if (!preState.powerThrottlingWasDisabled) await togglePowerThrottling(true);
+        if (!preState.nicPowerWasDisabled) await toggleNicPower(true);
+        if (!preState.persistentPriorityWasEnabled) await togglePersistentPriority(true);
+        if (!preState.xblWasStopped) await toggleBgService('XblAuthManager', false);
 
         setMaxBoostProgress(55);
-        // Network stack full optimization
-        if (!networkLatencyOptimized) await toggleNetworkLatency(true);
-        if (!nicInterruptModDisabled) await toggleNicInterruptMod(true);
+        if (!preState.networkLatencyWasOptimized) await toggleNetworkLatency(true);
+        if (!preState.nicInterruptModWasDisabled) await toggleNicInterruptMod(true);
 
         setMaxBoostProgress(65);
-        // System overhead annihilation
-        if (!visualEffectsStripped) await toggleVisualEffects(true);
-        if (!defenderExcluded) await toggleDefenderExclusion(true);
-        if (!focusAssistActive) await toggleFocusAssist(true);
-        if (!scheduledTasksDisabled) await toggleScheduledTasks(true);
+        if (!preState.visualEffectsWereStripped) await toggleVisualEffects(true);
+        if (!preState.defenderWasExcluded) await toggleDefenderExclusion(true);
+        if (!preState.focusAssistWasActive) await toggleFocusAssist(true);
+        if (!preState.scheduledTasksWereDisabled) await toggleScheduledTasks(true);
 
         setMaxBoostProgress(75);
-        // CPU affinity (hybrid only)
-        if (cpuTopology.isHybrid && !cpuAffinityActive) await toggleCpuAffinity(true);
+        if (cpuTopology.isHybrid && !preState.cpuAffinityWasActive) await toggleCpuAffinity(true);
         
         setMaxBoostProgress(82);
-        if (!timerResActive) await toggleTimerResolution(true);
+        if (!preState.timerResWasActive) await toggleTimerResolution(true);
         await cleanAllShaderCaches();
         
         setMaxBoostProgress(90);
@@ -884,46 +1020,47 @@ export function AppProvider({ children }) {
         if (gpuInfo.vendor === 'nvidia' || gpuInfo.vendor === 'amd') await applyGpuDriverProfile('performance');
 
         setMaxBoostProgress(96);
-        // Ultimate power plan (goes beyond High Performance)
         if (!ultimatePerformanceActive) await activateUltimatePerformance();
         
         setMaxBoostProgress(100); setMaxBoostStatus('active');
         addToast("Max Performance Boost activated!", "success");
       }
     } else {
+      // SMART REVERT: Only undo what was actually changed by boost
+      const pre = boostPreState || {};
       setMaxBoostStatus('reverting'); setMaxBoostProgress(10);
       
       setMaxBoostProgress(25);
-      if (registryStates.gameDvrDisabled) await toggleGameDvr(false);
-      if (gameModeActive) await toggleGameMode();
-      if (powerPlanMode !== 'balanced') await togglePowerPlan();
+      if (registryStates.gameDvrDisabled && !pre.gameDvrWasDisabled) await toggleGameDvr(false);
+      if (gameModeActive && !pre.gameModeWasActive) await toggleGameMode();
+      if (powerPlanMode !== 'balanced' && pre.powerPlanWas === 'balanced') await togglePowerPlan();
       for (const tweak of ['disableMouseAccel', 'disableUsbSuspend']) {
-        if (latencyTweaks[tweak]) await toggleLatencyTweak(tweak, false);
+        if (latencyTweaks[tweak] && !pre[tweak === 'disableMouseAccel' ? 'mouseAccelWasDisabled' : 'usbSuspendWasDisabled']) await toggleLatencyTweak(tweak, false);
       }
       
       setMaxBoostProgress(45);
-      if (powerThrottlingDisabled) await togglePowerThrottling(false);
-      if (nicPowerSavingDisabled) await toggleNicPower(false);
-      if (persistentPriorityEnabled) await togglePersistentPriority(false);
-      if (!bgServices.XblAuthManager) await toggleBgService('XblAuthManager', true);
-      if (timerResActive) await toggleTimerResolution(false);
+      if (powerThrottlingDisabled && !pre.powerThrottlingWasDisabled) await togglePowerThrottling(false);
+      if (nicPowerSavingDisabled && !pre.nicPowerWasDisabled) await toggleNicPower(false);
+      if (persistentPriorityEnabled && !pre.persistentPriorityWasEnabled) await togglePersistentPriority(false);
+      if (!bgServices.XblAuthManager && !pre.xblWasStopped) await toggleBgService('XblAuthManager', true);
+      if (timerResActive && !pre.timerResWasActive) await toggleTimerResolution(false);
 
       setMaxBoostProgress(60);
-      // Revert all new optimizations
-      if (networkLatencyOptimized) await toggleNetworkLatency(false);
-      if (nicInterruptModDisabled) await toggleNicInterruptMod(false);
+      if (networkLatencyOptimized && !pre.networkLatencyWasOptimized) await toggleNetworkLatency(false);
+      if (nicInterruptModDisabled && !pre.nicInterruptModWasDisabled) await toggleNicInterruptMod(false);
 
       setMaxBoostProgress(75);
-      if (visualEffectsStripped) await toggleVisualEffects(false);
-      if (defenderExcluded) await toggleDefenderExclusion(false);
-      if (focusAssistActive) await toggleFocusAssist(false);
-      if (scheduledTasksDisabled) await toggleScheduledTasks(false);
+      if (visualEffectsStripped && !pre.visualEffectsWereStripped) await toggleVisualEffects(false);
+      if (defenderExcluded && !pre.defenderWasExcluded) await toggleDefenderExclusion(false);
+      if (focusAssistActive && !pre.focusAssistWasActive) await toggleFocusAssist(false);
+      if (scheduledTasksDisabled && !pre.scheduledTasksWereDisabled) await toggleScheduledTasks(false);
 
       setMaxBoostProgress(90);
-      if (cpuAffinityActive) await toggleCpuAffinity(false);
+      if (cpuAffinityActive && !pre.cpuAffinityWasActive) await toggleCpuAffinity(false);
 
       setMaxBoostProgress(100); setMaxBoostActive(false); setMaxBoostStatus('idle');
-      addToast("Restored default parameters", "success");
+      setBoostPreState(null);
+      addToast("Restored to pre-boost state", "success");
     }
   };
 
@@ -1072,6 +1209,8 @@ export function AppProvider({ children }) {
       maxBoostActive, setMaxBoostActive, maxBoostProgress, setMaxBoostProgress,
       maxBoostStatus, setMaxBoostStatus, boostProfile, setBoostProfile,
       toasts, setToasts, isInitializing, setIsInitializing,
+      pageFileOptimized, setPageFileOptimized, togglePagefile,
+      autoStandbyCleanerActive, setAutoStandbyCleanerActive, toggleStandbyCleaner,
       initMessage, setInitMessage, registryBackups, setRegistryBackups,
       isProcessing, processingMessage, addToast, removeToast,
       loadRegistryBackups, restoreBackup, deleteBackup, clearAllBackups, restoreAllBackups, executeOperation,
