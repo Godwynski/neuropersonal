@@ -99,7 +99,9 @@ export default function ValorantOptimizer() {
     pageFileOptimized,
     togglePagefile,
     autoStandbyCleanerActive,
-    toggleStandbyCleaner
+    toggleStandbyCleaner,
+    explorerTerminated,
+    toggleExplorer
   } = useAppContext();
 
   const [activeTab, setActiveTab] = useState('OS & Registry');
@@ -602,6 +604,20 @@ export default function ValorantOptimizer() {
       actionType: 'toggle',
       onAction: () => setOptimizationOptions(prev => ({ ...prev, purgeApps: !prev.purgeApps })),
       actionLabel: optimizationOptions.purgeApps ? 'Disable' : 'Enable'
+    },
+    {
+      id: 'explorerTerminate',
+      name: 'Explorer.exe Termination (Cortex Mode)',
+      category: 'Launch Policies',
+      tier: 'aggressive',
+      impact: 'high',
+      desc: 'Terminates the Windows UI (taskbar, desktop) for maximum FPS.',
+      descDetailed: 'Forcefully terminates explorer.exe. This completely removes the Windows UI, taskbar, and desktop rendering, freeing up CPU cycles and removing DWM composition overhead. Your screen will be blank except for the game. (You can restart it when finished).',
+      status: explorerTerminated ? 'Terminated (Cortex Mode Active)' : 'Active (Windows UI Running)',
+      isOptimized: explorerTerminated === true,
+      actionType: 'toggle',
+      onAction: () => toggleExplorer(!explorerTerminated),
+      actionLabel: explorerTerminated ? 'Restart Explorer' : 'Terminate Explorer'
     },
     {
       id: 'gameMode',

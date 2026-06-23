@@ -88,6 +88,11 @@ contextBridge.exposeInMainWorld('api', {
 
   activateUltimatePerformance: () => ipcRenderer.invoke('activate-ultimate-performance'),
 
+  // Feature 16: Explorer Termination
+  checkExplorerStatus: () => ipcRenderer.invoke('check-explorer-status'),
+  terminateExplorer: () => ipcRenderer.invoke('terminate-explorer'),
+  restartExplorer: () => ipcRenderer.invoke('restart-explorer'),
+
   onValorantStatusChange: (callback) => {
     ipcRenderer.on('valorant-status-change', (event, isRunning) => callback(isRunning));
   }

@@ -2201,4 +2201,34 @@ ipcMain.handle('check-ultimate-performance', async () => {
   }
 });
 
+// Feature 16: Explorer.exe Termination (Razer Cortex Style)
+ipcMain.handle('check-explorer-status', async () => {
+  try {
+    const { stdout } = await execAsync('tasklist /FI "IMAGENAME eq explorer.exe" /FO CSV /NH');
+    return { success: true, isRunning: stdout.toLowerCase().includes('explorer.exe') };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('terminate-explorer', async () => {
+  try {
+    // Forcefully kill explorer.exe
+    await execAsync('taskkill /f /im explorer.exe').catch(() => {});
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('restart-explorer', async () => {
+  try {
+    // Start explorer using cmd to detach it properly
+    await execAsync('cmd.exe /c start explorer.exe');
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
 };

@@ -118,6 +118,7 @@ export function AppProvider({ children }) {
   const [ultimatePerformanceActive, setUltimatePerformanceActive] = useState(false);
   const [pageFileOptimized, setPageFileOptimized] = useState(false);
   const [autoStandbyCleanerActive, setAutoStandbyCleanerActive] = useState(false);
+  const [explorerTerminated, setExplorerTerminated] = useState(false);
 
   // One-Click Performance Booster State
   const [maxBoostActive, setMaxBoostActive] = useState(false);
@@ -607,6 +608,30 @@ export function AppProvider({ children }) {
     }
   };
 
+  const checkExplorerStatus = async () => {
+    if (!window.api || !window.api.checkExplorerStatus) return;
+    try { 
+      const res = await window.api.checkExplorerStatus(); 
+      if (res.success) setExplorerTerminated(!res.isRunning); 
+    } catch (e) {}
+  };
+
+  const toggleExplorer = async (terminate) => {
+    if (!window.api || !window.api.terminateExplorer) return;
+    try {
+      const res = terminate ? await window.api.terminateExplorer() : await window.api.restartExplorer();
+      if (res.success) {
+        setExplorerTerminated(terminate);
+        addToast(`Windows Explorer ${terminate ? 'terminated' : 'restarted'}.`, 'success');
+        addLog(`[System] Windows Explorer ${terminate ? 'Terminated (Cortex Mode)' : 'Restarted'}`);
+      } else {
+        addToast(`Failed to ${terminate ? 'terminate' : 'restart'} Explorer: ${res.error}`, 'error');
+      }
+    } catch (e) {
+      addToast('Error toggling Explorer', 'error');
+    }
+  };
+
   const deactivateUltimatePerformance = async () => {
     if (window.api && window.api.setDashboardTweak) {
       const res = await window.api.setDashboardTweak('powerPlan', 'high');
@@ -713,6 +738,7 @@ export function AppProvider({ children }) {
           checkScheduledTasks(),
           checkUltimatePerformance(),
           checkPagefileStatus(),
+          checkExplorerStatus()
         ]);
       } catch (err) { console.error(err); } 
       finally { setIsInitializing(false); }
@@ -1299,6 +1325,7 @@ export function AppProvider({ children }) {
       focusAssistActive, toggleFocusAssist,
       scheduledTasksDisabled, toggleScheduledTasks,
       ultimatePerformanceActive, activateUltimatePerformance, deactivateUltimatePerformance,
+      explorerTerminated, toggleExplorer,
       optimizedCount, totalOptimizations
     }}>
       {children}
