@@ -868,10 +868,9 @@ export function AppProvider({ children }) {
   };
 
   const launchValorant = async () => {
-    await triggerValorantAutoBoost();
-    // Auto-activate Ultimate Performance plan on launch
-    if (!ultimatePerformanceActive) {
-      await activateUltimatePerformance();
+    // Apply full boost profile before launching (same path as auto-detect)
+    if (!maxBoostActive) {
+      await toggleMaxBoost(true, boostProfile);
     }
     if (window.api && window.api.launchValorant) {
       addLog('[Launcher] Launching VALORANT via Riot Client...');
@@ -903,6 +902,16 @@ export function AppProvider({ children }) {
         scheduledTasksWereDisabled: scheduledTasksDisabled,
         cpuAffinityWasActive: cpuAffinityActive,
         vbsWasEnabled: vbsStatus.vbsEnabled,
+        // Extended state tracking for complete boost coverage
+        electronIgpuWasIsolated: electronIgpuIsolated,
+        intelGmmWasAllocated: intelGmmAllocated,
+        pageFileWasOptimized: pageFileOptimized,
+        standbyCleanerWasActive: autoStandbyCleanerActive,
+        gsyncWasDisabled: gsyncDisabled,
+        mpoWasDisabled: amdOptimizations.mpoDisabled,
+        amdShaderCacheWasOn: amdOptimizations.shaderCacheAlwaysOn,
+        ultimatePerformanceWasActive: ultimatePerformanceActive,
+        gpuDriverProfileWasApplied: gpuDriverProfile.powerMaxPerformance || gpuDriverProfile.antiLagEnabled,
       };
       setBoostPreState(preState);
 
@@ -937,14 +946,23 @@ export function AppProvider({ children }) {
         if (!preState.mouseAccelWasDisabled) await toggleLatencyTweak('disableMouseAccel', true);
         if (!preState.timerResWasActive) await toggleTimerResolution(true);
         
-        setMaxBoostProgress(82);
-        // Network
+        setMaxBoostProgress(75);
+        // Network & input
         if (!preState.networkLatencyWasOptimized) await toggleNetworkLatency(true);
         if (!preState.focusAssistWasActive) await toggleFocusAssist(true);
+        if (!preState.usbSuspendWasDisabled) await toggleLatencyTweak('disableUsbSuspend', true);
+        if (!preState.nicInterruptModWasDisabled) await toggleNicInterruptMod(true);
 
-        setMaxBoostProgress(92);
+        setMaxBoostProgress(85);
+        // Electron & system memory (critical on low-end — frees dGPU and prevents RAM bloat)
+        if (!preState.electronIgpuWasIsolated) await toggleElectronIgpu(true);
+        if (cpuTopology.isHybrid && !preState.cpuAffinityWasActive) await toggleCpuAffinity(true);
+        if (!preState.pageFileWasOptimized) await togglePagefile(true);
+        if (!preState.standbyCleanerWasActive) await toggleStandbyCleaner(true);
+
+        setMaxBoostProgress(95);
         // Ultimate Performance plan
-        if (!ultimatePerformanceActive) await activateUltimatePerformance();
+        if (!preState.ultimatePerformanceWasActive) await activateUltimatePerformance();
 
         // NOTE: Deliberately skipping shader cache purge — it hurts more than helps on low-end
         // NOTE: Deliberately skipping VBS toggle — requires reboot, not suitable for quick boost
@@ -972,11 +990,21 @@ export function AppProvider({ children }) {
         if (!preState.focusAssistWasActive) await toggleFocusAssist(true);
         if (!preState.scheduledTasksWereDisabled) await toggleScheduledTasks(true);
 
-        setMaxBoostProgress(80);
+        setMaxBoostProgress(72);
         if (cpuTopology.isHybrid && !preState.cpuAffinityWasActive) await toggleCpuAffinity(true);
 
-        setMaxBoostProgress(90);
+        setMaxBoostProgress(78);
+        // Electron & system memory optimizations
+        if (!preState.electronIgpuWasIsolated) await toggleElectronIgpu(true);
+        await optimizeElectronShortcuts();
+        if (!preState.pageFileWasOptimized) await togglePagefile(true);
+        if (!preState.standbyCleanerWasActive) await toggleStandbyCleaner(true);
+
+        setMaxBoostProgress(88);
         await cleanAllShaderCaches();
+
+        setMaxBoostProgress(95);
+        if (!preState.ultimatePerformanceWasActive) await activateUltimatePerformance();
         
         setMaxBoostProgress(100); setMaxBoostStatus('active');
         addToast("Safe Performance Boost activated!", "success");
@@ -1008,19 +1036,35 @@ export function AppProvider({ children }) {
         if (!preState.focusAssistWasActive) await toggleFocusAssist(true);
         if (!preState.scheduledTasksWereDisabled) await toggleScheduledTasks(true);
 
-        setMaxBoostProgress(75);
+        setMaxBoostProgress(70);
         if (cpuTopology.isHybrid && !preState.cpuAffinityWasActive) await toggleCpuAffinity(true);
+
+        setMaxBoostProgress(74);
+        // Electron & system memory optimizations
+        if (!preState.electronIgpuWasIsolated) await toggleElectronIgpu(true);
+        if (!preState.intelGmmWasAllocated) await toggleIntelGmm(true);
+        await optimizeElectronShortcuts();
+        if (!preState.pageFileWasOptimized) await togglePagefile(true);
+        if (!preState.standbyCleanerWasActive) await toggleStandbyCleaner(true);
         
-        setMaxBoostProgress(82);
+        setMaxBoostProgress(80);
         if (!preState.timerResWasActive) await toggleTimerResolution(true);
         await cleanAllShaderCaches();
         
-        setMaxBoostProgress(90);
+        setMaxBoostProgress(86);
         if (vbsStatus.vbsEnabled) await toggleVbs(false);
         if (gpuInfo.vendor === 'nvidia' || gpuInfo.vendor === 'amd') await applyGpuDriverProfile('performance');
 
+        setMaxBoostProgress(90);
+        // GPU vendor-specific optimizations
+        if (gpuInfo.vendor === 'nvidia' && !preState.gsyncWasDisabled) await toggleGsync(true);
+        if (gpuInfo.vendor === 'amd') {
+          if (!preState.mpoWasDisabled) await toggleAmdMpo(true);
+          if (!preState.amdShaderCacheWasOn) await toggleAmdShaderCache(true);
+        }
+
         setMaxBoostProgress(96);
-        if (!ultimatePerformanceActive) await activateUltimatePerformance();
+        if (!preState.ultimatePerformanceWasActive) await activateUltimatePerformance();
         
         setMaxBoostProgress(100); setMaxBoostStatus('active');
         addToast("Max Performance Boost activated!", "success");
@@ -1055,8 +1099,23 @@ export function AppProvider({ children }) {
       if (focusAssistActive && !pre.focusAssistWasActive) await toggleFocusAssist(false);
       if (scheduledTasksDisabled && !pre.scheduledTasksWereDisabled) await toggleScheduledTasks(false);
 
-      setMaxBoostProgress(90);
+      setMaxBoostProgress(80);
       if (cpuAffinityActive && !pre.cpuAffinityWasActive) await toggleCpuAffinity(false);
+
+      setMaxBoostProgress(85);
+      // Revert Electron & system memory optimizations
+      if (electronIgpuIsolated && !pre.electronIgpuWasIsolated) await toggleElectronIgpu(false);
+      if (intelGmmAllocated && !pre.intelGmmWasAllocated) await toggleIntelGmm(false);
+      if (pageFileOptimized && !pre.pageFileWasOptimized) await togglePagefile(false);
+      if (autoStandbyCleanerActive && !pre.standbyCleanerWasActive) await toggleStandbyCleaner(false);
+
+      setMaxBoostProgress(92);
+      // Revert GPU vendor-specific optimizations
+      if (gsyncDisabled && !pre.gsyncWasDisabled) await toggleGsync(false);
+      if (amdOptimizations.mpoDisabled && !pre.mpoWasDisabled) await toggleAmdMpo(false);
+      if (amdOptimizations.shaderCacheAlwaysOn && !pre.amdShaderCacheWasOn) await toggleAmdShaderCache(false);
+      if ((gpuDriverProfile.powerMaxPerformance || gpuDriverProfile.antiLagEnabled) && !pre.gpuDriverProfileWasApplied) await applyGpuDriverProfile('default');
+      if (ultimatePerformanceActive && !pre.ultimatePerformanceWasActive) await deactivateUltimatePerformance();
 
       setMaxBoostProgress(100); setMaxBoostActive(false); setMaxBoostStatus('idle');
       setBoostPreState(null);
@@ -1172,9 +1231,14 @@ export function AppProvider({ children }) {
     visualEffectsStripped === true,
     defenderExcluded === true,
     focusAssistActive === true,
-    scheduledTasksDisabled === true
+    scheduledTasksDisabled === true,
+    electronIgpuIsolated === true,
+    intelGmmAllocated === true,
+    pageFileOptimized === true,
+    autoStandbyCleanerActive === true,
+    ultimatePerformanceActive === true
   ].filter(Boolean).length;
-  const totalOptimizations = 17;
+  const totalOptimizations = 22;
 
   return (
     <AppContext.Provider value={{
