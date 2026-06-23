@@ -712,10 +712,7 @@ export function AppProvider({ children }) {
           checkFocusAssist(),
           checkScheduledTasks(),
           checkUltimatePerformance(),
-<<<<<<< HEAD
           checkPagefileStatus(),
-=======
->>>>>>> 6559c0dda60c94487e82aea2360166c61e837148
         ]);
       } catch (err) { console.error(err); } 
       finally { setIsInitializing(false); }
