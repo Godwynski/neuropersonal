@@ -404,14 +404,10 @@ ipcMain.handle('run-macro', async (event, macroKey) => {
 ipcMain.handle('run-cache-cleaner', async (event, type) => {
   try {
     if (type === 'scan') {
-      const tempCmd = `powershell -NoProfile -Command "if (Test-Path $env:TEMP) { Get-ChildItem -Path $env:TEMP -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum | Select-Object -ExpandProperty Sum } else { echo 0 }"`;
-      const valLogsCmd = `powershell -NoProfile -Command "if (Test-Path '$env:LOCALAPPDATA\\VALORANT\\Saved\\Logs') { Get-ChildItem -Path '$env:LOCALAPPDATA\\VALORANT\\Saved\\Logs' -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum | Select-Object -ExpandProperty Sum } else { echo 0 }"`;
-      const shaderCmd = `powershell -NoProfile -Command "(Get-ChildItem -Path '$env:LOCALAPPDATA\\NVIDIA\\DXCache', '$env:LOCALAPPDATA\\NVIDIA\\GLCache', '$env:LOCALAPPDATA\\AMD\\DxCache', '$env:LOCALAPPDATA\\D3DSCache' -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum"`;
-      
       const [tempOut, valLogsOut, shaderOut] = await Promise.all([
-        execAsync(tempCmd).catch(() => '0'),
-        execAsync(valLogsCmd).catch(() => '0'),
-        execAsync(shaderCmd).catch(() => '0'),
+        spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', "if (Test-Path $env:TEMP) { (Get-ChildItem -Path $env:TEMP -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum } else { 0 }"]).catch(() => '0'),
+        spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', "if (Test-Path '$env:LOCALAPPDATA\\VALORANT\\Saved\\Logs') { (Get-ChildItem -Path '$env:LOCALAPPDATA\\VALORANT\\Saved\\Logs' -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum } else { 0 }"]).catch(() => '0'),
+        spawnAsync('powershell.exe', ['-NoProfile', '-NonInteractive', '-Command', "(Get-ChildItem -Path '$env:LOCALAPPDATA\\NVIDIA\\DXCache', '$env:LOCALAPPDATA\\NVIDIA\\GLCache', '$env:LOCALAPPDATA\\AMD\\DxCache', '$env:LOCALAPPDATA\\D3DSCache' -Recurse -Force -ErrorAction SilentlyContinue | Measure-Object -Property Length -Sum).Sum"]).catch(() => '0'),
       ]);
 
       return {
@@ -1092,6 +1088,55 @@ ipcMain.handle('detect-gpu', async () => {
       });
     });
   });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// IPC Handler: Lightweight GPU Stats (temp + utilization only)
+// Avoids re-running full GPU detection; safe to poll every 10s
+// ─────────────────────────────────────────────────────────────────────────────
+
+ipcMain.handle('get-gpu-stats', async () => {
+  const gpuName = await getCachedGpuName().catch(() => 'Unknown');
+  const vendor = await getCachedGpuVendor().catch(() => 'unknown');
+
+  // Fast path: NVIDIA with nvidia-smi
+  if (vendor === 'nvidia') {
+    try {
+      const out = await spawnAsync('nvidia-smi.exe', [
+        '--query-gpu=temperature.gpu,utilization.gpu',
+        '--format=csv,noheader,nounits'
+      ]);
+      const parts = out.trim().split(', ');
+      return {
+        success: true,
+        temperature: parseInt(parts[0], 10) || 0,
+        utilization: parseInt(parts[1], 10) || 0
+      };
+    } catch (e) { /* fall through to generic */ }
+  }
+
+  // Generic path: Windows performance counters (works for AMD/Intel too)
+  try {
+    const script = `
+$util = 0; $temp = 0
+try {
+  $samples = (Get-Counter '\\GPU Engine(*engtype_3D)\\Utilization Percentage' -ErrorAction SilentlyContinue).CounterSamples | Where-Object CookedValue
+  if ($samples) { $util = ($samples.CookedValue | Measure-Object -Sum).Sum; if ($util -gt 100) { $util = 100 } }
+} catch {}
+try {
+  $tZone = (Get-Counter '\\Thermal Zone Information(*)\\Temperature' -ErrorAction SilentlyContinue).CounterSamples | Where-Object CookedValue
+  if ($tZone) { $temp = ($tZone[0].CookedValue - 273.15) }
+} catch {}
+@{ temperature = [Math]::Round($temp); utilization = [Math]::Round($util) } | ConvertTo-Json -Compress`;
+    const res = await runPsJson(script).catch(() => ({}));
+    return {
+      success: true,
+      temperature: res.temperature || 0,
+      utilization: res.utilization || 0
+    };
+  } catch (err) {
+    return { success: false, temperature: 0, utilization: 0 };
+  }
 });
 
 // ─────────────────────────────────────────────────────────────────────────────

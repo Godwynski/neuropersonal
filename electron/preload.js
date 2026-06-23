@@ -8,6 +8,7 @@ contextBridge.exposeInMainWorld('api', {
   detectValorantPath: () => ipcRenderer.invoke('detect-valorant-path'),
   launchValorant: (gamePath) => ipcRenderer.invoke('launch-valorant', gamePath),
   detectGpu: () => ipcRenderer.invoke('detect-gpu'),
+  getGpuStats: () => ipcRenderer.invoke('get-gpu-stats'),
   saveAppSettings: (settings) => ipcRenderer.invoke('save-app-settings', settings),
   loadAppSettings: () => ipcRenderer.invoke('load-app-settings'),
   backupRegistry: (keyPath, valueName) => ipcRenderer.invoke('backup-registry', { keyPath, valueName }),

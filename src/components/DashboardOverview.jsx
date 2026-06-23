@@ -110,8 +110,38 @@ export default function DashboardOverview() {
           )}
         </div>
         
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
           
+          {/* Low-End PC Mode */}
+          <button 
+            className={`text-left p-4 rounded-xl border transition-all relative overflow-hidden group ${
+              boostProfile === 'lowend' 
+                ? 'border-[#10b981] bg-[#10b981]/8 shadow-[0_0_20px_rgba(16,185,129,0.08)]' 
+                : 'border-[#262626] bg-[#141414]/50 hover:border-[#3f3f46]'
+            }`}
+            onClick={() => setBoostProfile('lowend')}
+          >
+            {boostProfile === 'lowend' && (
+              <div className="absolute top-3 right-3">
+                <svg className="w-4 h-4 text-[#10b981]" fill="currentColor" viewBox="0 0 20 20">
+                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                </svg>
+              </div>
+            )}
+            <div className="flex items-center gap-3 mb-2">
+              <div className="w-8 h-8 rounded-lg bg-[#10b981]/15 flex items-center justify-center shrink-0">
+                <span className="text-sm">⚡</span>
+              </div>
+              <div>
+                <h3 className="text-sm font-bold text-white">Low-End PC</h3>
+                <span className="text-[10px] text-[#10b981] font-semibold">★ Best for 30fps</span>
+              </div>
+            </div>
+            <p className="text-[11px] text-gray-400 leading-relaxed">
+              Proven tweaks only. Forces minimum graphics, kills bloat. Designed for PCs struggling under 60fps.
+            </p>
+          </button>
+
           {/* Maximum Performance */}
           <button 
             className={`text-left p-4 rounded-xl border transition-all relative overflow-hidden group ${
@@ -219,7 +249,7 @@ export default function DashboardOverview() {
           ) : maxBoostActive ? (
             'Stop Boost & Revert to Defaults'
           ) : (
-            `Apply ${boostProfile === 'aggressive' ? 'Maximum Performance' : 'Balanced Mode'}`
+            `Apply ${boostProfile === 'aggressive' ? 'Maximum Performance' : boostProfile === 'lowend' ? 'Low-End PC Mode' : 'Balanced Mode'}`
           )}
         </button>
         

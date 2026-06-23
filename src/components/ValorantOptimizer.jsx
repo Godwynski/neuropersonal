@@ -91,6 +91,8 @@ export default function ValorantOptimizer() {
   } = useAppContext();
 
   const [activeTab, setActiveTab] = useState('OS & Registry');
+  const [showAdvanced, setShowAdvanced] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
     
   const [lastScannedAt, setLastScannedAt] = useState(null);
 
@@ -652,32 +654,19 @@ export default function ValorantOptimizer() {
     }
   ];
 
-  // Filtering actions based on tab selection, search query and display rules
-  const filteredActions = allActions.filter(action => {
+  // Filter helper used by both tab counts and render
+  const filterAction = (action) => {
     if (action.showIf === false) return false;
-    
-    // Advanced filtering
     if (!showAdvanced && action.isAdvanced) return false;
-    
-    // Tab filtering — activeTab is always a category name
-    if (action.category !== activeTab) return false;
-    
-    // Search query filtering
     if (searchQuery.trim() !== '') {
       const query = searchQuery.toLowerCase();
       const nameMatch = action.name.toLowerCase().includes(query);
       const descMatch = (action.descDetailed || action.desc).toLowerCase().includes(query);
       const catMatch = action.category.toLowerCase().includes(query);
-      return nameMatch || descMatch || catMatch;
+      if (!nameMatch && !descMatch && !catMatch) return false;
     }
-    
     return true;
-  });
-
-  // Unique categories list to render accordions
-  const activeCategories = ['OS & Registry', 'GPU & Monitor', 'Caches & Cleaners', 'Launch Policies'].filter(cat => 
-    filteredActions.some(action => action.category === cat)
-  );
+  };
 
   return (
     <>
@@ -718,11 +707,39 @@ export default function ValorantOptimizer() {
           </div>
         </div>
 
+        {/* Search + Advanced Toggle */}
+        <div className="flex items-center gap-3 px-4 md:px-6 pb-2">
+          <div className="relative flex-1 max-w-xs">
+            <input
+              type="text"
+              placeholder="Search tweaks..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 bg-[#141414] border border-[#262626] rounded-lg text-[11px] text-gray-200 placeholder-gray-600 focus:outline-none focus:border-[#3b82f6]/50 transition-colors"
+            />
+            <svg className="absolute left-2.5 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-gray-600" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
+              <circle cx="11" cy="11" r="8" /><path d="m21 21-4.35-4.35" />
+            </svg>
+          </div>
+          <button
+            onClick={() => setShowAdvanced(!showAdvanced)}
+            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[11px] font-semibold transition-all border ${
+              showAdvanced 
+                ? 'bg-[#3b82f6]/10 border-[#3b82f6]/30 text-[#3b82f6]' 
+                : 'bg-[#141414] border-[#262626] text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            <svg className="w-3 h-3" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" /></svg>
+            {showAdvanced ? 'Advanced: ON' : 'Advanced: OFF'}
+          </button>
+        </div>
+
         {/* Category Tabs */}
         <div className="flex gap-1 px-4 md:px-6 pb-3 overflow-x-auto scrollbar-hide">
           {['OS & Registry', 'GPU & Monitor', 'Caches & Cleaners', 'Launch Policies'].map(cat => {
-            const catCount = allActions.filter(a => a.category === cat && a.showIf !== false && a.isOptimized).length;
-            const catTotal = allActions.filter(a => a.category === cat && a.showIf !== false).length;
+            const catActions = allActions.filter(a => a.category === cat && filterAction(a));
+            const catCount = catActions.filter(a => a.isOptimized).length;
+            const catTotal = catActions.length;
             return (
               <button
                 key={cat}
@@ -752,8 +769,7 @@ export default function ValorantOptimizer() {
           {/* Tweak Cards */}
           <div className="border border-[#262626] rounded-xl bg-[#141414]/30 overflow-hidden">
             <div className="divide-y divide-[#262626]/60">
-              {allActions.filter(action => action.category === activeTab).map((action) => {
-                if (action.showIf === false) return null;
+              {allActions.filter(action => action.category === activeTab && filterAction(action)).map((action) => {
 
                 const isThisLoading = processingActionId === action.id;
                 const isAnyLoading = processingActionId !== null;

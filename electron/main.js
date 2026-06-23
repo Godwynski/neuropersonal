@@ -64,6 +64,12 @@ function execAsync(cmd, opts = {}) {
   });
 }
 
+// Global state — defined before lifecycle handlers that reference it
+const globalState = {
+  timerResolutionProcess: timerResolutionProcess,
+  cachedIsAdmin: cachedIsAdmin
+};
+
 // ─────────────────────────────────────────────────────────────────────────────
 // PowerShell helper scripts
 // ─────────────────────────────────────────────────────────────────────────────
@@ -283,14 +289,6 @@ app.on('before-quit', () => {
 
 // Registry helpers moved to system/registry.js
 
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Register IPC Handlers
-// ─────────────────────────────────────────────────────────────────────────────
-const globalState = {
-  timerResolutionProcess: timerResolutionProcess,
-  cachedIsAdmin: cachedIsAdmin
-};
 
 require('./handlers/index')(ipcMain, {
   app, getMainWindow: () => mainWindow, globalState, allowedServiceNames,
