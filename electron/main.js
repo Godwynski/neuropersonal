@@ -21,7 +21,7 @@ app.on('second-instance', () => {
   }
 });
 
-let timerResolutionProcess = null;
+
 
 // #7: Cache admin status at startup — avoids spawning `net session` every 2 seconds
 let cachedIsAdmin = false;
@@ -66,7 +66,7 @@ function execAsync(cmd, opts = {}) {
 
 // Global state — defined before lifecycle handlers that reference it
 const globalState = {
-  timerResolutionProcess: timerResolutionProcess,
+  timerResolutionProcess: null,
   cachedIsAdmin: cachedIsAdmin,
   isValorantRunning: false
 };
@@ -299,3 +299,6 @@ require('./handlers/index')(ipcMain, {
   setRegistryValue, removeRegistryValue, setRegistryPathValue, removeRegistryPathValue,
   getActiveGpuDevicePath, getCachedGpuName, getCachedGpuVendor, setCachedGpu
 });
+
+require('./handlers/valorant')(ipcMain);
+

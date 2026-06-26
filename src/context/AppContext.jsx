@@ -1328,7 +1328,8 @@ export function AppProvider({ children }) {
       scheduledTasksDisabled, toggleScheduledTasks,
       ultimatePerformanceActive, activateUltimatePerformance, deactivateUltimatePerformance,
       explorerTerminated, toggleExplorer,
-      optimizedCount, totalOptimizations
+      optimizedCount, totalOptimizations,
+      optimizeElectronShortcuts, applyCompetitiveRenderConfig
     }}>
       {children}
     </AppContext.Provider>

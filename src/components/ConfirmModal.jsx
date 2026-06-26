@@ -46,7 +46,7 @@ export default function ConfirmModal({
   const v = variantStyles[variant] || variantStyles.warning;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-pencil-black/40 backdrop-blur-[2px]">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-pencil-black/40 backdrop-blur-[2px]" onClick={onCancel}>
       <div
         className={`bg-[#0a0a0a] border ${v.border} rounded-lg shadow-lg p-6 max-w-sm w-full mx-4 space-y-4 font-inter`}
         onClick={(e) => e.stopPropagation()}

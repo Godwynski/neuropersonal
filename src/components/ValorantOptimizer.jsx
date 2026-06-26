@@ -107,7 +107,11 @@ export default function ValorantOptimizer() {
   const [activeTab, setActiveTab] = useState('OS & Registry');
   const [showAdvanced, setShowAdvanced] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-    
+  
+  // Local state for LCU and Overlay
+  const [lcuConnected, setLcuConnected] = useState(false);
+  const [overlayActive, setOverlayActive] = useState(false);
+
   const [lastScannedAt, setLastScannedAt] = useState(null);
 
   // Confirm Modal state
@@ -139,6 +143,26 @@ export default function ValorantOptimizer() {
     }
   };
 
+  const handleToggleLcu = async () => {
+    if (!window.api) return;
+    const nextState = !lcuConnected;
+    if (nextState) {
+      const res = await window.api.valorantConnectLcu();
+      if (res && res.success) {
+        setLcuConnected(true);
+      }
+    } else {
+      await window.api.valorantDisconnectLcu();
+      setLcuConnected(false);
+    }
+  };
+
+  const handleToggleOverlay = async () => {
+    if (!window.api) return;
+    const nextState = !overlayActive;
+    await window.api.valorantToggleOverlay(nextState);
+    setOverlayActive(nextState);
+  };
 
 
 
@@ -778,6 +802,34 @@ export default function ValorantOptimizer() {
         ? deactivateUltimatePerformance()
         : activateUltimatePerformance(),
       actionLabel: ultimatePerformanceActive ? 'Restore' : 'Activate'
+    },
+    {
+      id: 'lcuTelemetry',
+      name: 'Vanguard Compliant LCU Telemetry',
+      category: 'Launch Policies',
+      tier: 'safe',
+      impact: 'low',
+      desc: 'Connects to VALORANT local server for live match stats.',
+      descDetailed: 'Parses lockfile and connects to VALORANT local server via secure WebSockets to get real-time game state telemetry.',
+      status: lcuConnected ? 'Connected' : 'Disconnected',
+      isOptimized: lcuConnected === true,
+      actionType: 'toggle',
+      onAction: handleToggleLcu,
+      actionLabel: lcuConnected ? 'Disconnect' : 'Connect'
+    },
+    {
+      id: 'overlayHUD',
+      name: 'Tactical Overlay HUD',
+      category: 'Launch Policies',
+      tier: 'safe',
+      impact: 'low',
+      desc: 'Enables a transparent in-game overlay for telemetry.',
+      descDetailed: 'Creates a transparent click-through window that renders live stats over the game without hooking DirectX.',
+      status: overlayActive ? 'Active' : 'Inactive',
+      isOptimized: overlayActive === true,
+      actionType: 'toggle',
+      onAction: handleToggleOverlay,
+      actionLabel: overlayActive ? 'Hide Overlay' : 'Show Overlay'
     }
   ];
 

@@ -16,7 +16,7 @@ export default function DashboardOverview() {
     executeOperation,
     applyOptimizationProfile,
     optimizedCount,
-    totalOptimizations = 17,
+    totalOptimizations,
     setActiveAppTab,
     // Quick actions
     runningFix,

@@ -176,13 +176,14 @@ export default function RegistryRollback() {
             </div>
 
             {registryBackups.map((b, idx) => {
+              const stableKey = `${b.keyPath}\\${b.valueName}`;
               const rowState = rowLoading[idx];
               const isRowBusy = rowState !== null && rowState !== undefined;
               const isRowDisabled = isAnyLoading;
 
               return (
                 <div
-                  key={idx}
+                  key={stableKey}
                   className={`border border-[#262626] rounded-lg p-2.5 bg-[#141414] flex flex-col sm:flex-row sm:items-center justify-between gap-3 transition-all ${isRowDisabled && !isRowBusy ? 'opacity-50' : ''}`}
                 >
                   <div className="flex-1 min-w-0">

@@ -93,6 +93,22 @@ contextBridge.exposeInMainWorld('api', {
   terminateExplorer: () => ipcRenderer.invoke('terminate-explorer'),
   restartExplorer: () => ipcRenderer.invoke('restart-explorer'),
 
+  // Vanguard Compliant Valorant Optimizations
+  valorantSetAffinity: (maskHex) => ipcRenderer.invoke('valorant-set-affinity', maskHex),
+  valorantOptimizeNetwork: () => ipcRenderer.invoke('valorant-optimize-network'),
+  valorantPurgeMemory: () => ipcRenderer.invoke('valorant-purge-memory'),
+  valorantStartMemoryMonitor: () => ipcRenderer.invoke('valorant-start-memory-monitor'),
+  valorantStopMemoryMonitor: () => ipcRenderer.invoke('valorant-stop-memory-monitor'),
+  valorantConnectLcu: () => ipcRenderer.invoke('valorant-connect-lcu'),
+  valorantDisconnectLcu: () => ipcRenderer.invoke('valorant-disconnect-lcu'),
+  valorantToggleOverlay: (enable) => ipcRenderer.invoke('valorant-toggle-overlay', enable),
+  
+  onValorantLcuEvent: (callback) => {
+    const handler = (event, data) => callback(data);
+    ipcRenderer.on('valorant-lcu-event', handler);
+    return () => ipcRenderer.removeListener('valorant-lcu-event', handler);
+  },
+
   onValorantStatusChange: (callback) => {
     const handler = (event, isRunning) => callback(isRunning);
     ipcRenderer.on('valorant-status-change', handler);

@@ -352,8 +352,8 @@ ipcMain.handle('set-dashboard-tweak', async (event, { tweakName, active, extraAr
       }
     }
     else if (tweakName === 'symmetricPriority') {
-      const valDiscord = active ? 2 : null; // Normal
-      const valVgc = active ? 1 : null;     // Idle
+      const normalPriority = active ? 2 : null; // Normal
+      const idlePriority = active ? 1 : null;     // Idle
       
       const setOrDel = async (exe, val) => {
         const path = `HKLM:\\SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\\Image File Execution Options\\${exe}\\PerfOptions`;
@@ -366,10 +366,10 @@ ipcMain.handle('set-dashboard-tweak', async (event, { tweakName, active, extraAr
         }
       };
       
-      await setOrDel('VALORANT-Win64-Shipping.exe', valDiscord);
-      await setOrDel('Discord.exe', valDiscord);
-      await setOrDel('Spotify.exe', valDiscord);
-      await setOrDel('vgc.exe', valVgc);
+      await setOrDel('VALORANT-Win64-Shipping.exe', normalPriority);
+      await setOrDel('Discord.exe', normalPriority);
+      await setOrDel('Spotify.exe', normalPriority);
+      await setOrDel('vgc.exe', idlePriority);
     }
     else if (tweakName === 'electronIgpu') {
       const val = active ? "GpuPreference=1;" : null;
@@ -1188,7 +1188,7 @@ ipcMain.handle('set-timer-resolution', async (event, active) => {
         '-NonInteractive',
         '-ExecutionPolicy', 'Bypass',
         '-File', scriptPath,
-        '-ParentPid', process.pid
+        '-ParentPid', String(process.pid)
       ], {
         detached: true,
         stdio: 'ignore',
@@ -2219,7 +2219,7 @@ ipcMain.handle('check-ultimate-performance', async () => {
 // Feature 16: Explorer.exe Termination (Razer Cortex Style)
 ipcMain.handle('check-explorer-status', async () => {
   try {
-    const { stdout } = await execAsync('tasklist /FI "IMAGENAME eq explorer.exe" /FO CSV /NH');
+    const stdout = await execAsync('tasklist /FI "IMAGENAME eq explorer.exe" /FO CSV /NH');
     return { success: true, isRunning: stdout.toLowerCase().includes('explorer.exe') };
   } catch (err) {
     return { success: false, error: err.message };

@@ -6,7 +6,7 @@ const { runPs, getCachedGpuName } = require('./powershell');
 function sanitizeRegistryKey(keyPath) {
   if (typeof keyPath !== 'string') return null;
   if (!/^(HKLM|HKCU|HKCR|HKU|HKCC):\\/i.test(keyPath)) return null;
-  if (/[`"${}[\];|&<>]/.test(keyPath)) return null;
+  if (/[`"$[\];|&<>]/.test(keyPath)) return null;
   return keyPath;
 }
 
