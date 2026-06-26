@@ -45,12 +45,8 @@ ipcMain.handle('get-system-stats', async () => {
   
   lastCpuInfo = { totalTick, totalIdle };
 
-  // #9: Detect VALORANT asynchronously — no longer blocks main thread
-  let valorantRunning = false;
-  try {
-    const output = await spawnAsync('tasklist.exe', ['/FI', 'IMAGENAME eq VALORANT-Win64-Shipping.exe', '/NH']);
-    valorantRunning = output.toLowerCase().includes('valorant-win64-shipping');
-  } catch (e) { console.error('Silent error caught:', e.message); }
+  // #9: Read cached VALORANT status from global state to prevent tasklist polling
+  let valorantRunning = globalState.isValorantRunning || false;
 
   return {
     platform: process.platform,
@@ -504,8 +500,8 @@ $wshShell = New-Object -ComObject WScript.Shell
 $optimizedCount = 0
 
 foreach ($dir in $dirs) {
-  if (Test-Path $dir) {
-    $shortcuts = Get-ChildItem -Path $dir -Filter "*.lnk" -Recurse -ErrorAction SilentlyContinue
+  if (Test-Path -LiteralPath $dir) {
+    $shortcuts = Get-ChildItem -LiteralPath $dir -Filter "*.lnk" -Recurse -ErrorAction SilentlyContinue
     foreach ($shortcut in $shortcuts) {
       if ($targets -contains $shortcut.Name) {
         $link = $wshShell.CreateShortcut($shortcut.FullName)
@@ -577,24 +573,43 @@ if (-not $pf) {
   }
 });
 
-let standbyInterval = null;
-ipcMain.handle('start-standby-cleaner', () => {
-  if (standbyInterval) return { success: true, alreadyRunning: true };
-  standbyInterval = setInterval(async () => {
-    try {
-      await execAsync('powershell -NoProfile -Command "Add-Type @\\"\\nusing System; using System.Runtime.InteropServices;\\npublic class MemPurge {\\n    [DllImport(\\"ntdll.dll\\")] public static extern int NtSetSystemInformation(int InfoClass, ref int Info, int Length);\\n    public static void ClearStandbyList() { int cmd = 4; NtSetSystemInformation(80, ref cmd, sizeof(int)); }\\n}\\n\\"@; [MemPurge]::ClearStandbyList(); [System.GC]::Collect(); [System.GC]::WaitForPendingFinalizers()"');
-    } catch (e) {
-      console.error('Standby cleaner error:', e);
-    }
-  }, 5 * 60 * 1000); // 5 minutes
-  return { success: true };
+ipcMain.handle('start-standby-cleaner', async () => {
+  if (globalState.standbyCleanerProcess) return { success: true, alreadyRunning: true };
+  try {
+    const script = `
+$code = @"
+using System; using System.Runtime.InteropServices;
+public class MemPurge {
+    [DllImport("ntdll.dll")] public static extern int NtSetSystemInformation(int InfoClass, ref int Info, int Length);
+    public static void ClearStandbyList() { int cmd = 4; NtSetSystemInformation(80, ref cmd, sizeof(int)); }
+}
+"@
+try { Add-Type -TypeDefinition $code -ErrorAction SilentlyContinue } catch {}
+while ($true) {
+    [MemPurge]::ClearStandbyList()
+    [System.GC]::Collect()
+    [System.GC]::WaitForPendingFinalizers()
+    Start-Sleep -Seconds 300
+}`;
+    const encoded = psEncode(script);
+    globalState.standbyCleanerProcess = spawn('powershell.exe', [
+      '-NoProfile', '-NonInteractive', '-WindowStyle', 'Hidden', '-EncodedCommand', encoded
+    ], { detached: true, stdio: 'ignore', windowsHide: true });
+    globalState.standbyCleanerProcess.unref();
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
 });
 
-ipcMain.handle('stop-standby-cleaner', () => {
-  if (standbyInterval) {
-    clearInterval(standbyInterval);
-    standbyInterval = null;
+ipcMain.handle('stop-standby-cleaner', async () => {
+  if (globalState.standbyCleanerProcess && globalState.standbyCleanerProcess.pid) {
+    try { process.kill(globalState.standbyCleanerProcess.pid); } catch(e) {}
+    globalState.standbyCleanerProcess = null;
   }
+  try {
+    await execAsync('taskkill /F /FI "WINDOWTITLE eq standby_cleaner*" /IM powershell.exe').catch(() => {});
+  } catch (err) {}
   return { success: true };
 });
 
@@ -655,7 +670,7 @@ ipcMain.handle('kill-process', async (event, processName) => {
   try {
     // Use the exact allowlisted name to prevent injection
     const canonical = [...ALLOWED_PROCESSES].find(n => n === processName.toLowerCase());
-    await execAsync(`taskkill /f /im "${canonical}"`);
+    await execAsync(`taskkill /f /t /im "${canonical}"`);
     return { success: true };
   } catch (err) {
     return { success: false, error: err.message };
@@ -1849,7 +1864,7 @@ if ($eCoreMask -eq 0) { $eCoreMask = [long]([Math]::Pow(2, $idx) - 1) }
 # Pin VALORANT to P-cores
 Get-Process -Name 'VALORANT-Win64-Shipping' -ErrorAction SilentlyContinue | ForEach-Object { try { $_.ProcessorAffinity = [IntPtr]$pCoreMask } catch {} }
 # Move system overhead to E-cores (best effort)
-foreach ($name in @('dwm','audiodg','SearchIndexer','MsMpEng')) {
+foreach ($name in @('dwm','audiodg','SearchIndexer')) {
   Get-Process -Name $name -ErrorAction SilentlyContinue | ForEach-Object { try { $_.ProcessorAffinity = [IntPtr]$eCoreMask } catch {} }
 }`;
       const encoded = psEncode(script);
@@ -1860,7 +1875,7 @@ foreach ($name in @('dwm','audiodg','SearchIndexer','MsMpEng')) {
 $totalLogical = (Get-CimInstance Win32_Processor | Select-Object -First 1).NumberOfLogicalProcessors
 $allMask = [long]([Math]::Pow(2, $totalLogical) - 1)
 Get-Process -Name 'VALORANT-Win64-Shipping' -ErrorAction SilentlyContinue | ForEach-Object { try { $_.ProcessorAffinity = [IntPtr]$allMask } catch {} }
-foreach ($name in @('dwm','audiodg','SearchIndexer','MsMpEng')) {
+foreach ($name in @('dwm','audiodg','SearchIndexer')) {
   Get-Process -Name $name -ErrorAction SilentlyContinue | ForEach-Object { try { $_.ProcessorAffinity = [IntPtr]$allMask } catch {} }
 }`;
       const encoded = psEncode(script);

@@ -94,6 +94,8 @@ contextBridge.exposeInMainWorld('api', {
   restartExplorer: () => ipcRenderer.invoke('restart-explorer'),
 
   onValorantStatusChange: (callback) => {
-    ipcRenderer.on('valorant-status-change', (event, isRunning) => callback(isRunning));
+    const handler = (event, isRunning) => callback(isRunning);
+    ipcRenderer.on('valorant-status-change', handler);
+    return () => ipcRenderer.removeListener('valorant-status-change', handler);
   }
 });

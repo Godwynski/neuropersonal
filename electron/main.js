@@ -67,7 +67,8 @@ function execAsync(cmd, opts = {}) {
 // Global state — defined before lifecycle handlers that reference it
 const globalState = {
   timerResolutionProcess: timerResolutionProcess,
-  cachedIsAdmin: cachedIsAdmin
+  cachedIsAdmin: cachedIsAdmin,
+  isValorantRunning: false
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -224,12 +225,12 @@ app.whenReady().then(() => {
   tray.on('click', () => mainWindow.show());
 
   // Auto-Boost: Polling for VALORANT
-  let isValorantRunning = false;
+  globalState.isValorantRunning = false;
   setInterval(() => {
     exec('tasklist /FI "IMAGENAME eq VALORANT-Win64-Shipping.exe" /FO CSV /NH', (err, stdout) => {
       const running = stdout && stdout.includes('VALORANT-Win64-Shipping.exe');
-      if (running !== isValorantRunning) {
-        isValorantRunning = running;
+      if (running !== globalState.isValorantRunning) {
+        globalState.isValorantRunning = running;
         if (mainWindow && !mainWindow.isDestroyed()) {
           mainWindow.webContents.send('valorant-status-change', running);
         }

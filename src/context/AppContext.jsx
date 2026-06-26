@@ -662,12 +662,13 @@ export function AppProvider({ children }) {
   };
 
   const togglePowerPlan = async () => {
-    // Cycle: balanced → high → balanced (ultimate is managed separately)
+    if (powerPlanMode === 'ultimate') {
+      await deactivateUltimatePerformance();
+      return;
+    }
     const nextMode = powerPlanMode === 'balanced' ? 'high' : 'balanced';
     if (window.api && window.api.setDashboardTweak) {
-      // If we don't have the original plan saved, assume it's the opposite of what we're setting
       if (!originalPowerPlan) setOriginalPowerPlan(powerPlanMode);
-      
       const res = await window.api.setDashboardTweak('powerPlan', nextMode);
       if (res.success) setPowerPlanMode(nextMode);
     }
@@ -777,9 +778,10 @@ export function AppProvider({ children }) {
           executeOperation("Auto-Reverting System...", () => toggleMaxBoost(false));
         }
       };
-      window.api.onValorantStatusChange(handler);
-      // Note: Electron preload ipcRenderer.on doesn't return a removeListener handle
-      // but we still mark this as intentional to prevent double-registration
+      const cleanup = window.api.onValorantStatusChange(handler);
+      return () => {
+        if (cleanup) cleanup();
+      };
     }
   }, [autoBoostActive, maxBoostActive, boostProfile]);
 
