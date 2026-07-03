@@ -4,7 +4,7 @@ export default function Toast({ toasts, removeToast }) {
   // Only render the 3 most recent toasts
   const visibleToasts = toasts.slice(-3);
   return (
-    <div className="fixed top-4 right-4 z-50 flex flex-col gap-3.5 max-w-xs pointer-events-none">
+    <div className="fixed top-16 right-4 z-50 flex flex-col gap-3.5 max-w-xs pointer-events-none">
       {visibleToasts.map((t) => (
         <ToastItem key={t.id} toast={t} removeToast={removeToast} />
       ))}

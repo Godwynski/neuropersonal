@@ -768,14 +768,20 @@ export function AppProvider({ children }) {
   }, []);
 
   // System Automation: Valorant Process Listener
+  // Use a ref for toggleMaxBoost to avoid stale closures — it reads many state variables
+  const toggleMaxBoostRef = useRef(toggleMaxBoost);
+  useEffect(() => { toggleMaxBoostRef.current = toggleMaxBoost; });
+
   useEffect(() => {
     if (window.api && window.api.onValorantStatusChange) {
       const handler = (isRunning) => {
         setValorantRunning(isRunning);
         if (isRunning && autoBoostActive && !maxBoostActive) {
-          executeOperation("Auto-Boosting for VALORANT...", () => toggleMaxBoost(true, boostProfile));
+          // Call toggleMaxBoost directly — it manages its own progress UI.
+          // Don't wrap in executeOperation to avoid the blocking overlay.
+          toggleMaxBoostRef.current(true, boostProfile);
         } else if (!isRunning && maxBoostActive) {
-          executeOperation("Auto-Reverting System...", () => toggleMaxBoost(false));
+          toggleMaxBoostRef.current(false);
         }
       };
       const cleanup = window.api.onValorantStatusChange(handler);
