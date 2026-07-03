@@ -7,43 +7,31 @@ export default function DashboardOverview() {
     stats,
     gpuInfo,
     maxBoostStatus,
-    boostProfile,
-    setBoostProfile,
     maxBoostActive,
     maxBoostProgress,
     toggleMaxBoost,
     isProcessing,
     executeOperation,
-    applyOptimizationProfile,
     optimizedCount,
     totalOptimizations,
-    setActiveAppTab,
     // Quick actions
     runningFix,
     runDiagnosticFix,
     tempFolderSize,
+    shaderCacheSize,
     scanningTemp,
+    scanningVal,
     purgingTemp,
-    scanTempFolder,
-    purgeTempFolder,
-    valorantRunning
+    cleaningLogs,
+    cleaningShaders,
+    scanAllCaches,
+    cleanAllCaches
   } = useAppContext();
 
-  const [presetLoading, setPresetLoading] = useState(null);
 
   const isBoosting = maxBoostStatus === 'boosting';
   const isReverting = maxBoostStatus === 'reverting';
   const isBusy = isBoosting || isReverting || isProcessing;
-
-  const runPreset = async (preset) => {
-    if (isBusy || presetLoading) return;
-    setPresetLoading(preset);
-    try {
-      await executeOperation(`Applying ${preset} profile...`, () => applyOptimizationProfile(preset));
-    } finally {
-      setPresetLoading(null);
-    }
-  };
 
   const optimizationPercentage = Math.round(((optimizedCount || 0) / totalOptimizations) * 100) || 0;
   const healthColor = optimizationPercentage >= 80 ? '#3b82f6' : optimizationPercentage >= 50 ? '#eab308' : '#ff4655';
@@ -95,174 +83,64 @@ export default function DashboardOverview() {
         </div>
       </div>
 
-      {/* ── Performance Profile Selection + Apply ── */}
-      <div className="mb-6">
-        <div className="flex items-center justify-between mb-4">
+      {/* ── One-Click Performance Boost ── */}
+      <div className="mb-6 bg-[#141414] border border-[#262626] rounded-2xl p-6 relative overflow-hidden">
+        {/* Decorative subtle background gradient glow */}
+        <div className={`absolute top-0 right-0 w-80 h-80 rounded-full blur-[100px] transition-all duration-700 pointer-events-none ${
+          maxBoostActive ? 'bg-[#ff4655]/10' : 'bg-[#3b82f6]/5'
+        }`} />
+        
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 relative z-10">
           <div>
-            <h2 className="text-lg font-bold font-outfit text-white">Performance Profile</h2>
-            <p className="text-xs text-gray-500 mt-0.5">Select a mode, then apply. We handle the complex settings.</p>
+            <h2 className="text-xl font-bold font-outfit text-white">One-Click Performance Boost</h2>
+            <p className="text-xs text-gray-400 mt-1 max-w-xl">
+              Optimize CPU topology, system priority, power states, network latency, and driver profile settings in a single click. Skipped reboot-dependent actions to keep things seamless.
+            </p>
+            {maxBoostActive && (
+              <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#ff4655]/10 border border-[#ff4655]/30 text-[#ff4655] text-xs font-bold uppercase tracking-wider">
+                <span className="w-2 h-2 rounded-full bg-[#ff4655] animate-pulse" />
+                Active Boost Enabled
+              </div>
+            )}
           </div>
-          {maxBoostActive && (
-            <span className="px-3 py-1 rounded-full bg-[#3b82f6]/10 text-[#3b82f6] text-[10px] font-bold uppercase tracking-wider border border-[#3b82f6]/30 flex items-center gap-1.5">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#3b82f6] animate-pulse" />
-              Boost Active
-            </span>
-          )}
-        </div>
-        
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-3 mb-4">
-          
-          {/* Low-End PC Mode */}
-          <button 
-            className={`text-left p-4 rounded-xl border transition-all relative overflow-hidden group ${
-              boostProfile === 'lowend' 
-                ? 'border-[#10b981] bg-[#10b981]/8 shadow-[0_0_20px_rgba(16,185,129,0.08)]' 
-                : 'border-[#262626] bg-[#141414]/50 hover:border-[#3f3f46]'
-            }`}
-            onClick={() => setBoostProfile('lowend')}
-          >
-            {boostProfile === 'lowend' && (
-              <div className="absolute top-3 right-3">
-                <svg className="w-4 h-4 text-[#10b981]" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </div>
-            )}
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-[#10b981]/15 flex items-center justify-center shrink-0">
-                <span className="text-sm">⚡</span>
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white">Low-End PC</h3>
-                <span className="text-[10px] text-[#10b981] font-semibold">★ Best for 30fps</span>
-              </div>
-            </div>
-            <p className="text-[11px] text-gray-400 leading-relaxed">
-              Proven tweaks only. Forces minimum graphics, kills bloat. Designed for PCs struggling under 60fps.
-            </p>
-          </button>
 
-          {/* Maximum Performance */}
-          <button 
-            className={`text-left p-4 rounded-xl border transition-all relative overflow-hidden group ${
-              boostProfile === 'aggressive' 
-                ? 'border-[#ff4655] bg-[#ff4655]/8 shadow-[0_0_20px_rgba(255,70,85,0.08)]' 
-                : 'border-[#262626] bg-[#141414]/50 hover:border-[#3f3f46]'
-            }`}
-            onClick={() => setBoostProfile('aggressive')}
-          >
-            {boostProfile === 'aggressive' && (
-              <div className="absolute top-3 right-3">
-                <svg className="w-4 h-4 text-[#ff4655]" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </div>
-            )}
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-[#ff4655]/15 flex items-center justify-center shrink-0">
-                <span className="text-sm">🎮</span>
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white">Maximum Performance</h3>
-                <span className="text-[10px] text-[#ff4655] font-semibold">⚠ May need reboot</span>
-              </div>
-            </div>
-            <p className="text-[11px] text-gray-400 leading-relaxed">
-              Kills background apps, disables VBS, forces maximum CPU/GPU clocks. Best for competitive gaming.
-            </p>
-          </button>
-
-          {/* Balanced */}
-          <button 
-            className={`text-left p-4 rounded-xl border transition-all relative overflow-hidden group ${
-              boostProfile === 'safe' 
-                ? 'border-[#3b82f6] bg-[#3b82f6]/8 shadow-[0_0_20px_rgba(59,130,246,0.08)]' 
-                : 'border-[#262626] bg-[#141414]/50 hover:border-[#3f3f46]'
-            }`}
-            onClick={() => setBoostProfile('safe')}
-          >
-            {boostProfile === 'safe' && (
-              <div className="absolute top-3 right-3">
-                <svg className="w-4 h-4 text-[#3b82f6]" fill="currentColor" viewBox="0 0 20 20">
-                  <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
-                </svg>
-              </div>
-            )}
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-[#3b82f6]/15 flex items-center justify-center shrink-0">
-                <span className="text-sm">⚖️</span>
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white">Balanced Mode</h3>
-                <span className="text-[10px] text-[#3b82f6] font-semibold">✓ Safe & Stable</span>
-              </div>
-            </div>
-            <p className="text-[11px] text-gray-400 leading-relaxed">
-              Improves game responsiveness without killing apps. Recommended daily driver for most users.
-            </p>
-          </button>
-
-          {/* Restore Defaults */}
-          <button 
-            className="text-left p-4 rounded-xl border border-[#262626] bg-[#141414]/50 hover:border-[#3f3f46] transition-all"
-            onClick={() => runPreset('revert')}
-            disabled={isBusy}
-          >
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-8 h-8 rounded-lg bg-gray-600/15 flex items-center justify-center shrink-0">
-                <span className="text-sm">↩️</span>
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-white">Restore Defaults</h3>
-                {presetLoading === 'revert' ? (
-                  <span className="text-[10px] text-gray-400 font-semibold flex items-center gap-1"><Spinner className="w-2.5 h-2.5"/> Reverting...</span>
-                ) : (
-                  <span className="text-[10px] text-gray-500 font-semibold">Undo all tweaks</span>
-                )}
-              </div>
-            </div>
-            <p className="text-[11px] text-gray-400 leading-relaxed">
-              Reverts all system tweaks back to Windows defaults. Use this if something feels off.
-            </p>
-          </button>
-
+          <div className="shrink-0 flex flex-col items-stretch md:items-end w-full md:w-auto">
+            <button
+              onClick={() => executeOperation(
+                maxBoostActive ? "Reverting System Optimizations..." : "Applying Performance Boost...",
+                () => maxBoostActive ? toggleMaxBoost(false) : toggleMaxBoost(true)
+              )}
+              disabled={isBusy}
+              className={`py-4 px-8 rounded-xl font-bold text-sm transition-all duration-300 shadow-lg select-none ${
+                isBoosting ? 'bg-[#3b82f6] text-white cursor-wait' 
+                : isReverting ? 'bg-[#ff4655] text-white cursor-wait'
+                : maxBoostActive ? 'bg-gradient-to-r from-[#ff4655] to-[#f43f5e] hover:shadow-[0_0_20px_rgba(255,70,85,0.4)] text-white hover:scale-[1.02] active:scale-[0.98]' 
+                : 'bg-white text-[#0a0a0a] hover:bg-gray-100 hover:shadow-[0_0_20px_rgba(255,255,255,0.2)] hover:scale-[1.02] active:scale-[0.98]'
+              } disabled:opacity-60`}
+            >
+              {isBoosting ? (
+                <span className="flex items-center justify-center gap-2"><Spinner className="w-4 h-4"/> Boosting...</span>
+              ) : isReverting ? (
+                <span className="flex items-center justify-center gap-2"><Spinner className="w-4 h-4"/> Reverting...</span>
+              ) : maxBoostActive ? (
+                'Revert Optimizations'
+              ) : (
+                'Boost Performance'
+              )}
+            </button>
+          </div>
         </div>
 
-        {/* Apply / Revert Button */}
-        <button
-          onClick={() => executeOperation(
-            maxBoostActive ? "Reverting System Optimizations..." : "Applying Performance Profile...",
-            () => maxBoostActive ? toggleMaxBoost(false) : toggleMaxBoost(true, boostProfile)
-          )}
-          disabled={isBusy}
-          className={`w-full py-3.5 px-6 rounded-xl font-bold text-sm transition-all ${
-            isBoosting ? 'bg-[#3b82f6] text-white' 
-            : isReverting ? 'bg-[#ff4655] text-white'
-            : maxBoostActive ? 'bg-[#ff4655] hover:bg-[#ff4655]/90 text-white' 
-            : 'bg-white text-[#0a0a0a] hover:bg-gray-100'
-          } disabled:opacity-60`}
-        >
-          {isBoosting ? (
-            <span className="flex items-center justify-center gap-2"><Spinner className="w-4 h-4"/> Applying Profile...</span>
-          ) : isReverting ? (
-            <span className="flex items-center justify-center gap-2"><Spinner className="w-4 h-4"/> Restoring System...</span>
-          ) : maxBoostActive ? (
-            'Stop Boost & Revert to Defaults'
-          ) : (
-            `Apply ${boostProfile === 'aggressive' ? 'Maximum Performance' : boostProfile === 'lowend' ? 'Low-End PC Mode' : 'Balanced Mode'}`
-          )}
-        </button>
-        
         {/* Progress bar — only when boosting/reverting */}
         {(isBoosting || isReverting) && (
-          <div className="mt-3">
-            <div className="flex justify-between text-[11px] text-gray-400 font-medium mb-1">
-              <span>{isBoosting ? 'Optimizing...' : 'Restoring...'}</span>
+          <div className="mt-6 relative z-10">
+            <div className="flex justify-between text-[11px] text-gray-400 font-medium mb-1.5">
+              <span>{isBoosting ? 'Applying speed enhancements...' : 'Restoring original settings...'}</span>
               <span>{maxBoostProgress}%</span>
             </div>
-            <div className="w-full h-1.5 bg-[#141414] rounded-full overflow-hidden border border-[#262626]">
+            <div className="w-full h-2 bg-[#0a0a0a] rounded-full overflow-hidden border border-[#262626]">
               <div 
-                className={`h-full transition-all duration-300 ${isBoosting ? 'bg-[#3b82f6]' : 'bg-[#ff4655]'}`}
+                className={`h-full transition-all duration-300 ${isBoosting ? 'bg-[#3b82f6] shadow-[0_0_8px_#3b82f6]' : 'bg-[#ff4655] shadow-[0_0_8px_#ff4655]'}`}
                 style={{ width: `${maxBoostProgress}%` }}
               />
             </div>
@@ -272,80 +150,87 @@ export default function DashboardOverview() {
 
       {/* ── Quick Actions Strip ── */}
       <div>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-bold font-outfit text-white uppercase tracking-wider">Quick Actions</h2>
-          <button 
-            onClick={() => setActiveAppTab('advanced')}
-            className="text-[11px] text-[#3b82f6] hover:text-[#3b82f6]/80 font-semibold transition-colors"
-          >
-            Advanced Tweaks →
-          </button>
         </div>
         
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           {/* Clear RAM */}
           <button
             onClick={() => runDiagnosticFix('ramRejuvenation')}
-            disabled={runningFix !== null || scanningTemp || purgingTemp}
-            className={`flex flex-col items-center gap-2 p-3.5 rounded-xl border transition-all disabled:opacity-50 ${
+            disabled={isBusy || runningFix !== null}
+            className={`flex flex-col items-center justify-center gap-3 p-4 min-h-[90px] rounded-xl border transition-all duration-300 disabled:opacity-50 select-none ${
               runningFix === 'ramRejuvenation'
                 ? 'bg-[#3b82f6]/10 border-[#3b82f6]/30 text-[#3b82f6]'
-                : 'bg-[#141414] border-[#262626] text-gray-300 hover:bg-[#1a1a1a] hover:border-[#3f3f46]'
+                : 'bg-[#141414] border-[#262626] text-gray-300 hover:bg-[#1c1c1c] hover:border-[#3f3f46]'
             }`}
           >
-            <span className="text-xl">🧠</span>
-            <span className="text-[11px] font-semibold font-outfit">
-              {runningFix === 'ramRejuvenation' ? <span className="flex items-center gap-1"><Spinner className="w-3 h-3"/>Clearing...</span> : 'Clear RAM'}
+            <span className="text-2xl">🧠</span>
+            <span className="text-xs font-bold font-outfit text-white">
+              {runningFix === 'ramRejuvenation' ? <span className="flex items-center gap-1.5"><Spinner className="w-3.5 h-3.5"/>Clearing...</span> : 'Clear RAM'}
             </span>
           </button>
 
           {/* Restart Desktop UI */}
           <button
             onClick={() => runDiagnosticFix('chronosReset')}
-            disabled={runningFix !== null || scanningTemp || purgingTemp}
-            className={`flex flex-col items-center gap-2 p-3.5 rounded-xl border transition-all disabled:opacity-50 ${
+            disabled={isBusy || runningFix !== null}
+            className={`flex flex-col items-center justify-center gap-3 p-4 min-h-[90px] rounded-xl border transition-all duration-300 disabled:opacity-50 select-none ${
               runningFix === 'chronosReset'
                 ? 'bg-[#3b82f6]/10 border-[#3b82f6]/30 text-[#3b82f6]'
-                : 'bg-[#141414] border-[#262626] text-gray-300 hover:bg-[#1a1a1a] hover:border-[#3f3f46]'
+                : 'bg-[#141414] border-[#262626] text-gray-300 hover:bg-[#1c1c1c] hover:border-[#3f3f46]'
             }`}
           >
-            <span className="text-xl">🖥️</span>
-            <span className="text-[11px] font-semibold font-outfit">
-              {runningFix === 'chronosReset' ? <span className="flex items-center gap-1"><Spinner className="w-3 h-3"/>Restarting...</span> : 'Restart UI'}
+            <span className="text-2xl">🖥️</span>
+            <span className="text-xs font-bold font-outfit text-white">
+              {runningFix === 'chronosReset' ? <span className="flex items-center gap-1.5"><Spinner className="w-3.5 h-3.5"/>Restarting...</span> : 'Restart UI'}
             </span>
           </button>
 
-          {/* Scan Temp */}
+          {/* Scan Caches */}
           <button
-            onClick={scanTempFolder}
-            disabled={runningFix !== null || scanningTemp || purgingTemp}
-            className={`flex flex-col items-center gap-2 p-3.5 rounded-xl border transition-all disabled:opacity-50 ${
-              scanningTemp
+            onClick={scanAllCaches}
+            disabled={isBusy || scanningTemp || scanningVal || purgingTemp || cleaningLogs || cleaningShaders}
+            className={`flex flex-col items-center justify-center gap-2 p-4 min-h-[90px] rounded-xl border transition-all duration-300 disabled:opacity-50 select-none ${
+              scanningTemp || scanningVal
                 ? 'bg-[#3b82f6]/10 border-[#3b82f6]/30 text-[#3b82f6]'
-                : 'bg-[#141414] border-[#262626] text-gray-300 hover:bg-[#1a1a1a] hover:border-[#3f3f46]'
+                : 'bg-[#141414] border-[#262626] text-gray-300 hover:bg-[#1c1c1c] hover:border-[#3f3f46]'
             }`}
           >
-            <span className="text-xl">🔍</span>
-            <span className="text-[11px] font-semibold font-outfit">
-              {scanningTemp ? <span className="flex items-center gap-1"><Spinner className="w-3 h-3"/>Scanning...</span> : (
-                <>Scan Temp<br/><span className="text-[9px] text-gray-500 font-normal">{tempFolderSize}</span></>
+            <span className="text-2xl">🔍</span>
+            <span className="text-xs font-bold font-outfit text-white text-center">
+              {scanningTemp || scanningVal ? (
+                <span className="flex items-center gap-1.5"><Spinner className="w-3.5 h-3.5"/>Scanning...</span>
+              ) : (
+                <>
+                  <div>Scan Caches</div>
+                  {tempFolderSize !== 'Click Scan' && shaderCacheSize !== 'Click Scan' && (
+                    <div className="text-[10px] text-gray-500 font-normal mt-0.5">
+                      Temp: {tempFolderSize} · Shaders: {shaderCacheSize}
+                    </div>
+                  )}
+                </>
               )}
             </span>
           </button>
 
-          {/* Purge Temp */}
+          {/* Purge Caches */}
           <button
-            onClick={purgeTempFolder}
-            disabled={runningFix !== null || scanningTemp || purgingTemp || tempFolderSize === 'Click Scan' || tempFolderSize === '0 Bytes'}
-            className={`flex flex-col items-center gap-2 p-3.5 rounded-xl border transition-all disabled:opacity-50 ${
-              purgingTemp
+            onClick={cleanAllCaches}
+            disabled={isBusy || scanningTemp || scanningVal || purgingTemp || cleaningLogs || cleaningShaders}
+            className={`flex flex-col items-center justify-center gap-3 p-4 min-h-[90px] rounded-xl border transition-all duration-300 disabled:opacity-50 select-none ${
+              purgingTemp || cleaningLogs || cleaningShaders
                 ? 'bg-[#ff4655]/10 border-[#ff4655]/30 text-[#ff4655]'
-                : 'bg-[#141414] border-[#262626] text-gray-300 hover:bg-[#1a1a1a] hover:border-[#3f3f46]'
+                : 'bg-[#141414] border-[#262626] text-gray-300 hover:bg-[#1c1c1c] hover:border-[#3f3f46]'
             }`}
           >
-            <span className="text-xl">🗑️</span>
-            <span className="text-[11px] font-semibold font-outfit">
-              {purgingTemp ? <span className="flex items-center gap-1"><Spinner className="w-3 h-3"/>Purging...</span> : 'Purge Temp'}
+            <span className="text-2xl">🗑️</span>
+            <span className="text-xs font-bold font-outfit text-white">
+              {purgingTemp || cleaningLogs || cleaningShaders ? (
+                <span className="flex items-center gap-1.5"><Spinner className="w-3.5 h-3.5"/>Purging...</span>
+              ) : (
+                'Purge Caches'
+              )}
             </span>
           </button>
         </div>

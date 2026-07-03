@@ -149,8 +149,14 @@ export function AppProvider({ children }) {
   const executeOperation = async (message, asyncFn) => {
     if (isProcessing) { addToast('System is busy. Please wait.', 'warning'); return; }
     setIsProcessing(true); setProcessingMessage(message);
-    try { await asyncFn(); } catch (e) { addToast(`Operation failed: ${e.message}`, 'error'); } 
-    finally { setIsProcessing(false); setProcessingMessage(''); }
+    try { 
+      await asyncFn(); 
+    } catch (e) { 
+      addToast(`Operation failed: ${e.message}`, 'error'); 
+      addLog(`[Error] Operation failed: ${e.message}`);
+    } finally { 
+      setIsProcessing(false); setProcessingMessage(''); 
+    }
   };
 
   // ─────────────────────────────────────────────────────────────────────────────
@@ -199,8 +205,13 @@ export function AppProvider({ children }) {
           flaggedDrivers: [],
           vbsReenabled
         });
+      } else {
+        addLog(`[Error] Failed to refresh status: ${res.error || 'Unknown error'}`);
       }
-    } catch (e) { console.error('Failed to refresh status:', e); }
+    } catch (e) { 
+      console.error('Failed to refresh status:', e); 
+      addLog(`[Error] Failed to refresh status: ${e.message}`);
+    }
   };
 
   const checkVanguardHealth = async () => {
@@ -214,29 +225,49 @@ export function AppProvider({ children }) {
   const loadRegistryBackups = async () => {
     if (window.api && window.api.getRegistryBackups) {
       const res = await window.api.getRegistryBackups();
-      if (res.success) setRegistryBackups(res.backups || []);
+      if (res.success) {
+        setRegistryBackups(res.backups || []);
+      } else {
+        addLog(`[Error] Failed to load registry backups: ${res.error || 'Unknown error'}`);
+      }
     }
   };
 
   const restoreBackup = async (index) => {
     if (window.api && window.api.restoreRegistryBackup) {
       const res = await window.api.restoreRegistryBackup(index);
-      if (res.success) { addToast('Restored successfully!', 'success'); loadRegistryBackups(); refreshAllStatus(); }
-      else addToast(`Restore failed: ${res.error}`, 'error');
+      if (res.success) {
+        addToast('Restored successfully!', 'success');
+        loadRegistryBackups();
+        refreshAllStatus();
+      } else {
+        addToast(`Restore failed: ${res.error}`, 'error');
+        addLog(`[Error] Restore failed: ${res.error || 'Unknown error'}`);
+      }
     }
   };
 
   const deleteBackup = async (index) => {
     if (window.api && window.api.deleteRegistryBackup) {
       const res = await window.api.deleteRegistryBackup(index);
-      if (res.success) { addToast('Backup deleted', 'success'); loadRegistryBackups(); }
+      if (res.success) {
+        addToast('Backup deleted', 'success');
+        loadRegistryBackups();
+      } else {
+        addLog(`[Error] Failed to delete backup: ${res.error || 'Unknown error'}`);
+      }
     }
   };
 
   const clearAllBackups = async () => {
     if (window.api && window.api.clearAllRegistryBackups) {
       const res = await window.api.clearAllRegistryBackups();
-      if (res.success) { addToast('All backups cleared', 'success'); loadRegistryBackups(); }
+      if (res.success) {
+        addToast('All backups cleared', 'success');
+        loadRegistryBackups();
+      } else {
+        addLog(`[Error] Failed to clear backups: ${res.error || 'Unknown error'}`);
+      }
     }
   };
 
@@ -244,11 +275,18 @@ export function AppProvider({ children }) {
     if (window.api && window.api.restoreAllRegistryBackups) {
       const res = await window.api.restoreAllRegistryBackups();
       if (res.success) { 
-        if (res.warnings) addToast('Restored with some errors (see logs)', 'warning');
-        else addToast('All restored successfully!', 'success'); 
-        loadRegistryBackups(); refreshAllStatus(); 
+        if (res.warnings && res.warnings.length > 0) {
+          addToast('Restored with some errors (see logs)', 'warning');
+          res.warnings.forEach(w => addLog(`[Warning] ${w}`));
+        } else {
+          addToast('All restored successfully!', 'success');
+        }
+        loadRegistryBackups();
+        refreshAllStatus(); 
+      } else {
+        addToast(`Restore all failed: ${res.error}`, 'error');
+        addLog(`[Error] Restore all failed: ${res.error || 'Unknown error'}`);
       }
-      else addToast(`Restore all failed: ${res.error}`, 'error');
     }
   };
 
@@ -262,10 +300,11 @@ export function AppProvider({ children }) {
       const res = await window.api.setDashboardTweak(name, value, extraArgs);
       if (res.success) {
         if (successMsg) addLog(`[Tweak] ${successMsg}`);
-        refreshAllStatus(); // Verify system state
+        if (maxBoostStatus === 'idle') refreshAllStatus(); // Verify system state
       } else {
-        if (errorMsg) addLog(`[Error] ${errorMsg}: ${res.error}`);
-        refreshAllStatus(); // Revert optimistic if failed
+        const fallbackMsg = `Failed to toggle ${name}`;
+        addLog(`[Error] ${errorMsg || fallbackMsg}: ${res.error || 'Unknown error'}`);
+        if (maxBoostStatus === 'idle') refreshAllStatus(); // Revert optimistic if failed
       }
     }
   };
@@ -379,92 +418,180 @@ export function AppProvider({ children }) {
     try {
       const res = await window.api.detectGpu();
       if (res.success) setGpuInfo(res.gpu);
-    } catch (e) { console.error(e); }
+      else addLog(`[Error] GPU detection failed: ${res.error || 'Unknown error'}`);
+    } catch (e) {
+      console.error(e);
+      addLog(`[Error] GPU detection error: ${e.message}`);
+    }
   };
 
   const detectValorantPath = async () => {
     if (!window.api || !window.api.detectValorantPath) return;
     try {
       const res = await window.api.detectValorantPath();
-      if (res.success) { setValorantPath(res.path); setValorantPathDetected(res.exists); }
-    } catch (e) {}
+      if (res.success) {
+        setValorantPath(res.path);
+        setValorantPathDetected(res.exists);
+      } else {
+        addLog(`[Error] Valorant path detection failed: ${res.error || 'Unknown error'}`);
+      }
+    } catch (e) {
+      addLog(`[Error] Valorant path detection error: ${e.message}`);
+    }
   };
 
   const browseValorantPath = async () => {
     if (!window.api || !window.api.selectValorantPath) return;
     try {
       const res = await window.api.selectValorantPath();
-      if (res.success && res.path) { setValorantPath(res.path); setValorantPathDetected(true); addToast('Path configured!', 'success'); refreshAllStatus(res.path); }
-    } catch (e) {}
+      if (res.success && res.path) {
+        setValorantPath(res.path);
+        setValorantPathDetected(true);
+        addToast('Path configured!', 'success');
+        refreshAllStatus(res.path);
+      } else if (res.error) {
+        addLog(`[Error] Browse Valorant path failed: ${res.error}`);
+      }
+    } catch (e) {
+      addLog(`[Error] Browse Valorant path error: ${e.message}`);
+    }
   };
 
   const checkHpetStatus = async () => {
     if (!window.api || !window.api.checkHpetStatus) return;
-    try { const res = await window.api.checkHpetStatus(); if (res.success) setHpetDisabled(res.hpetDisabled); } catch (e) {}
+    try {
+      const res = await window.api.checkHpetStatus();
+      if (res.success) setHpetDisabled(res.hpetDisabled);
+      else addLog(`[Error] Check HPET failed: ${res.error || 'Unknown error'}`);
+    } catch (e) {
+      addLog(`[Error] Check HPET error: ${e.message}`);
+    }
   };
 
   const checkAmdOptimizations = async () => {
     if (!window.api || !window.api.checkAmdOptimizations) return;
-    try { const res = await window.api.checkAmdOptimizations(); if (res.success) setAmdOptimizations({ mpoDisabled: res.mpoDisabled, legacyDxPath: res.legacyDxPath, shaderCacheAlwaysOn: res.shaderCacheAlwaysOn }); } catch (e) {}
+    try {
+      const res = await window.api.checkAmdOptimizations();
+      if (res.success) {
+        setAmdOptimizations({
+          mpoDisabled: res.mpoDisabled,
+          legacyDxPath: res.legacyDxPath,
+          shaderCacheAlwaysOn: res.shaderCacheAlwaysOn
+        });
+      } else {
+        addLog(`[Error] Check AMD optimizations failed: ${res.error || 'Unknown error'}`);
+      }
+    } catch (e) {
+      addLog(`[Error] Check AMD optimizations error: ${e.message}`);
+    }
   };
 
   const checkGpuDriverProfile = async () => {
     if (!window.api || !window.api.checkGpuDriverProfile) return;
-    try { const res = await window.api.checkGpuDriverProfile(); if (res.success) setGpuDriverProfile(prev => ({ ...prev, ...res })); } catch (e) {}
+    try {
+      const res = await window.api.checkGpuDriverProfile();
+      if (res.success) setGpuDriverProfile(prev => ({ ...prev, ...res }));
+      else addLog(`[Error] Check GPU driver profile failed: ${res.error || 'Unknown error'}`);
+    } catch (e) {
+      addLog(`[Error] Check GPU driver profile error: ${e.message}`);
+    }
   };
 
   const checkHardwareBottlenecks = async () => {
     if (!window.api || !window.api.checkHardwareBottlenecks) return;
-    try { const res = await window.api.checkHardwareBottlenecks(); if (res.success) setHardwareInfo(prev => ({ ...prev, ...res })); } catch (e) {}
+    try {
+      const res = await window.api.checkHardwareBottlenecks();
+      if (res.success) setHardwareInfo(prev => ({ ...prev, ...res }));
+      else addLog(`[Error] Check hardware bottlenecks failed: ${res.error || 'Unknown error'}`);
+    } catch (e) {
+      addLog(`[Error] Check hardware bottlenecks error: ${e.message}`);
+    }
   };
 
   const toggleVbs = async (enable) => {
     addLog(`[VBS] ${enable ? 'Enabling' : 'Disabling'} VBS...`);
     if (window.api && window.api.toggleVbs) {
       const res = await window.api.toggleVbs(enable);
-      if (res.success) { setVbsStatus(p => ({ ...p, vbsEnabled: enable, memoryIntegrity: enable })); setVbsRebootRequired(true); triggerRebootPrompt(); }
+      if (res.success) {
+        setVbsStatus(p => ({ ...p, vbsEnabled: enable, memoryIntegrity: enable }));
+        setVbsRebootRequired(true);
+        triggerRebootPrompt();
+      } else {
+        addLog(`[Error] Failed to toggle VBS: ${res.error || 'Unknown error'}`);
+      }
     }
   };
 
   const toggleHpet = async (disable) => {
     if (window.api && window.api.toggleHpet) {
       const res = await window.api.toggleHpet(disable);
-      if (res.success) { setHpetDisabled(disable); setHpetRebootRequired(true); triggerRebootPrompt(); }
+      if (res.success) {
+        setHpetDisabled(disable);
+        setHpetRebootRequired(true);
+        triggerRebootPrompt();
+      } else {
+        addLog(`[Error] Failed to toggle HPET: ${res.error || 'Unknown error'}`);
+      }
     }
   };
 
   const toggleAmdMpo = async (disable) => {
     if (window.api && window.api.toggleAmdMpo) {
       const res = await window.api.toggleAmdMpo(disable);
-      if (res.success) { setAmdOptimizations(p => ({ ...p, mpoDisabled: disable })); addToast(`MPO toggled`, 'success'); }
+      if (res.success) {
+        setAmdOptimizations(p => ({ ...p, mpoDisabled: disable }));
+        addToast(`MPO toggled`, 'success');
+      } else {
+        addLog(`[Error] Failed to toggle AMD MPO: ${res.error || 'Unknown error'}`);
+      }
     }
   };
 
   const toggleAmdLegacyDx = async (enableLegacy) => {
     if (window.api && window.api.toggleAmdLegacyDx) {
       const res = await window.api.toggleAmdLegacyDx(enableLegacy);
-      if (res.success) { setAmdOptimizations(p => ({ ...p, legacyDxPath: enableLegacy })); addToast(`Legacy DX toggled`, 'success'); }
+      if (res.success) {
+        setAmdOptimizations(p => ({ ...p, legacyDxPath: enableLegacy }));
+        addToast(`Legacy DX toggled`, 'success');
+      } else {
+        addLog(`[Error] Failed to toggle AMD Legacy DX: ${res.error || 'Unknown error'}`);
+      }
     }
   };
 
   const toggleAmdShaderCache = async (alwaysOn) => {
     if (window.api && window.api.toggleAmdShaderCache) {
       const res = await window.api.toggleAmdShaderCache(alwaysOn);
-      if (res.success) { setAmdOptimizations(p => ({ ...p, shaderCacheAlwaysOn: alwaysOn })); addToast(`Shader Cache policy toggled`, 'success'); }
+      if (res.success) {
+        setAmdOptimizations(p => ({ ...p, shaderCacheAlwaysOn: alwaysOn }));
+        addToast(`Shader Cache policy toggled`, 'success');
+      } else {
+        addLog(`[Error] Failed to toggle AMD Shader Cache: ${res.error || 'Unknown error'}`);
+      }
     }
   };
 
   const applyGpuDriverProfile = async (profile) => {
     if (window.api && window.api.applyGpuDriverProfile) {
       const res = await window.api.applyGpuDriverProfile({ vendor: gpuInfo.vendor, profile });
-      if (res.success) { await checkGpuDriverProfile(); addToast(`Driver profile applied`, 'success'); }
+      if (res.success) {
+        await checkGpuDriverProfile();
+        addToast(`Driver profile applied`, 'success');
+      } else {
+        addLog(`[Error] Failed to apply GPU driver profile: ${res.error || 'Unknown error'}`);
+      }
     }
   };
 
   const toggleLegacyRebar = async (enable) => {
     if (window.api && window.api.toggleLegacyRebar) {
       const res = await window.api.toggleLegacyRebar(enable);
-      if (res.success) { setHardwareInfo(p => ({ ...p, legacyRebarForced: enable })); addToast(`Legacy ReBAR toggled`, enable ? 'warning' : 'success'); }
+      if (res.success) {
+        setHardwareInfo(p => ({ ...p, legacyRebarForced: enable }));
+        addToast(`Legacy ReBAR toggled`, enable ? 'warning' : 'success');
+      } else {
+        addLog(`[Error] Failed to toggle Legacy ReBAR: ${res.error || 'Unknown error'}`);
+      }
     }
   };
 
@@ -476,6 +603,7 @@ export function AppProvider({ children }) {
         addLog(`[System] Optimized ${res.count} Electron shortcuts (V8/Renderer bypass).`);
       } else {
         addToast(`Failed to optimize shortcuts: ${res.error}`, 'error');
+        addLog(`[Error] Failed to optimize Electron shortcuts: ${res.error || 'Unknown error'}`);
       }
     }
   };
@@ -486,85 +614,184 @@ export function AppProvider({ children }) {
 
   const checkNetworkLatency = async () => {
     if (!window.api || !window.api.checkNetworkLatency) return;
-    try { const res = await window.api.checkNetworkLatency(); if (res.success) setNetworkLatencyOptimized(res.nagleDisabled || false); } catch (e) {}
+    try {
+      const res = await window.api.checkNetworkLatency();
+      if (res.success) setNetworkLatencyOptimized(res.nagleDisabled || false);
+      else addLog(`[Error] Check network latency failed: ${res.error || 'Unknown error'}`);
+    } catch (e) {
+      addLog(`[Error] Check network latency error: ${e.message}`);
+    }
   };
 
   const toggleNetworkLatency = async (enable) => {
     if (!window.api || !window.api.toggleNetworkLatency) return;
     const res = await window.api.toggleNetworkLatency(enable);
-    if (res.success) { setNetworkLatencyOptimized(enable); addLog(`[Network] TCP/Nagle ${enable ? 'optimized' : 'restored'}`); addToast(`TCP latency ${enable ? 'optimized' : 'restored'}`, 'success'); }
+    if (res.success) {
+      setNetworkLatencyOptimized(enable);
+      addLog(`[Network] TCP/Nagle ${enable ? 'optimized' : 'restored'}`);
+      addToast(`TCP latency ${enable ? 'optimized' : 'restored'}`, 'success');
+    } else {
+      addLog(`[Error] Failed to toggle network latency: ${res.error || 'Unknown error'}`);
+    }
   };
 
   const checkNicInterruptMod = async () => {
     if (!window.api || !window.api.checkNicInterruptMod) return;
-    try { const res = await window.api.checkNicInterruptMod(); if (res.success) setNicInterruptModDisabled(res.disabled || false); } catch (e) {}
+    try {
+      const res = await window.api.checkNicInterruptMod();
+      if (res.success) setNicInterruptModDisabled(res.disabled || false);
+      else addLog(`[Error] Check NIC interrupt moderation failed: ${res.error || 'Unknown error'}`);
+    } catch (e) {
+      addLog(`[Error] Check NIC interrupt moderation error: ${e.message}`);
+    }
   };
 
   const toggleNicInterruptMod = async (disable) => {
     if (!window.api || !window.api.toggleNicInterruptMod) return;
     const res = await window.api.toggleNicInterruptMod(disable);
-    if (res.success) { setNicInterruptModDisabled(disable); addLog(`[NIC] Interrupt Moderation ${disable ? 'disabled' : 'enabled'}`); addToast(`NIC interrupt moderation ${disable ? 'disabled' : 'restored'}`, 'success'); }
+    if (res.success) {
+      setNicInterruptModDisabled(disable);
+      addLog(`[NIC] Interrupt Moderation ${disable ? 'disabled' : 'enabled'}`);
+      addToast(`NIC interrupt moderation ${disable ? 'disabled' : 'restored'}`, 'success');
+    } else {
+      addLog(`[Error] Failed to toggle NIC interrupt moderation: ${res.error || 'Unknown error'}`);
+    }
   };
 
   const checkCpuTopology = async () => {
     if (!window.api || !window.api.checkCpuTopology) return;
-    try { const res = await window.api.checkCpuTopology(); if (res.success) setCpuTopology({ isHybrid: res.isHybrid || false, pCoreCount: res.pCoreCount || 0, eCoreCount: res.eCoreCount || 0, totalLogical: res.totalLogical || 0, cpuName: res.cpuName || '' }); } catch (e) {}
+    try {
+      const res = await window.api.checkCpuTopology();
+      if (res.success) {
+        setCpuTopology({
+          isHybrid: res.isHybrid || false,
+          pCoreCount: res.pCoreCount || 0,
+          eCoreCount: res.eCoreCount || 0,
+          totalLogical: res.totalLogical || 0,
+          cpuName: res.cpuName || ''
+        });
+      } else {
+        addLog(`[Error] Check CPU topology failed: ${res.error || 'Unknown error'}`);
+      }
+    } catch (e) {
+      addLog(`[Error] Check CPU topology error: ${e.message}`);
+    }
   };
 
   const toggleCpuAffinity = async (enable) => {
     if (!window.api || !window.api.setCpuAffinity) return;
     const mode = enable ? 'performance' : 'default';
     const res = await window.api.setCpuAffinity({ mode });
-    if (res.success) { setCpuAffinityActive(enable); addLog(`[CPU] Affinity ${enable ? 'pinned to P-cores' : 'reset to all cores'}`); addToast(`CPU affinity ${enable ? 'optimized' : 'restored'}`, 'success'); }
+    if (res.success) {
+      setCpuAffinityActive(enable);
+      addLog(`[CPU] Affinity ${enable ? 'pinned to P-cores' : 'reset to all cores'}`);
+      addToast(`CPU affinity ${enable ? 'optimized' : 'restored'}`, 'success');
+    } else {
+      addLog(`[Error] Failed to toggle CPU affinity: ${res.error || 'Unknown error'}`);
+    }
   };
 
   const checkVisualEffects = async () => {
     if (!window.api || !window.api.checkVisualEffects) return;
-    try { const res = await window.api.checkVisualEffects(); if (res.success) setVisualEffectsStripped(res.stripped || false); } catch (e) {}
+    try {
+      const res = await window.api.checkVisualEffects();
+      if (res.success) setVisualEffectsStripped(res.stripped || false);
+      else addLog(`[Error] Check visual effects failed: ${res.error || 'Unknown error'}`);
+    } catch (e) {
+      addLog(`[Error] Check visual effects error: ${e.message}`);
+    }
   };
 
   const toggleVisualEffects = async (strip) => {
     if (!window.api || !window.api.toggleVisualEffects) return;
     const res = await window.api.toggleVisualEffects(strip);
-    if (res.success) { setVisualEffectsStripped(strip); addLog(`[Visual] Effects ${strip ? 'stripped for performance' : 'restored'}`); addToast(`Visual effects ${strip ? 'stripped' : 'restored'}`, 'success'); }
+    if (res.success) {
+      setVisualEffectsStripped(strip);
+      addLog(`[Visual] Effects ${strip ? 'stripped for performance' : 'restored'}`);
+      addToast(`Visual effects ${strip ? 'stripped' : 'restored'}`, 'success');
+    } else {
+      addLog(`[Error] Failed to toggle visual effects: ${res.error || 'Unknown error'}`);
+    }
   };
 
   const checkDefenderExclusion = async () => {
     if (!window.api || !window.api.checkDefenderExclusion) return;
-    try { const res = await window.api.checkDefenderExclusion(); if (res.success) setDefenderExcluded(res.isExcluded || false); } catch (e) {}
+    try {
+      const res = await window.api.checkDefenderExclusion();
+      if (res.success) setDefenderExcluded(res.isExcluded || false);
+      else addLog(`[Error] Check defender exclusion failed: ${res.error || 'Unknown error'}`);
+    } catch (e) {
+      addLog(`[Error] Check defender exclusion error: ${e.message}`);
+    }
   };
 
   const toggleDefenderExclusion = async (add) => {
     if (!window.api || !window.api.toggleDefenderExclusion) return;
     const res = await window.api.toggleDefenderExclusion(add);
-    if (res.success) { setDefenderExcluded(add); addLog(`[Defender] Exclusions ${add ? 'added' : 'removed'}`); addToast(`Defender exclusions ${add ? 'added' : 'removed'}`, 'success'); }
+    if (res.success) {
+      setDefenderExcluded(add);
+      addLog(`[Defender] Exclusions ${add ? 'added' : 'removed'}`);
+      addToast(`Defender exclusions ${add ? 'added' : 'removed'}`, 'success');
+    } else {
+      addLog(`[Error] Failed to toggle Defender exclusions: ${res.error || 'Unknown error'}`);
+    }
   };
 
   const checkFocusAssist = async () => {
     if (!window.api || !window.api.checkFocusAssist) return;
-    try { const res = await window.api.checkFocusAssist(); if (res.success) setFocusAssistActive(res.notificationsDisabled || false); } catch (e) {}
+    try {
+      const res = await window.api.checkFocusAssist();
+      if (res.success) setFocusAssistActive(res.notificationsDisabled || false);
+      else addLog(`[Error] Check focus assist failed: ${res.error || 'Unknown error'}`);
+    } catch (e) {
+      addLog(`[Error] Check focus assist error: ${e.message}`);
+    }
   };
 
   const toggleFocusAssist = async (enable) => {
     if (!window.api || !window.api.toggleFocusAssist) return;
     const res = await window.api.toggleFocusAssist(enable);
-    if (res.success) { setFocusAssistActive(enable); addLog(`[Focus] Notifications ${enable ? 'suppressed' : 'restored'}`); addToast(`Notifications ${enable ? 'suppressed' : 'restored'}`, 'success'); }
+    if (res.success) {
+      setFocusAssistActive(enable);
+      addLog(`[Focus] Notifications ${enable ? 'suppressed' : 'restored'}`);
+      addToast(`Notifications ${enable ? 'suppressed' : 'restored'}`, 'success');
+    } else {
+      addLog(`[Error] Failed to toggle Focus Assist: ${res.error || 'Unknown error'}`);
+    }
   };
 
   const checkScheduledTasks = async () => {
     if (!window.api || !window.api.checkScheduledTasks) return;
-    try { const res = await window.api.checkScheduledTasks(); if (res.success) setScheduledTasksDisabled(res.allDisabled || false); } catch (e) {}
+    try {
+      const res = await window.api.checkScheduledTasks();
+      if (res.success) setScheduledTasksDisabled(res.allDisabled || false);
+      else addLog(`[Error] Check scheduled tasks failed: ${res.error || 'Unknown error'}`);
+    } catch (e) {
+      addLog(`[Error] Check scheduled tasks error: ${e.message}`);
+    }
   };
 
   const toggleScheduledTasks = async (disable) => {
     if (!window.api || !window.api.toggleScheduledTasks) return;
     const res = await window.api.toggleScheduledTasks(disable);
-    if (res.success) { setScheduledTasksDisabled(disable); addLog(`[Tasks] Scheduled tasks ${disable ? 'disabled' : 'enabled'}`); addToast(`Telemetry tasks ${disable ? 'disabled' : 'restored'}`, 'success'); }
+    if (res.success) {
+      setScheduledTasksDisabled(disable);
+      addLog(`[Tasks] Scheduled tasks ${disable ? 'disabled' : 'enabled'}`);
+      addToast(`Telemetry tasks ${disable ? 'disabled' : 'restored'}`, 'success');
+    } else {
+      addLog(`[Error] Failed to toggle scheduled tasks: ${res.error || 'Unknown error'}`);
+    }
   };
 
   const checkUltimatePerformance = async () => {
     if (!window.api || !window.api.checkUltimatePerformance) return;
-    try { const res = await window.api.checkUltimatePerformance(); if (res.success) setUltimatePerformanceActive(res.isUltimate || false); } catch (e) {}
+    try {
+      const res = await window.api.checkUltimatePerformance();
+      if (res.success) setUltimatePerformanceActive(res.isUltimate || false);
+      else addLog(`[Error] Check Ultimate Performance failed: ${res.error || 'Unknown error'}`);
+    } catch (e) {
+      addLog(`[Error] Check Ultimate Performance error: ${e.message}`);
+    }
   };
 
   const activateUltimatePerformance = async () => {
@@ -579,13 +806,21 @@ export function AppProvider({ children }) {
       } else {
         addToast('Ultimate Performance plan activated', 'success');
       }
+    } else {
+      addToast(`Failed to activate Ultimate Performance: ${res.error}`, 'error');
+      addLog(`[Error] Failed to activate Ultimate Performance: ${res.error || 'Unknown error'}`);
     }
-    else addToast(`Failed to activate Ultimate Performance: ${res.error}`, 'error');
   };
 
   const checkPagefileStatus = async () => {
     if (!window.api || !window.api.checkPagefileStatus) return;
-    try { const res = await window.api.checkPagefileStatus(); if (res.success) setPageFileOptimized(res.optimized || false); } catch (e) {}
+    try {
+      const res = await window.api.checkPagefileStatus();
+      if (res.success) setPageFileOptimized(res.optimized || false);
+      else addLog(`[Error] Check pagefile status failed: ${res.error || 'Unknown error'}`);
+    } catch (e) {
+      addLog(`[Error] Check pagefile status error: ${e.message}`);
+    }
   };
 
   const togglePagefile = async (enable) => {
@@ -595,6 +830,8 @@ export function AppProvider({ children }) {
       setPageFileOptimized(enable);
       addLog(`[System] Virtual Memory Pagefile ${enable ? 'locked to 1.5x RAM' : 'set to System Managed'}`);
       addToast(`Virtual Memory ${enable ? 'Optimized' : 'Restored'}`, 'success');
+    } else {
+      addLog(`[Error] Failed to toggle pagefile: ${res.error || 'Unknown error'}`);
     }
   };
 
@@ -605,15 +842,20 @@ export function AppProvider({ children }) {
       setAutoStandbyCleanerActive(enable);
       addLog(`[Memory] Auto Standby Cleaner ${enable ? 'started (5m interval)' : 'stopped'}`);
       addToast(`Standby Cleaner ${enable ? 'Active' : 'Stopped'}`, 'success');
+    } else {
+      addLog(`[Error] Failed to toggle Standby Cleaner: ${res.error || 'Unknown error'}`);
     }
   };
 
   const checkExplorerStatus = async () => {
     if (!window.api || !window.api.checkExplorerStatus) return;
-    try { 
-      const res = await window.api.checkExplorerStatus(); 
-      if (res.success) setExplorerTerminated(!res.isRunning); 
-    } catch (e) {}
+    try {
+      const res = await window.api.checkExplorerStatus();
+      if (res.success) setExplorerTerminated(!res.isRunning);
+      else addLog(`[Error] Check Explorer status failed: ${res.error || 'Unknown error'}`);
+    } catch (e) {
+      addLog(`[Error] Check Explorer status error: ${e.message}`);
+    }
   };
 
   const toggleExplorer = async (terminate) => {
@@ -626,9 +868,11 @@ export function AppProvider({ children }) {
         addLog(`[System] Windows Explorer ${terminate ? 'Terminated (Cortex Mode)' : 'Restarted'}`);
       } else {
         addToast(`Failed to ${terminate ? 'terminate' : 'restart'} Explorer: ${res.error}`, 'error');
+        addLog(`[Error] Failed to toggle Explorer: ${res.error || 'Unknown error'}`);
       }
     } catch (e) {
       addToast('Error toggling Explorer', 'error');
+      addLog(`[Error] Error toggling Explorer: ${e.message}`);
     }
   };
 
@@ -767,29 +1011,6 @@ export function AppProvider({ children }) {
     };
   }, []);
 
-  // System Automation: Valorant Process Listener
-  // Use a ref for toggleMaxBoost to avoid stale closures — it reads many state variables
-  const toggleMaxBoostRef = useRef(toggleMaxBoost);
-  useEffect(() => { toggleMaxBoostRef.current = toggleMaxBoost; });
-
-  useEffect(() => {
-    if (window.api && window.api.onValorantStatusChange) {
-      const handler = (isRunning) => {
-        setValorantRunning(isRunning);
-        if (isRunning && autoBoostActive && !maxBoostActive) {
-          // Call toggleMaxBoost directly — it manages its own progress UI.
-          // Don't wrap in executeOperation to avoid the blocking overlay.
-          toggleMaxBoostRef.current(true, boostProfile);
-        } else if (!isRunning && maxBoostActive) {
-          toggleMaxBoostRef.current(false);
-        }
-      };
-      const cleanup = window.api.onValorantStatusChange(handler);
-      return () => {
-        if (cleanup) cleanup();
-      };
-    }
-  }, [autoBoostActive, maxBoostActive, boostProfile]);
 
   const previousValorantRunning = useRef(false);
 
@@ -914,7 +1135,7 @@ export function AppProvider({ children }) {
     }
   };
 
-  const toggleMaxBoost = async (enable, profileType = 'safe') => {
+  const toggleMaxBoost = async (enable) => {
     if (enable) {
       // Capture pre-boost state for smart revert
       const preState = {
@@ -946,163 +1167,75 @@ export function AppProvider({ children }) {
         amdShaderCacheWasOn: amdOptimizations.shaderCacheAlwaysOn,
         ultimatePerformanceWasActive: ultimatePerformanceActive,
         gpuDriverProfileWasApplied: gpuDriverProfile.powerMaxPerformance || gpuDriverProfile.antiLagEnabled,
+        // Full Send state tracking
+        hpetWasDisabled: hpetDisabled,
+        symmetricPriorityWasActive: symmetricPriorityActive,
+        amdLegacyDxWasEnabled: amdOptimizations.legacyDxPath,
+        legacyRebarWasForced: hardwareInfo.legacyRebarForced,
       };
       setBoostPreState(preState);
 
       setMaxBoostStatus('boosting'); setMaxBoostActive(true); setMaxBoostProgress(10);
       await new Promise(r => setTimeout(r, 200));
 
-      if (profileType === 'lowend') {
-        // LOW-END PC MODE: Only Tier 1 & 2 tweaks that genuinely help at 30fps
-        setMaxBoostProgress(15);
-        // Graphics: Force all-low tournament settings
-        if (selectedConfig) await applyTournamentPreset();
-        
-        setMaxBoostProgress(25);
-        // Tier 1: Highest impact system tweaks
-        if (!preState.gameDvrWasDisabled) await toggleGameDvr(true);
-        if (powerPlanMode !== 'high') await togglePowerPlan();
-        if (!preState.powerThrottlingWasDisabled) await togglePowerThrottling(true);
-        
-        setMaxBoostProgress(40);
-        // Kill background apps (biggest single win on low-end)
-        if (optimizationOptions.purgeApps) await runDeepPerformanceOptimize();
-        
-        setMaxBoostProgress(55);
-        // System overhead reduction
-        if (!preState.visualEffectsWereStripped) await toggleVisualEffects(true);
-        if (!preState.scheduledTasksWereDisabled) await toggleScheduledTasks(true);
-        if (!preState.defenderWasExcluded) await toggleDefenderExclusion(true);
-        
-        setMaxBoostProgress(70);
-        // CPU and latency
-        if (!preState.persistentPriorityWasEnabled) await togglePersistentPriority(true);
-        if (!preState.mouseAccelWasDisabled) await toggleLatencyTweak('disableMouseAccel', true);
-        if (!preState.timerResWasActive) await toggleTimerResolution(true);
-        
-        setMaxBoostProgress(75);
-        // Network & input
-        if (!preState.networkLatencyWasOptimized) await toggleNetworkLatency(true);
-        if (!preState.focusAssistWasActive) await toggleFocusAssist(true);
-        if (!preState.usbSuspendWasDisabled) await toggleLatencyTweak('disableUsbSuspend', true);
-        if (!preState.nicInterruptModWasDisabled) await toggleNicInterruptMod(true);
-
-        setMaxBoostProgress(85);
-        // Electron & system memory (critical on low-end — frees dGPU and prevents RAM bloat)
-        if (!preState.electronIgpuWasIsolated) await toggleElectronIgpu(true);
-        if (cpuTopology.isHybrid && !preState.cpuAffinityWasActive) await toggleCpuAffinity(true);
-        if (!preState.pageFileWasOptimized) await togglePagefile(true);
-        if (!preState.standbyCleanerWasActive) await toggleStandbyCleaner(true);
-
-        setMaxBoostProgress(95);
-        // Ultimate Performance plan
-        if (!preState.ultimatePerformanceWasActive) await activateUltimatePerformance();
-
-        // NOTE: Deliberately skipping shader cache purge — it hurts more than helps on low-end
-        // NOTE: Deliberately skipping VBS toggle — requires reboot, not suitable for quick boost
-        
-        setMaxBoostProgress(100); setMaxBoostStatus('active');
-        addToast("Low-End PC Boost activated! Graphics set to minimum.", "success");
-      } else if (profileType === 'safe') {
-        setMaxBoostProgress(20);
-        if (!preState.gameModeWasActive) await toggleGameMode();
-        if (powerPlanMode !== 'high') await togglePowerPlan();
-        
-        setMaxBoostProgress(35);
-        if (!preState.gameDvrWasDisabled) await toggleGameDvr(true);
-        for (const tweak of ['disableMouseAccel', 'disableUsbSuspend']) {
-          if (!latencyTweaks[tweak]) await toggleLatencyTweak(tweak, true);
-        }
-
-        setMaxBoostProgress(50);
-        if (!preState.networkLatencyWasOptimized) await toggleNetworkLatency(true);
-        if (!preState.nicInterruptModWasDisabled) await toggleNicInterruptMod(true);
-
-        setMaxBoostProgress(65);
-        if (!preState.visualEffectsWereStripped) await toggleVisualEffects(true);
-        if (!preState.defenderWasExcluded) await toggleDefenderExclusion(true);
-        if (!preState.focusAssistWasActive) await toggleFocusAssist(true);
-        if (!preState.scheduledTasksWereDisabled) await toggleScheduledTasks(true);
-
-        setMaxBoostProgress(72);
-        if (cpuTopology.isHybrid && !preState.cpuAffinityWasActive) await toggleCpuAffinity(true);
-
-        setMaxBoostProgress(78);
-        // Electron & system memory optimizations
-        if (!preState.electronIgpuWasIsolated) await toggleElectronIgpu(true);
-        await optimizeElectronShortcuts();
-        if (!preState.pageFileWasOptimized) await togglePagefile(true);
-        if (!preState.standbyCleanerWasActive) await toggleStandbyCleaner(true);
-
-        setMaxBoostProgress(88);
-        await cleanAllShaderCaches();
-
-        setMaxBoostProgress(95);
-        if (!preState.ultimatePerformanceWasActive) await activateUltimatePerformance();
-        
-        setMaxBoostProgress(100); setMaxBoostStatus('active');
-        addToast("Safe Performance Boost activated!", "success");
-      } else {
-        // aggressive / max profile
-        setMaxBoostProgress(15);
-        if (!preState.gameModeWasActive) await toggleGameMode();
-        if (powerPlanMode !== 'high') await togglePowerPlan();
-        
-        setMaxBoostProgress(25);
-        if (!preState.gameDvrWasDisabled) await toggleGameDvr(true);
-        for (const tweak of ['disableMouseAccel', 'disableUsbSuspend']) {
-          if (!latencyTweaks[tweak]) await toggleLatencyTweak(tweak, true);
-        }
-        
-        setMaxBoostProgress(40);
-        if (!preState.powerThrottlingWasDisabled) await togglePowerThrottling(true);
-        if (!preState.nicPowerWasDisabled) await toggleNicPower(true);
-        if (!preState.persistentPriorityWasEnabled) await togglePersistentPriority(true);
-        if (!preState.xblWasStopped) await toggleBgService('XblAuthManager', false);
-
-        setMaxBoostProgress(55);
-        if (!preState.networkLatencyWasOptimized) await toggleNetworkLatency(true);
-        if (!preState.nicInterruptModWasDisabled) await toggleNicInterruptMod(true);
-
-        setMaxBoostProgress(65);
-        if (!preState.visualEffectsWereStripped) await toggleVisualEffects(true);
-        if (!preState.defenderWasExcluded) await toggleDefenderExclusion(true);
-        if (!preState.focusAssistWasActive) await toggleFocusAssist(true);
-        if (!preState.scheduledTasksWereDisabled) await toggleScheduledTasks(true);
-
-        setMaxBoostProgress(70);
-        if (cpuTopology.isHybrid && !preState.cpuAffinityWasActive) await toggleCpuAffinity(true);
-
-        setMaxBoostProgress(74);
-        // Electron & system memory optimizations
-        if (!preState.electronIgpuWasIsolated) await toggleElectronIgpu(true);
-        if (!preState.intelGmmWasAllocated) await toggleIntelGmm(true);
-        await optimizeElectronShortcuts();
-        if (!preState.pageFileWasOptimized) await togglePagefile(true);
-        if (!preState.standbyCleanerWasActive) await toggleStandbyCleaner(true);
-        
-        setMaxBoostProgress(80);
-        if (!preState.timerResWasActive) await toggleTimerResolution(true);
-        await cleanAllShaderCaches();
-        
-        setMaxBoostProgress(86);
-        if (vbsStatus.vbsEnabled) await toggleVbs(false);
-        if (gpuInfo.vendor === 'nvidia' || gpuInfo.vendor === 'amd') await applyGpuDriverProfile('performance');
-
-        setMaxBoostProgress(90);
-        // GPU vendor-specific optimizations
-        if (gpuInfo.vendor === 'nvidia' && !preState.gsyncWasDisabled) await toggleGsync(true);
-        if (gpuInfo.vendor === 'amd') {
-          if (!preState.mpoWasDisabled) await toggleAmdMpo(true);
-          if (!preState.amdShaderCacheWasOn) await toggleAmdShaderCache(true);
-        }
-
-        setMaxBoostProgress(96);
-        if (!preState.ultimatePerformanceWasActive) await activateUltimatePerformance();
-        
-        setMaxBoostProgress(100); setMaxBoostStatus('active');
-        addToast("Max Performance Boost activated!", "success");
+      setMaxBoostProgress(15);
+      if (!preState.gameModeWasActive) await toggleGameMode();
+      if (powerPlanMode !== 'high') await togglePowerPlan();
+      
+      setMaxBoostProgress(25);
+      if (!preState.gameDvrWasDisabled) await toggleGameDvr(true);
+      for (const tweak of ['disableMouseAccel', 'disableUsbSuspend']) {
+        if (!latencyTweaks[tweak]) await toggleLatencyTweak(tweak, true);
       }
+      
+      setMaxBoostProgress(40);
+      if (!preState.powerThrottlingWasDisabled) await togglePowerThrottling(true);
+      if (!preState.nicPowerWasDisabled) await toggleNicPower(true);
+      if (!preState.persistentPriorityWasEnabled) await togglePersistentPriority(true);
+      if (!preState.xblWasStopped) await toggleBgService('XblAuthManager', false);
+
+      setMaxBoostProgress(55);
+      if (!preState.networkLatencyWasOptimized) await toggleNetworkLatency(true);
+      if (!preState.nicInterruptModWasDisabled) await toggleNicInterruptMod(true);
+
+      setMaxBoostProgress(65);
+      if (!preState.visualEffectsWereStripped) await toggleVisualEffects(true);
+      if (!preState.defenderWasExcluded) await toggleDefenderExclusion(true);
+      if (!preState.focusAssistWasActive) await toggleFocusAssist(true);
+      if (!preState.scheduledTasksWereDisabled) await toggleScheduledTasks(true);
+
+      setMaxBoostProgress(70);
+      if (cpuTopology.isHybrid && !preState.cpuAffinityWasActive) await toggleCpuAffinity(true);
+
+      setMaxBoostProgress(74);
+      // Electron & system memory optimizations
+      if (!preState.electronIgpuWasIsolated) await toggleElectronIgpu(true);
+      if (!preState.intelGmmWasAllocated) await toggleIntelGmm(true);
+      await optimizeElectronShortcuts();
+      if (!preState.pageFileWasOptimized) await togglePagefile(true);
+      if (!preState.standbyCleanerWasActive) await toggleStandbyCleaner(true);
+      
+      setMaxBoostProgress(80);
+      if (!preState.timerResWasActive) await toggleTimerResolution(true);
+      await cleanAllShaderCaches();
+      
+      setMaxBoostProgress(86);
+      if (gpuInfo.vendor === 'nvidia' || gpuInfo.vendor === 'amd') await applyGpuDriverProfile('performance');
+
+      setMaxBoostProgress(90);
+      // GPU vendor-specific optimizations
+      if (gpuInfo.vendor === 'nvidia' && !preState.gsyncWasDisabled) await toggleGsync(true);
+      if (gpuInfo.vendor === 'amd') {
+        if (!preState.mpoWasDisabled) await toggleAmdMpo(true);
+        if (!preState.amdShaderCacheWasOn) await toggleAmdShaderCache(true);
+      }
+
+      setMaxBoostProgress(96);
+      if (!preState.ultimatePerformanceWasActive) await activateUltimatePerformance();
+      
+      setMaxBoostProgress(100); setMaxBoostStatus('active');
+      await refreshAllStatus();
+      addToast("System Boost Activated!", "success");
     } else {
       // SMART REVERT: Only undo what was actually changed by boost
       const pre = boostPreState || {};
@@ -1148,11 +1281,17 @@ export function AppProvider({ children }) {
       if (gsyncDisabled && !pre.gsyncWasDisabled) await toggleGsync(false);
       if (amdOptimizations.mpoDisabled && !pre.mpoWasDisabled) await toggleAmdMpo(false);
       if (amdOptimizations.shaderCacheAlwaysOn && !pre.amdShaderCacheWasOn) await toggleAmdShaderCache(false);
+      if (amdOptimizations.legacyDxPath && !pre.amdLegacyDxWasEnabled) await toggleAmdLegacyDx(false);
+      if (hardwareInfo.legacyRebarForced && !pre.legacyRebarWasForced) await toggleLegacyRebar(false);
       if ((gpuDriverProfile.powerMaxPerformance || gpuDriverProfile.antiLagEnabled) && !pre.gpuDriverProfileWasApplied) await applyGpuDriverProfile('default');
       if (ultimatePerformanceActive && !pre.ultimatePerformanceWasActive) await deactivateUltimatePerformance();
+      // Revert Full Send-specific items
+      if (symmetricPriorityActive && !pre.symmetricPriorityWasActive) await toggleSymmetricPriority(false);
+      if (hpetDisabled && !pre.hpetWasDisabled) await toggleHpet(false);
 
       setMaxBoostProgress(100); setMaxBoostActive(false); setMaxBoostStatus('idle');
       setBoostPreState(null);
+      await refreshAllStatus();
       addToast("Restored to pre-boost state", "success");
     }
   };
@@ -1175,17 +1314,33 @@ export function AppProvider({ children }) {
     setScanningTemp(true); addLog('[Storage] Analyzing temp file size...');
     try {
       const res = await window.api.runCacheCleaner('scan');
-      if (res.success) { setTempFolderSize(formatBytes(res.tempBytes)); addLog(`[Storage] Temp size: ${formatBytes(res.tempBytes)}`); }
-    } catch (e) {} finally { setScanningTemp(false); }
+      if (res.success) { 
+        setTempFolderSize(formatBytes(res.tempBytes)); 
+        addLog(`[Storage] Temp size: ${formatBytes(res.tempBytes)}`); 
+      } else {
+        addLog(`[Error] Failed to scan temp folder: ${res.error || 'Unknown error'}`);
+      }
+    } catch (e) {
+      addLog(`[Error] Scan temp folder error: ${e.message}`);
+    } finally { setScanningTemp(false); }
   };
 
   const purgeTempFolder = async () => {
     if (purgingTemp) return;
     setPurgingTemp(true); addLog('[Storage] Purging temporary files...');
     try {
-      if (window.api && window.api.runCacheCleaner) await window.api.runCacheCleaner('purgeTemp');
-      setTempFolderSize('0.00 Bytes'); addLog('[Storage] Temporary directories purged.');
-    } catch (e) {} finally { setPurgingTemp(false); }
+      if (window.api && window.api.runCacheCleaner) {
+        const res = await window.api.runCacheCleaner('purgeTemp');
+        if (res.success) {
+          setTempFolderSize('0.00 Bytes'); 
+          addLog('[Storage] Temporary directories purged.');
+        } else {
+          addLog(`[Error] Failed to purge temp: ${res.error || 'Unknown error'}`);
+        }
+      }
+    } catch (e) {
+      addLog(`[Error] Purge temp error: ${e.message}`);
+    } finally { setPurgingTemp(false); }
   };
 
   const scanValorantCaches = async () => {
@@ -1193,16 +1348,105 @@ export function AppProvider({ children }) {
     setScanningVal(true); addLog('[Scrubber] Scanning cache directories...');
     try {
       const res = await window.api.runCacheCleaner('scan');
-      if (res.success) { setValorantLogsSize(formatBytes(res.valLogsBytes)); setShaderCacheSize(formatBytes(res.shaderBytes)); }
-    } catch (e) {} finally { setScanningVal(false); }
+      if (res.success) { 
+        setValorantLogsSize(formatBytes(res.valLogsBytes)); 
+        setShaderCacheSize(formatBytes(res.shaderBytes)); 
+      } else {
+        addLog(`[Error] Failed to scan Valorant caches: ${res.error || 'Unknown error'}`);
+      }
+    } catch (e) {
+      addLog(`[Error] Scan Valorant caches error: ${e.message}`);
+    } finally { setScanningVal(false); }
   };
 
   const clearValorantLogs = async () => {
     if (cleaningLogs) return;
     setCleaningLogs(true);
-    if (window.api && window.api.runCacheCleaner) await window.api.runCacheCleaner('purgeValLogs');
-    setValorantLogsSize('0.00 Bytes'); addLog('[Scrubber] Client log directories purged.');
-    setCleaningLogs(false);
+    try {
+      if (window.api && window.api.runCacheCleaner) {
+        const res = await window.api.runCacheCleaner('purgeValLogs');
+        if (res.success) {
+          setValorantLogsSize('0.00 Bytes'); 
+          addLog('[Scrubber] Client log directories purged.');
+        } else {
+          addLog(`[Error] Failed to clear Valorant logs: ${res.error || 'Unknown error'}`);
+        }
+      }
+    } catch (e) {
+      addLog(`[Error] Clear Valorant logs error: ${e.message}`);
+    } finally {
+      setCleaningLogs(false);
+    }
+  };
+
+  const scanAllCaches = async () => {
+    if (scanningTemp || scanningVal) return;
+    setScanningTemp(true);
+    setScanningVal(true);
+    addLog('[Storage] Analyzing system and game cache sizes...');
+    try {
+      if (window.api && window.api.runCacheCleaner) {
+        const res = await window.api.runCacheCleaner('scan');
+        if (res.success) {
+          setTempFolderSize(formatBytes(res.tempBytes));
+          setValorantLogsSize(formatBytes(res.valLogsBytes));
+          setShaderCacheSize(formatBytes(res.shaderBytes));
+          const totalBytes = (res.tempBytes || 0) + (res.valLogsBytes || 0) + (res.shaderBytes || 0);
+          addLog(`[Storage] Scan completed. Total cleanable junk found: ${formatBytes(totalBytes)}`);
+          addToast('Scan completed!', 'success');
+        } else {
+          addLog(`[Error] Failed to scan caches: ${res.error || 'Unknown error'}`);
+          addToast('Scan failed', 'error');
+        }
+      }
+    } catch (e) {
+      addLog(`[Error] Scan caches error: ${e.message}`);
+      addToast('Scan failed', 'error');
+    } finally {
+      setScanningTemp(false);
+      setScanningVal(false);
+    }
+  };
+
+  const cleanAllCaches = async () => {
+    if (purgingTemp || cleaningLogs || cleaningShaders) return;
+    setPurgingTemp(true);
+    setCleaningLogs(true);
+    setCleaningShaders(true);
+    addLog('[Storage] Purging system temp, game logs, and shader caches...');
+    try {
+      if (window.api && window.api.runCacheCleaner) {
+        const [tempRes, logsRes, shaderRes] = await Promise.all([
+          window.api.runCacheCleaner('purgeTemp'),
+          window.api.runCacheCleaner('purgeValLogs'),
+          window.api.runCacheCleaner('purgeShader')
+        ]);
+        
+        let hasError = false;
+        if (!tempRes.success) { addLog(`[Error] Failed to purge temp: ${tempRes.error}`); hasError = true; }
+        else setTempFolderSize('0.00 Bytes');
+
+        if (!logsRes.success) { addLog(`[Error] Failed to purge Valorant logs: ${logsRes.error}`); hasError = true; }
+        else setValorantLogsSize('0.00 Bytes');
+
+        if (!shaderRes.success) { addLog(`[Error] Failed to purge shader cache: ${shaderRes.error}`); hasError = true; }
+        else setShaderCacheSize('0.00 Bytes');
+
+        if (!hasError) {
+          addLog('[Storage] All cache and temporary files cleaned.');
+          addToast('Cleaned all junk files successfully!', 'success');
+        } else {
+          addToast('Some caches failed to clean (see logs)', 'warning');
+        }
+      }
+    } catch (e) {
+      addLog(`[Error] Clean caches error: ${e.message}`);
+      addToast('Clean caches failed', 'error');
+    } finally {
+      setPurgingTemp(false);
+      setCleaningLogs(false);
+      setCleaningShaders(false);
+    }
   };
 
 
@@ -1274,6 +1518,31 @@ export function AppProvider({ children }) {
   ].filter(Boolean).length;
   const totalOptimizations = 22;
 
+  // System Automation: Valorant Process Listener
+  // Use a ref for toggleMaxBoost to avoid stale closures — it reads many state variables
+  const toggleMaxBoostRef = useRef(toggleMaxBoost);
+  useEffect(() => { toggleMaxBoostRef.current = toggleMaxBoost; });
+
+  useEffect(() => {
+    if (window.api && window.api.onValorantStatusChange) {
+      const handler = (isRunning) => {
+        setValorantRunning(isRunning);
+        if (isRunning && autoBoostActive && !maxBoostActive) {
+          // Call toggleMaxBoost directly — it manages its own progress UI.
+          // Don't wrap in executeOperation to avoid the blocking overlay.
+          toggleMaxBoostRef.current(true);
+        } else if (!isRunning && maxBoostActive) {
+          toggleMaxBoostRef.current(false);
+        }
+      };
+      const cleanup = window.api.onValorantStatusChange(handler);
+      return () => {
+        if (cleanup) cleanup();
+      };
+    }
+  }, [autoBoostActive, maxBoostActive]);
+
+
   return (
     <AppContext.Provider value={{
       isElectron, setIsElectron,
@@ -1335,7 +1604,8 @@ export function AppProvider({ children }) {
       ultimatePerformanceActive, activateUltimatePerformance, deactivateUltimatePerformance,
       explorerTerminated, toggleExplorer,
       optimizedCount, totalOptimizations,
-      optimizeElectronShortcuts, applyCompetitiveRenderConfig
+      optimizeElectronShortcuts, applyCompetitiveRenderConfig,
+      scanAllCaches, cleanAllCaches
     }}>
       {children}
     </AppContext.Provider>

@@ -6,7 +6,6 @@ export default function Sidebar() {
 
   const navItems = [
     { id: 'dashboard', icon: '🏠', label: 'Dashboard' },
-    { id: 'advanced', icon: '⚙️', label: 'Advanced Tweaks' },
     { id: 'settings', icon: '🔧', label: 'Settings & Backup' }
   ];
 

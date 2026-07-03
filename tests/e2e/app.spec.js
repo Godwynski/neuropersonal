@@ -43,9 +43,6 @@ test.describe('Neuropersonal E2E Testing', () => {
       errors.push(exception.message);
     });
 
-    // Navigate to Advanced Tweaks
-    await window.click('text=Advanced Tweaks');
-    await expect(window.locator('text=Low-level system modifications')).toBeVisible();
 
     // Navigate to Settings & Backup
     await window.click('text=Settings & Backup');
