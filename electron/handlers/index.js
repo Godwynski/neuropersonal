@@ -372,7 +372,7 @@ ipcMain.handle('set-dashboard-tweak', async (event, { tweakName, active, extraAr
       await setOrDel('vgc.exe', idlePriority);
     }
     else if (tweakName === 'electronIgpu') {
-      const val = active ? "GpuPreference=1;" : null;
+      const val = active ? "'GpuPreference=1;'" : null;
       const path = 'HKCU:\\SOFTWARE\\Microsoft\\DirectX\\UserGpuPreferences';
       await spawnAsync('powershell.exe', ['-NoProfile', '-Command', `if (-not (Test-Path '${path}')) { New-Item -Path '${path}' -Force | Out-Null }`]);
       if (val) {

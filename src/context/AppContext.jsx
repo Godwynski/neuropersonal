@@ -1137,6 +1137,7 @@ export function AppProvider({ children }) {
 
   const toggleMaxBoost = async (enable) => {
     if (enable) {
+      addLog('[Boost] Starting Performance Boost sequence...');
       // Capture pre-boost state for smart revert
       const preState = {
         gameModeWasActive: gameModeActive,
@@ -1175,66 +1176,484 @@ export function AppProvider({ children }) {
       };
       setBoostPreState(preState);
 
-      setMaxBoostStatus('boosting'); setMaxBoostActive(true); setMaxBoostProgress(10);
-      await new Promise(r => setTimeout(r, 200));
+      setMaxBoostStatus('boosting'); setMaxBoostActive(true); setMaxBoostProgress(5);
+      await new Promise(r => setTimeout(r, 100));
 
+      // 1. Game Mode
+      setMaxBoostProgress(10);
+      if (preState.gameModeWasActive) {
+        addLog('[Boost] Game Mode is already enabled.');
+      } else {
+        try {
+          const res = await window.api.setDashboardTweak('gameMode', true);
+          if (res.success) {
+            setGameModeActive(true);
+            addLog('[Boost] Game Mode optimized successfully.');
+          } else {
+            addLog(`[Error] Game Mode optimization failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] Game Mode optimization failed: ${e.message}`);
+        }
+      }
+
+      // 2. High Performance Power Plan
       setMaxBoostProgress(15);
-      if (!preState.gameModeWasActive) await toggleGameMode();
-      if (powerPlanMode !== 'high') await togglePowerPlan();
-      
+      if (powerPlanMode === 'high' || powerPlanMode === 'ultimate') {
+        addLog('[Boost] Power Plan is already optimized.');
+      } else {
+        try {
+          if (!originalPowerPlan) setOriginalPowerPlan(powerPlanMode);
+          const res = await window.api.setDashboardTweak('powerPlan', 'high');
+          if (res.success) {
+            setPowerPlanMode('high');
+            addLog('[Boost] High Performance Power Plan applied successfully.');
+          } else {
+            addLog(`[Error] High Performance Power Plan application failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] High Performance Power Plan application failed: ${e.message}`);
+        }
+      }
+
+      // 3. Game DVR
+      setMaxBoostProgress(20);
+      if (preState.gameDvrWasDisabled) {
+        addLog('[Boost] Game DVR is already disabled.');
+      } else {
+        try {
+          const res = await window.api.setDashboardTweak('gameDvr', true);
+          if (res.success) {
+            setRegistryStates(p => ({...p, gameDvrDisabled: true}));
+            addLog('[Boost] Game DVR disabled successfully.');
+          } else {
+            addLog(`[Error] Game DVR optimization failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] Game DVR optimization failed: ${e.message}`);
+        }
+      }
+
+      // 4. Latency Tweaks (Mouse Acceleration, USB Suspend)
       setMaxBoostProgress(25);
-      if (!preState.gameDvrWasDisabled) await toggleGameDvr(true);
       for (const tweak of ['disableMouseAccel', 'disableUsbSuspend']) {
-        if (!latencyTweaks[tweak]) await toggleLatencyTweak(tweak, true);
+        if (latencyTweaks[tweak]) {
+          addLog(`[Boost] Latency tweak ${tweak} is already applied.`);
+        } else {
+          try {
+            const res = await window.api.setDashboardTweak(tweak, true, { gamePath: valorantPath });
+            if (res.success) {
+              setLatencyTweaks(p => ({ ...p, [tweak]: true }));
+              addLog(`[Boost] Latency tweak ${tweak} applied successfully.`);
+            } else {
+              addLog(`[Error] Latency tweak ${tweak} failed: ${res.error || 'Unknown error'}`);
+            }
+          } catch (e) {
+            addLog(`[Error] Latency tweak ${tweak} failed: ${e.message}`);
+          }
+        }
       }
-      
+
+      // 5. Power Throttling
+      setMaxBoostProgress(30);
+      if (preState.powerThrottlingWasDisabled) {
+        addLog('[Boost] Power Throttling is already disabled.');
+      } else {
+        try {
+          const res = await window.api.setDashboardTweak('powerThrottlingDisabled', true);
+          if (res.success) {
+            setPowerThrottlingDisabled(true);
+            addLog('[Boost] Power Throttling disabled successfully.');
+          } else {
+            addLog(`[Error] Power Throttling disable failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] Power Throttling disable failed: ${e.message}`);
+        }
+      }
+
+      // 6. NIC Power Saving
+      setMaxBoostProgress(35);
+      if (preState.nicPowerWasDisabled) {
+        addLog('[Boost] NIC Power Saving is already disabled.');
+      } else {
+        try {
+          const res = await window.api.setDashboardTweak('nicPowerSavingDisabled', true);
+          if (res.success) {
+            setNicPowerSavingDisabled(true);
+            addLog('[Boost] NIC Power Saving disabled successfully.');
+          } else {
+            addLog(`[Error] NIC Power Saving disable failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] NIC Power Saving disable failed: ${e.message}`);
+        }
+      }
+
+      // 7. Persistent Priority
       setMaxBoostProgress(40);
-      if (!preState.powerThrottlingWasDisabled) await togglePowerThrottling(true);
-      if (!preState.nicPowerWasDisabled) await toggleNicPower(true);
-      if (!preState.persistentPriorityWasEnabled) await togglePersistentPriority(true);
-      if (!preState.xblWasStopped) await toggleBgService('XblAuthManager', false);
-
-      setMaxBoostProgress(55);
-      if (!preState.networkLatencyWasOptimized) await toggleNetworkLatency(true);
-      if (!preState.nicInterruptModWasDisabled) await toggleNicInterruptMod(true);
-
-      setMaxBoostProgress(65);
-      if (!preState.visualEffectsWereStripped) await toggleVisualEffects(true);
-      if (!preState.defenderWasExcluded) await toggleDefenderExclusion(true);
-      if (!preState.focusAssistWasActive) await toggleFocusAssist(true);
-      if (!preState.scheduledTasksWereDisabled) await toggleScheduledTasks(true);
-
-      setMaxBoostProgress(70);
-      if (cpuTopology.isHybrid && !preState.cpuAffinityWasActive) await toggleCpuAffinity(true);
-
-      setMaxBoostProgress(74);
-      // Electron & system memory optimizations
-      if (!preState.electronIgpuWasIsolated) await toggleElectronIgpu(true);
-      if (!preState.intelGmmWasAllocated) await toggleIntelGmm(true);
-      await optimizeElectronShortcuts();
-      if (!preState.pageFileWasOptimized) await togglePagefile(true);
-      if (!preState.standbyCleanerWasActive) await toggleStandbyCleaner(true);
-      
-      setMaxBoostProgress(80);
-      if (!preState.timerResWasActive) await toggleTimerResolution(true);
-      await cleanAllShaderCaches();
-      
-      setMaxBoostProgress(86);
-      if (gpuInfo.vendor === 'nvidia' || gpuInfo.vendor === 'amd') await applyGpuDriverProfile('performance');
-
-      setMaxBoostProgress(90);
-      // GPU vendor-specific optimizations
-      if (gpuInfo.vendor === 'nvidia' && !preState.gsyncWasDisabled) await toggleGsync(true);
-      if (gpuInfo.vendor === 'amd') {
-        if (!preState.mpoWasDisabled) await toggleAmdMpo(true);
-        if (!preState.amdShaderCacheWasOn) await toggleAmdShaderCache(true);
+      if (preState.persistentPriorityWasEnabled) {
+        addLog('[Boost] Persistent CPU Priority is already enabled.');
+      } else {
+        try {
+          const res = await window.api.setDashboardTweak('persistentPriorityEnabled', true, { gamePath: valorantPath });
+          if (res.success) {
+            setPersistentPriorityEnabled(true);
+            addLog('[Boost] Persistent CPU Priority enabled successfully.');
+          } else {
+            addLog(`[Error] Persistent CPU Priority enable failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] Persistent CPU Priority enable failed: ${e.message}`);
+        }
       }
 
+      // 8. Xbox Live Services
+      setMaxBoostProgress(45);
+      if (preState.xblWasStopped) {
+        addLog('[Boost] Xbox Live Services are already stopped.');
+      } else {
+        try {
+          const res = await window.api.setDashboardTweak('bgService', false, { serviceName: 'XblAuthManager' });
+          if (res.success) {
+            setBgServices(p => ({ ...p, XblAuthManager: false }));
+            addLog('[Boost] Xbox Live Services stopped successfully.');
+          } else {
+            addLog(`[Error] Xbox Live Services stop failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] Xbox Live Services stop failed: ${e.message}`);
+        }
+      }
+
+      // 9. Network Latency (TCP/Nagle)
+      setMaxBoostProgress(50);
+      if (preState.networkLatencyWasOptimized) {
+        addLog('[Boost] Network Latency (TCP/Nagle) is already optimized.');
+      } else {
+        try {
+          const res = await window.api.toggleNetworkLatency(true);
+          if (res.success) {
+            setNetworkLatencyOptimized(true);
+            addLog('[Boost] Network Latency (TCP/Nagle) optimized successfully.');
+          } else {
+            addLog(`[Error] Network Latency (TCP/Nagle) optimization failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] Network Latency (TCP/Nagle) optimization failed: ${e.message}`);
+        }
+      }
+
+      // 10. NIC Interrupt Moderation
+      setMaxBoostProgress(55);
+      if (preState.nicInterruptModWasDisabled) {
+        addLog('[Boost] NIC Interrupt Moderation is already disabled.');
+      } else {
+        try {
+          const res = await window.api.toggleNicInterruptMod(true);
+          if (res.success) {
+            setNicInterruptModDisabled(true);
+            addLog('[Boost] NIC Interrupt Moderation disabled successfully.');
+          } else {
+            addLog(`[Error] NIC Interrupt Moderation disable failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] NIC Interrupt Moderation disable failed: ${e.message}`);
+        }
+      }
+
+      // 11. Visual Effects
+      setMaxBoostProgress(60);
+      if (preState.visualEffectsWereStripped) {
+        addLog('[Boost] Visual Effects are already stripped.');
+      } else {
+        try {
+          const res = await window.api.toggleVisualEffects(true);
+          if (res.success) {
+            setVisualEffectsStripped(true);
+            addLog('[Boost] Visual Effects stripped successfully.');
+          } else {
+            addLog(`[Error] Visual Effects strip failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] Visual Effects strip failed: ${e.message}`);
+        }
+      }
+
+      // 12. Windows Defender Exclusion
+      setMaxBoostProgress(65);
+      if (preState.defenderWasExcluded) {
+        addLog('[Boost] Windows Defender exclusions are already added.');
+      } else {
+        try {
+          const res = await window.api.toggleDefenderExclusion(true);
+          if (res.success) {
+            setDefenderExcluded(true);
+            addLog('[Boost] Windows Defender exclusions added successfully.');
+          } else {
+            addLog(`[Error] Windows Defender exclusions failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] Windows Defender exclusions failed: ${e.message}`);
+        }
+      }
+
+      // 13. Focus Assist
+      setMaxBoostProgress(70);
+      if (preState.focusAssistWasActive) {
+        addLog('[Boost] Focus Assist notifications are already suppressed.');
+      } else {
+        try {
+          const res = await window.api.toggleFocusAssist(true);
+          if (res.success) {
+            setFocusAssistActive(true);
+            addLog('[Boost] Focus Assist notification suppression active.');
+          } else {
+            addLog(`[Error] Focus Assist notification suppression failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] Focus Assist notification suppression failed: ${e.message}`);
+        }
+      }
+
+      // 14. Scheduled Telemetry Tasks
+      setMaxBoostProgress(73);
+      if (preState.scheduledTasksWereDisabled) {
+        addLog('[Boost] Scheduled telemetry tasks are already disabled.');
+      } else {
+        try {
+          const res = await window.api.toggleScheduledTasks(true);
+          if (res.success) {
+            setScheduledTasksDisabled(true);
+            addLog('[Boost] Scheduled telemetry tasks disabled successfully.');
+          } else {
+            addLog(`[Error] Scheduled telemetry tasks disable failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] Scheduled telemetry tasks disable failed: ${e.message}`);
+        }
+      }
+
+      // 15. CPU Affinity (P-cores mapping)
+      setMaxBoostProgress(76);
+      if (!cpuTopology.isHybrid) {
+        addLog('[Boost] CPU Affinity optimization: skipped (system does not have hybrid P/E core topology).');
+      } else if (preState.cpuAffinityWasActive) {
+        addLog('[Boost] CPU Affinity is already pinned to P-cores.');
+      } else {
+        try {
+          const res = await window.api.setCpuAffinity({ mode: 'performance' });
+          if (res.success) {
+            setCpuAffinityActive(true);
+            addLog('[Boost] CPU Affinity pinned to P-cores successfully.');
+          } else {
+            addLog(`[Error] CPU Affinity pinning failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] CPU Affinity pinning failed: ${e.message}`);
+        }
+      }
+
+      // 16. Electron iGPU Isolation
+      setMaxBoostProgress(78);
+      if (preState.electronIgpuWasIsolated) {
+        addLog('[Boost] Electron iGPU Isolation is already active.');
+      } else {
+        try {
+          const res = await window.api.setDashboardTweak('electronIgpu', true);
+          if (res.success) {
+            setElectronIgpuIsolated(true);
+            addLog('[Boost] Electron iGPU Isolation active.');
+          } else {
+            addLog(`[Error] Electron iGPU Isolation failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] Electron iGPU Isolation failed: ${e.message}`);
+        }
+      }
+
+      // 17. Intel GMM Allocation
+      setMaxBoostProgress(80);
+      if (preState.intelGmmWasAllocated) {
+        addLog('[Boost] Intel GMM Allocation is already active.');
+      } else {
+        try {
+          const res = await window.api.setDashboardTweak('intelGmm', true);
+          if (res.success) {
+            setIntelGmmAllocated(true);
+            addLog('[Boost] Intel GMM Allocation active.');
+          } else {
+            addLog(`[Error] Intel GMM Allocation failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] Intel GMM Allocation failed: ${e.message}`);
+        }
+      }
+
+      // 18. Electron App Shortcuts
+      setMaxBoostProgress(82);
+      try {
+        const res = await window.api.optimizeElectronShortcuts();
+        if (res.success) {
+          addLog(`[Boost] Optimized ${res.count} Electron app shortcuts.`);
+        } else {
+          addLog(`[Error] Electron app shortcuts optimization failed: ${res.error || 'Unknown error'}`);
+        }
+      } catch (e) {
+        addLog(`[Error] Electron app shortcuts optimization failed: ${e.message}`);
+      }
+
+      // 19. Virtual Memory Pagefile
+      setMaxBoostProgress(84);
+      if (preState.pageFileWasOptimized) {
+        addLog('[Boost] Virtual Memory Pagefile is already locked.');
+      } else {
+        try {
+          const res = await window.api.setPagefile(true);
+          if (res.success) {
+            setPageFileOptimized(true);
+            addLog('[Boost] Virtual Memory Pagefile locked to 1.5x RAM.');
+          } else {
+            addLog(`[Error] Virtual Memory Pagefile locking failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] Virtual Memory Pagefile locking failed: ${e.message}`);
+        }
+      }
+
+      // 20. Auto Standby Cleaner
+      setMaxBoostProgress(86);
+      if (preState.standbyCleanerWasActive) {
+        addLog('[Boost] Auto Standby Cleaner is already active.');
+      } else {
+        try {
+          const res = await window.api.startStandbyCleaner();
+          if (res.success) {
+            setAutoStandbyCleanerActive(true);
+            addLog('[Boost] Auto Standby Cleaner active (5m interval).');
+          } else {
+            addLog(`[Error] Auto Standby Cleaner activation failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] Auto Standby Cleaner activation failed: ${e.message}`);
+        }
+      }
+
+      // 21. Timer Resolution
+      setMaxBoostProgress(88);
+      if (preState.timerResWasActive) {
+        addLog('[Boost] High precision Timer Resolution is already active.');
+      } else {
+        try {
+          const res = await window.api.setTimerResolution(true);
+          if (res.success) {
+            setTimerResActive(true);
+            addLog('[Boost] High precision Timer Resolution active.');
+          } else {
+            addLog(`[Error] High precision Timer Resolution failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] High precision Timer Resolution failed: ${e.message}`);
+        }
+      }
+
+      // 22. GPU Driver Profile
+      setMaxBoostProgress(90);
+      try {
+        const res = await window.api.applyGpuDriverProfile({ vendor: gpuInfo.vendor, profile: 'performance' });
+        if (res.success) {
+          setGpuDriverProfile(prev => ({ ...prev, powerMaxPerformance: true }));
+          addLog('[Boost] GPU driver profile set to Maximum Performance.');
+        } else {
+          addLog(`[Error] GPU driver profile application failed: ${res.error || 'Unknown error'}`);
+        }
+      } catch (e) {
+        addLog(`[Error] GPU driver profile application failed: ${e.message}`);
+      }
+
+      // 23. GPU GSync (Nvidia)
+      setMaxBoostProgress(92);
+      if (gpuInfo.vendor !== 'nvidia') {
+        // Skip
+      } else if (preState.gsyncWasDisabled) {
+        addLog('[Boost] NVIDIA G-Sync is already disabled.');
+      } else {
+        try {
+          const res = await window.api.setDashboardTweak('gsyncDisabled', true);
+          if (res.success) {
+            setGsyncDisabled(true);
+            addLog('[Boost] NVIDIA G-Sync disabled.');
+          } else {
+            addLog(`[Error] NVIDIA G-Sync disable failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] NVIDIA G-Sync disable failed: ${e.message}`);
+        }
+      }
+
+      // 24. AMD MPO & Shader Cache
+      setMaxBoostProgress(94);
+      if (gpuInfo.vendor !== 'amd') {
+        // Skip
+      } else {
+        if (preState.mpoWasDisabled) {
+          addLog('[Boost] AMD MPO is already disabled.');
+        } else {
+          try {
+            const res = await window.api.toggleAmdMpo(true);
+            if (res.success) {
+              setAmdOptimizations(p => ({ ...p, mpoDisabled: true }));
+              addLog('[Boost] AMD MPO disabled.');
+            } else {
+              addLog(`[Error] AMD MPO disable failed: ${res.error || 'Unknown error'}`);
+            }
+          } catch (e) {
+            addLog(`[Error] AMD MPO disable failed: ${e.message}`);
+          }
+        }
+        if (preState.amdShaderCacheWasOn) {
+          addLog('[Boost] AMD Shader Cache policy is already set to Always On.');
+        } else {
+          try {
+            const res = await window.api.toggleAmdShaderCache(true);
+            if (res.success) {
+              setAmdOptimizations(p => ({ ...p, shaderCacheAlwaysOn: true }));
+              addLog('[Boost] AMD Shader Cache policy set to Always On.');
+            } else {
+              addLog(`[Error] AMD Shader Cache policy failed: ${res.error || 'Unknown error'}`);
+            }
+          } catch (e) {
+            addLog(`[Error] AMD Shader Cache policy failed: ${e.message}`);
+          }
+        }
+      }
+
+      // 25. Ultimate Performance Power Plan
       setMaxBoostProgress(96);
-      if (!preState.ultimatePerformanceWasActive) await activateUltimatePerformance();
-      
+      if (preState.ultimatePerformanceWasActive) {
+        addLog('[Boost] Ultimate Performance Power Plan is already active.');
+      } else {
+        try {
+          const res = await window.api.activateUltimatePerformance();
+          if (res.success) {
+            setUltimatePerformanceActive(true);
+            setPowerPlanMode('ultimate');
+            addLog('[Boost] Ultimate Performance Power Plan active.');
+          } else {
+            addLog(`[Error] Ultimate Performance Power Plan activation failed: ${res.error || 'Unknown error'}`);
+          }
+        } catch (e) {
+          addLog(`[Error] Ultimate Performance Power Plan activation failed: ${e.message}`);
+        }
+      }
+
+      // 26. Skipped reboot-dependent optimizations
+      addLog('[Boost] VBS virtualization optimization: skipped (requires system reboot).');
+      addLog('[Boost] HPET hardware timer optimization: skipped (requires system reboot).');
+
       setMaxBoostProgress(100); setMaxBoostStatus('active');
       await refreshAllStatus();
+      addLog('[Boost] Performance Boost sequence complete.');
       addToast("System Boost Activated!", "success");
     } else {
       // SMART REVERT: Only undo what was actually changed by boost
@@ -1493,30 +1912,34 @@ export function AppProvider({ children }) {
   };
 
   const optimizedCount = [
+    gameModeActive === true,
     registryStates.gameDvrDisabled === true,
     latencyTweaks.disableMouseAccel === true,
     latencyTweaks.disableUsbSuspend === true,
-    persistentPriorityEnabled === true,
-    timerResActive === true,
-    hpetDisabled === true,
-    nicPowerSavingDisabled === true,
     powerThrottlingDisabled === true,
+    nicPowerSavingDisabled === true,
+    persistentPriorityEnabled === true,
     !bgServices.XblAuthManager,
-    !vbsStatus.vbsEnabled,
-    (gpuInfo.vendor === 'nvidia' && gsyncDisabled) || (gpuInfo.vendor === 'amd' && amdOptimizations.mpoDisabled),
     networkLatencyOptimized === true,
     nicInterruptModDisabled === true,
     visualEffectsStripped === true,
     defenderExcluded === true,
     focusAssistActive === true,
     scheduledTasksDisabled === true,
+    cpuAffinityActive === true,
     electronIgpuIsolated === true,
     intelGmmAllocated === true,
     pageFileOptimized === true,
     autoStandbyCleanerActive === true,
-    ultimatePerformanceActive === true
+    timerResActive === true,
+    gpuDriverProfile.powerMaxPerformance === true || gpuDriverProfile.antiLagEnabled === true,
+    gpuInfo.vendor === 'nvidia' ? gsyncDisabled === true : (gpuInfo.vendor === 'amd' ? amdOptimizations.mpoDisabled === true : true),
+    gpuInfo.vendor === 'amd' ? amdOptimizations.shaderCacheAlwaysOn === true : true,
+    ultimatePerformanceActive === true,
+    !vbsStatus.vbsEnabled,
+    hpetDisabled === true
   ].filter(Boolean).length;
-  const totalOptimizations = 22;
+  const totalOptimizations = 26;
 
   // System Automation: Valorant Process Listener
   // Use a ref for toggleMaxBoost to avoid stale closures — it reads many state variables
